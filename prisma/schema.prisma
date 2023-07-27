@@ -1,0 +1,87 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  address       String
+  isBadgeHolder Int
+  created_at    DateTime
+  votes          Vote[]
+  results        Result[]
+}
+
+model Space {
+  id        Int    @id @default(autoincrement())
+  title     String
+  description String
+  created_at DateTime
+  polls       Poll[]
+}
+
+enum PollStatus {
+  ACTIVE
+  CLOSED
+}
+
+model Poll {
+  id          Int          @id @default(autoincrement())
+  title       String
+  space_id    Int
+  status      PollStatus   @default(ACTIVE)
+  ends_at     DateTime
+  created_at  DateTime
+  space       Space        @relation(fields: [space_id], references: [id])
+  collections  Collection[]
+}
+
+model Collection {
+  id                  Int           @id @default(autoincrement())
+  poll_id             Int
+  parent_collection_id Int?
+  created_at          DateTime
+  poll                Poll          @relation(fields: [poll_id], references: [id])
+  parent_collection   Collection?   @relation("CollectionToCollection", fields: [parent_collection_id], references: [id])
+  subCollections      Collection[]  @relation("CollectionToCollection")
+  projects            Project[]
+  options1            Vote[]        @relation("VoteToCollection1")
+  options2            Vote[]        @relation("VoteToCollection2")
+  voted               Vote[]        @relation("Voted")
+}
+
+model Result {
+  id         Int     @id @default(autoincrement())
+  user_id    Int
+  project_id Int
+  value      Float
+  user       User    @relation(fields: [user_id], references: [id])
+  project    Project @relation(fields: [project_id], references: [id])
+}
+
+model Project {
+  id            Int          @id @default(autoincrement())
+  url           String
+  description   String
+  collection_id Int
+  created_at    DateTime
+  collection    Collection  @relation(fields: [collection_id], references: [id])
+  results       Result[]
+}
+
+model Vote {
+  id             Int         @id @default(autoincrement())
+  user_id        Int
+  collection1_id Int
+  collection2_id Int
+  picked_id           Int
+  created_at     DateTime
+  user           User       @relation(fields: [user_id], references: [id])
+  collection1    Collection @relation("VoteToCollection1", fields: [collection1_id], references: [id])
+  collection2    Collection @relation("VoteToCollection2", fields: [collection2_id], references: [id])
+  picked         Collection @relation("Voted", fields: [picked_id], references: [id])
+}
