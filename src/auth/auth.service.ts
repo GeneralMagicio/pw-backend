@@ -18,6 +18,16 @@ export class AuthService {
     return id;
   };
 
+  cleanUpExpiredNonces = async () => {
+    await this.prismaService.nonce.deleteMany({
+      where: {
+        expires_at: {
+          lt: `${Date.now()}`,
+        },
+      },
+    });
+  };
+
   generateNonce = () => {
     const nonce = generateRandomString({
       length: 48,
@@ -25,13 +35,35 @@ export class AuthService {
       numerical: true,
       uppercase: true,
     });
-    // const nonce = generateNonce();
+
+    // Replace this with a cron job (or better with a key/value db)
+    if (Math.random() < 0.2) setTimeout(() => this.cleanUpExpiredNonces(), 0);
+
     return nonce;
   };
 
   isNonceValid = async (nonce: string) => {
     const isValid = await this.prismaService.nonce.findFirst({
       where: { nonce },
+    });
+
+    if (isValid === null) throw new Error('Unavailable nonce');
+    if (isValid.expires_at > `${Date.now()}`) throw new Error('Expired nonce');
+
+    return true;
+  };
+
+  isTokenValid = async (token: string) => {
+    const isValid = await this.prismaService.nonce.findFirst({
+      where: {
+        nonce: token,
+        user_id: {
+          not: null,
+        },
+        expires_at: {
+          gt: `${Date.now()}`,
+        },
+      },
     });
 
     if (isValid === null) return false;
@@ -41,12 +73,12 @@ export class AuthService {
 
   verifyUser = async (message: SiweMessage, signature: any) => {
     const siweMessage = new SiweMessage(message);
-    const isValid = this.isNonceValid(message.nonce);
-    if (!isValid) return false;
     try {
+      await this.isNonceValid(message.nonce);
       await siweMessage.verify({ signature });
       return true;
-    } catch {
+    } catch (err) {
+      console.error('ERROR:', err);
       return false;
     }
   };

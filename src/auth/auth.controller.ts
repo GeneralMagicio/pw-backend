@@ -6,6 +6,8 @@ import {
   Logger,
   UnauthorizedException,
   Res,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
@@ -13,7 +15,7 @@ import { PrismaService } from 'src/prisma.service';
 import { SiweMessage } from 'siwe';
 import { Response } from 'express';
 import { UsersService } from 'src/user/users.service';
-import { hashData } from 'src/utils';
+import { AuthGuard } from './auth.guard';
 
 @Controller({ path: 'auth' })
 export class AuthController {
@@ -24,27 +26,35 @@ export class AuthController {
     private readonly usersService: UsersService,
   ) {}
 
+  @UseGuards(AuthGuard)
+  @Get('/isLoggedIn')
+  async isLoggedIn(@Req() req) {
+    return req.user;
+  }
+
   @Post('/login')
   async login(
     @Res() res: Response,
     @Body('message') message: SiweMessage,
     @Body('signature') signature: any,
   ) {
-    this.logger.log(message);
-    this.logger.log(signature);
     const { address, nonce } = message;
-    const isAuthentic = this.authService.verifyUser(message, signature);
-    if (!isAuthentic) throw new UnauthorizedException();
+    const isAuthentic = await this.authService.verifyUser(message, signature);
+    if (!isAuthentic) throw new UnauthorizedException('Invalid signature');
     let user = await this.prismaService.user.findFirst({
-      where: { address: await hashData(address) },
+      where: { address },
     });
     if (!user) {
       user = await this.usersService.create({ address, isBadgeHolder: true });
     }
 
-    console.log('Reached here!');
+    await this.prismaService.nonce.delete({
+      where: {
+        user_id: user.id,
+      },
+    });
 
-    this.prismaService.nonce.updateMany({
+    await this.prismaService.nonce.updateMany({
       where: {
         nonce,
       },
@@ -54,17 +64,13 @@ export class AuthController {
       },
     });
 
-    console.log('Reached here! 2');
-    // Put the nonce as a http-only cookie in the client's browser
-
     res.cookie('auth', nonce, {
       httpOnly: true,
       secure: true,
       expires: new Date(Date.now() + 30 * 60 * 1000),
     });
 
-    console.log('Reached here! 3');
-    return 'Success';
+    res.status(200).send('Success');
   }
 
   @Get('/nonce')
@@ -73,7 +79,7 @@ export class AuthController {
     await this.prismaService.nonce.create({
       data: {
         nonce,
-        expires_at: `${Date.now() + 2 * 60 * 1000}`, // in 1 mins
+        expires_at: `${Date.now() + 2 * 60 * 1000}`, // in 2 mins
       },
     });
     return nonce;
