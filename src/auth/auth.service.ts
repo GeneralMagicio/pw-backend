@@ -48,7 +48,7 @@ export class AuthService {
     });
 
     if (isValid === null) throw new Error('Unavailable nonce');
-    if (isValid.expires_at > `${Date.now()}`) throw new Error('Expired nonce');
+    if (isValid.expires_at < `${Date.now()}`) throw new Error('Expired nonce');
 
     return true;
   };

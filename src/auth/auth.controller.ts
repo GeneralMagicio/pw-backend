@@ -48,7 +48,7 @@ export class AuthController {
       user = await this.usersService.create({ address, isBadgeHolder: true });
     }
 
-    await this.prismaService.nonce.delete({
+    await this.prismaService.nonce.deleteMany({
       where: {
         user_id: user.id,
       },
