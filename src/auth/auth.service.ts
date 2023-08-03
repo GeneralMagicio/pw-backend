@@ -54,7 +54,8 @@ export class AuthService {
   };
 
   isTokenValid = async (token: string) => {
-    const isValid = await this.prismaService.nonce.findFirst({
+    const user = await this.prismaService.nonce.findFirst({
+      select: { user: true },
       where: {
         nonce: token,
         user_id: {
@@ -66,9 +67,9 @@ export class AuthService {
       },
     });
 
-    if (isValid === null) return false;
+    if (user === null) return false;
 
-    return true;
+    return user;
   };
 
   verifyUser = async (message: SiweMessage, signature: any) => {

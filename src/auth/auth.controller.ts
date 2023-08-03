@@ -32,6 +32,12 @@ export class AuthController {
     return req.user;
   }
 
+  @Post('/logout')
+  async logout(@Res() res: Response) {
+    res.clearCookie('auth');
+    res.send('Logged out.');
+  }
+
   @Post('/login')
   async login(
     @Res() res: Response,
