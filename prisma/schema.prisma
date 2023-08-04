@@ -43,6 +43,7 @@ model Poll {
 
 model Collection {
   id                  Int           @id @default(autoincrement())
+  name                String
   poll_id             Int
   parent_collection_id Int?
   created_at          DateTime      @default(now())
@@ -66,6 +67,7 @@ model Result {
 
 model Project {
   id            Int          @id @default(autoincrement())
+  name          String
   url           String
   description   String
   collection_id Int
