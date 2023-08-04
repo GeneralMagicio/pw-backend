@@ -34,7 +34,15 @@ export class AuthController {
 
   @Post('/logout')
   async logout(@Res() res: Response) {
-    res.clearCookie('auth');
+    res.clearCookie('auth', {
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
+      domain:
+        process.env.NODE_ENV === 'staging'
+          ? 'pairwise.iran.liara.run'
+          : undefined,
+      secure: true,
+    });
     res.send('Logged out.');
   }
 
@@ -72,6 +80,11 @@ export class AuthController {
 
     res.cookie('auth', nonce, {
       httpOnly: true,
+      sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
+      domain:
+        process.env.NODE_ENV === 'staging'
+          ? 'pairwise.iran.liara.run'
+          : undefined,
       secure: true,
       expires: new Date(Date.now() + 30 * 60 * 1000),
     });
