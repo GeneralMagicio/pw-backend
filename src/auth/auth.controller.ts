@@ -12,10 +12,11 @@ import {
 
 import { AuthService } from './auth.service';
 import { PrismaService } from 'src/prisma.service';
-import { SiweMessage } from 'siwe';
 import { Response } from 'express';
 import { UsersService } from 'src/user/users.service';
 import { AuthGuard } from './auth.guard';
+import { LoginDTO } from './dto/login.dto';
+import { ApiResponse } from '@nestjs/swagger';
 
 @Controller({ path: 'auth' })
 export class AuthController {
@@ -27,6 +28,14 @@ export class AuthController {
   ) {}
 
   @UseGuards(AuthGuard)
+  @ApiResponse({
+    status: 401,
+    description: "You're not logged in",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "You're logged in and the user object is returned",
+  })
   @Get('/isLoggedIn')
   async isLoggedIn(@Req() req) {
     return req.user;
@@ -46,12 +55,9 @@ export class AuthController {
     res.send('Logged out.');
   }
 
+  @ApiResponse({ status: 200, description: 'Sets an auth cookie' })
   @Post('/login')
-  async login(
-    @Res() res: Response,
-    @Body('message') message: SiweMessage,
-    @Body('signature') signature: any,
-  ) {
+  async login(@Res() res: Response, @Body() { message, signature }: LoginDTO) {
     const { address, nonce } = message;
     const isAuthentic = await this.authService.verifyUser(message, signature);
     if (!isAuthentic) throw new UnauthorizedException('Invalid signature');
@@ -92,6 +98,11 @@ export class AuthController {
     res.status(200).send('Success');
   }
 
+  @ApiResponse({
+    status: 200,
+    type: String,
+    description: 'a 48 character alphanumerical nonce is returned',
+  })
   @Get('/nonce')
   async getNonce() {
     const nonce = this.authService.generateNonce();

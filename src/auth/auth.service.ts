@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { generateRandomString } from 'src/utils';
-import { SiweMessage, generateNonce } from 'siwe';
+import { SiweMessage } from 'siwe';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
