@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   Logger,
-  Param,
   Post,
   Query,
   Req,
@@ -12,7 +11,7 @@ import {
 
 import { FlowService } from './flow.service';
 import { PrismaService } from 'src/prisma.service';
-import { ApiResponse } from '@nestjs/swagger';
+import { ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { VoteProjectsDTO } from './dto/voteProjects.dto';
 import { VoteCollectionsDTO } from './dto/voteCollections.dto';
@@ -26,7 +25,13 @@ export class FlowController {
     private readonly prismaService: PrismaService,
   ) {}
 
-  // @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard)
+  @ApiQuery({
+    name: 'pid',
+    description:
+      'Parent id of the collections (skip if you want the top level collections)',
+    required: false,
+  })
   @Get('/collections')
   async getCollections(@Query('pid') parentId?: number) {
     const collections = await this.flowService.getCollections(parentId);
@@ -61,6 +66,8 @@ export class FlowController {
     );
   }
 
+  @ApiQuery({ name: 'cid', description: 'Collection id of the pairs' })
+  @ApiResponse({ status: 200, description: 'Returns 3 pairs of comparisons' })
   @UseGuards(AuthGuard)
   @Get('/projects/pairs')
   async getPairs(
