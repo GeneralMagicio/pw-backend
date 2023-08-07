@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as fs from 'fs';
 import * as cors from 'cors';
 import * as cookieParser from 'cookie-parser';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   let httpsOptions = undefined;
@@ -14,6 +15,7 @@ async function bootstrap() {
     };
   }
   const app = await NestFactory.create(AppModule, { httpsOptions });
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.use(cors({ credentials: true, origin: 'https://localhost:3001' }));
   app.use(cookieParser());
 

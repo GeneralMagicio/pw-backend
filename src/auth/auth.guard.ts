@@ -24,7 +24,7 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid auth token');
     }
 
-    request.user = user;
+    request.userId = user.user.id;
 
     return true;
   }

@@ -43,6 +43,7 @@ export class AuthController {
 
   @Post('/logout')
   async logout(@Res() res: Response) {
+    // expire the token from the db because the expiration time of the tokens are rather long
     res.clearCookie('auth', {
       httpOnly: true,
       sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',

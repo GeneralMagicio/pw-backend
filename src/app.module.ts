@@ -5,9 +5,16 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './user/users.module';
 import { MocksModule } from './mock/mock.module';
+import { FlowModule } from './flow/flow.module';
 
 @Module({
-  imports: [ConfigModule.forRoot(), AuthModule, UsersModule, MocksModule],
+  imports: [
+    ConfigModule.forRoot(),
+    AuthModule,
+    UsersModule,
+    MocksModule,
+    FlowModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
