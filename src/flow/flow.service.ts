@@ -1,7 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { getPairwiseCombinations, sortCombinations } from 'src/utils';
+import {
+  calculateCollectionRanking,
+  generateZeroMatrix,
+} from 'src/utils/mathematical-logic';
 
 @Injectable()
 export class FlowService {
@@ -84,6 +88,51 @@ export class FlowService {
     return collections;
   };
 
+  getCollectionRanking = async (userId: number, collectionId: number) => {
+    const allVotes = await this.prismaService.projectVote.findMany({
+      where: {
+        user_id: userId,
+        project1: { collection_id: collectionId },
+        project2: { collection_id: collectionId },
+      },
+    });
+
+    const allProjects = await this.prismaService.project.findMany({
+      where: {
+        collection_id: collectionId,
+      },
+    });
+
+    const matrix = this.buildVotesMatrix(allVotes, allProjects);
+
+    // matrix[0][2] = 1;
+    // matrix[0][3] = 1;
+    // matrix[0][4] = 1;
+    // matrix[0][5] = 1;
+    // matrix[0][6] = 1;
+    // matrix[0][7] = 1;
+    // matrix[3][8] = 1;
+    matrix[8][5] = 1;
+    matrix[4][9] = 1;
+    matrix[7][8] = 1;
+    matrix[1][5] = 1;
+    matrix[6][8] = 1;
+    matrix[2][5] = 1;
+    matrix[9][5] = 1;
+    matrix[7][3] = 1;
+    matrix[6][1] = 1;
+    matrix[3][9] = 1;
+    matrix[2][7] = 1;
+    // matrix[6][5] = 1;
+    // matrix[9][2] = 1;
+    // matrix[4][7] = 1;
+    // matrix[8][2] = 1;
+    // matrix[9][3] = 1;
+
+    console.log('matrix:', matrix);
+    return calculateCollectionRanking(matrix);
+  };
+
   getPairs = async (userId: number, collectionId: number, count = 5) => {
     const allVotes = await this.prismaService.projectVote.findMany({
       where: {
@@ -163,6 +212,44 @@ export class FlowService {
     );
 
     return pairs;
+  };
+
+  private buildVotesMatrix = (
+    votes: {
+      project1_id: number;
+      project2_id: number;
+      picked_id: number;
+    }[],
+    allProjects: { id: number }[],
+  ) => {
+    // console.log(votes, allProjects);
+
+    const n = allProjects.length;
+    // an n*n zero matrix
+    const matrix = generateZeroMatrix(n);
+    const zeroBasedMapping = allProjects.reduce(
+      (acc, project, index) => ({ ...acc, [index]: project.id }),
+      {},
+    );
+
+    const getVote = (i: number, j: number) =>
+      votes.find(
+        (vote) =>
+          (vote.project1_id === zeroBasedMapping[i] &&
+            vote.project2_id === zeroBasedMapping[j]) ||
+          (vote.project1_id === zeroBasedMapping[j] &&
+            vote.project2_id === zeroBasedMapping[i]),
+      )?.picked_id === zeroBasedMapping[i]
+        ? 1
+        : 0;
+
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        matrix[i][j] = getVote(i, j);
+      }
+    }
+
+    return matrix;
   };
 
   private determineIdRanking = (

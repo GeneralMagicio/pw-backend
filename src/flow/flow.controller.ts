@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Logger,
+  Param,
   Post,
   Query,
   Req,
@@ -77,5 +78,22 @@ export class FlowController {
     const pairs = await this.flowService.getPairs(userId, collectionId, 3);
 
     return pairs;
+  }
+
+  // @UseGuards(AuthGuard)
+  // @ApiQuery({ name: 'cid', description: 'Collection id of the ranking' })
+  @ApiResponse({ status: 200, description: 'Collection ranking' })
+  @Get('/collection/:cid/ranking')
+  async getRanking(
+    // @Req() { userId }: AuthedReq,
+    @Param('cid') collectionId: number,
+  ) {
+    const userId = 1;
+    const ranking = await this.flowService.getCollectionRanking(
+      userId,
+      collectionId,
+    );
+
+    return ranking;
   }
 }
