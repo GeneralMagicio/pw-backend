@@ -101,7 +101,7 @@ model ProjectVote {
   user_id     Int
   project1_id Int
   project2_id Int
-  picked_id   Int?
+  picked_id   Int?     
   created_at  DateTime @default(now())
   updated_at  DateTime @default(now())
   user        User     @relation(fields: [user_id], references: [id])

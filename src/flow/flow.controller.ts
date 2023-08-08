@@ -46,7 +46,7 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Body() { project1Id, project2Id, pickedId }: VoteProjectsDTO,
   ) {
-    await this.flowService.voteForProjects(
+    return this.flowService.voteForProjects(
       userId,
       project1Id,
       project2Id,
@@ -60,7 +60,7 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Body() { collection1Id, collection2Id, pickedId }: VoteCollectionsDTO,
   ) {
-    await this.flowService.voteForCollections(
+    return this.flowService.voteForCollections(
       userId,
       collection1Id,
       collection2Id,

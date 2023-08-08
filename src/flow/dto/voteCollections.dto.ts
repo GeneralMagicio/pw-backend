@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt } from 'class-validator';
+import { IsInt, Validate } from 'class-validator';
+import { IsNumberOrNull } from './voteProjects.dto';
 
 export class VoteCollectionsDTO {
   @IsInt()
@@ -10,7 +11,7 @@ export class VoteCollectionsDTO {
   @ApiProperty()
   collection2Id: number;
 
-  @IsInt()
+  @Validate(IsNumberOrNull)
   @ApiProperty()
-  pickedId: number;
+  pickedId: number | null;
 }

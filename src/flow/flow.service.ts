@@ -4,7 +4,6 @@ import { subscribe } from 'diagnostics_channel';
 import { PrismaService } from 'src/prisma.service';
 import { getPairwiseCombinations, sortCombinations } from 'src/utils';
 import {
-  calculateCollectionRanking,
   generateZeroMatrix,
   getRankingForSetOfDampingFactors,
 } from 'src/utils/mathematical-logic';
@@ -30,7 +29,7 @@ export class FlowService {
     userId: number,
     project1Id: number,
     project2Id: number,
-    pickedId: number,
+    pickedId: number | null,
   ) => {
     this.validateProjectVote(project1Id, project2Id, pickedId);
     const payload = {
@@ -58,7 +57,7 @@ export class FlowService {
     userId: number,
     collection1Id: number,
     collection2Id: number,
-    pickedId: number,
+    pickedId: number | null,
   ) => {
     this.validateCollectionVote(collection1Id, collection2Id, pickedId);
     const payload = {
@@ -132,29 +131,6 @@ export class FlowService {
       zeroBasedMappingFunction,
     );
 
-    matrix[0][2] = 1;
-    // matrix[3][8] = 1;
-    // matrix[8][5] = 1;
-    // matrix[4][9] = 1;
-    matrix[0][7] = 1;
-    matrix[7][8] = 1;
-    matrix[0][6] = 1;
-    // matrix[1][5] = 1;
-    // matrix[6][8] = 1;
-    matrix[0][5] = 1;
-    matrix[2][5] = 1;
-    // matrix[9][5] = 1;
-    matrix[0][4] = 1;
-    matrix[7][3] = 1;
-    matrix[6][1] = 1;
-    // matrix[2][7] = 1;
-    // matrix[6][5] = 1;
-    matrix[9][2] = 1;
-    matrix[0][3] = 1;
-    matrix[4][7] = 1;
-    // matrix[8][2] = 1;
-    // matrix[9][3] = 1;
-
     console.log('matrix:', matrix);
 
     const result = getRankingForSetOfDampingFactors(matrix);
@@ -173,7 +149,7 @@ export class FlowService {
 
   getCollectionRankingWithCollectionType = async (
     userId: number,
-    collectionId: number,
+    collectionId: number | null,
   ) => {
     const allVotes = await this.prismaService.collectionVote.findMany({
       where: {
@@ -205,31 +181,6 @@ export class FlowService {
       allCollections.map(({ id }) => ({ id })),
       zeroBasedMappingFunction,
     );
-
-    // matrix[0][2] = 1;
-    // matrix[3][8] = 1;
-    // matrix[8][5] = 1;
-    // matrix[4][9] = 1;
-    matrix[0][7] = 1;
-    matrix[7][8] = 1;
-    // matrix[0][6] = 1;
-    // matrix[1][5] = 1;
-    // matrix[6][8] = 1;
-    matrix[0][5] = 1;
-    matrix[2][5] = 1;
-    // matrix[9][5] = 1;
-    // matrix[0][4] = 1;
-    matrix[7][3] = 1;
-    matrix[6][1] = 1;
-    // matrix[2][7] = 1;
-    // matrix[6][5] = 1;
-    matrix[9][2] = 1;
-    matrix[0][3] = 1;
-    matrix[4][7] = 1;
-    // matrix[8][2] = 1;
-    // matrix[9][3] = 1;
-
-    // console.log('matrix:', matrix);
 
     const result = getRankingForSetOfDampingFactors(matrix);
 
@@ -410,7 +361,7 @@ export class FlowService {
   };
 
   getCollectionSubunitType = async (
-    collectionId: number,
+    collectionId: number | null,
   ): Promise<'project' | 'collection'> => {
     const collections = await this.prismaService.collection.findFirst({
       where: { parent_collection_id: collectionId },
@@ -433,7 +384,7 @@ export class FlowService {
     votes: {
       id1: number;
       id2: number;
-      picked_id: number;
+      picked_id: number | null;
     }[],
     allProjects: { id: number }[],
     zeroBasedMappingFunction: (i: number) => number,
@@ -497,7 +448,11 @@ export class FlowService {
         'Collection 1 and collection 2 ids should be different',
       );
 
-    if (pickedId !== collection1Id && pickedId !== collection2Id)
+    if (
+      pickedId !== null &&
+      pickedId !== collection1Id &&
+      pickedId !== collection2Id
+    )
       throw new BadRequestException('Picked collection invalid id');
 
     const [collection1, collection2] = await Promise.all([
@@ -519,7 +474,7 @@ export class FlowService {
         'Project 1 and project 2 ids should be different',
       );
 
-    if (pickedId !== project1Id && pickedId !== project2Id)
+    if (pickedId !== null && pickedId !== project1Id && pickedId !== project2Id)
       throw new BadRequestException('Picked project invalid id');
 
     const [project1, project2] = await Promise.all([
