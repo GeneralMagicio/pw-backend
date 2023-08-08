@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { subscribe } from 'diagnostics_channel';
 import { PrismaService } from 'src/prisma.service';
 import { getPairwiseCombinations, sortCombinations } from 'src/utils';
 import {
@@ -86,7 +87,14 @@ export class FlowService {
       where: { parent_collection_id: parentCollectionId },
     });
 
-    return collections;
+    const withSubunits = Promise.all(
+      collections.map(async (collection) => ({
+        ...collection,
+        subunit: await this.getCollectionSubunitType(collection.id),
+      })),
+    );
+
+    return withSubunits;
   };
 
   getCollectionRanking = async (userId: number, collectionId: number) => {
@@ -133,7 +141,91 @@ export class FlowService {
     return getRankingForSetOfDampingFactors(matrix);
   };
 
-  getPairs = async (userId: number, collectionId: number, count = 5) => {
+  getCollectionPairs = async (
+    userId: number,
+    parentCollection: number,
+    count = 5,
+  ) => {
+    const allVotes = await this.prismaService.collectionVote.findMany({
+      where: {
+        user_id: userId,
+        collection1: { parent_collection_id: parentCollection },
+        collection2: { parent_collection_id: parentCollection },
+      },
+    });
+
+    const allCollections = await this.prismaService.collection.findMany({
+      where: {
+        parent_collection_id: parentCollection,
+      },
+    });
+
+    const votedIds = allVotes.reduce(
+      (acc, vote) => [...acc, vote.collection1_id, vote.collection2_id],
+      [] as number[],
+    );
+
+    const allIds = allCollections.map((collection) => collection.id);
+
+    const votedCollectionsRanking = this.determineIdRanking(votedIds);
+
+    // ascending id rankings (i.e., the last element has been voted the most)
+    let idRanking: number[] = [];
+
+    for (let i = 0; i < allIds.length; i++) {
+      const value = allIds[i];
+      if (!votedCollectionsRanking.includes(value)) idRanking.push(value);
+    }
+
+    idRanking = [...idRanking, ...votedCollectionsRanking];
+
+    const combinations = getPairwiseCombinations(allIds);
+
+    const sortedCombinations = sortCombinations(combinations, idRanking);
+
+    const result = [];
+    let i = 0;
+    while (result.length < count) {
+      const combination = sortedCombinations[i];
+      const px = combination[0];
+      const py = combination[1];
+      const index = allVotes.findIndex(
+        (vote) =>
+          (vote.collection1_id === px && vote.collection2_id === py) ||
+          (vote.collection1_id === py && vote.collection2_id === px),
+      );
+
+      if (index === -1) result.push(combination);
+
+      i++;
+    }
+
+    const pairs = await Promise.all(
+      result.map((pair) =>
+        this.prismaService.collection.findMany({
+          where: {
+            OR: [
+              {
+                id: pair[0],
+              },
+              {
+                id: pair[1],
+              },
+            ],
+          },
+        }),
+      ),
+    );
+
+    return {
+      pairs,
+      totalPairs: combinations.flat(0).length,
+      votedPairs: allVotes.length,
+      type: 'collection' as const,
+    };
+  };
+
+  getProjectPairs = async (userId: number, collectionId: number, count = 5) => {
     const allVotes = await this.prismaService.projectVote.findMany({
       where: {
         user_id: userId,
@@ -209,7 +301,28 @@ export class FlowService {
       pairs,
       totalPairs: combinations.flat(0).length,
       votedPairs: allVotes.length,
+      type: 'project' as const,
     };
+  };
+
+  getCollectionSubunitType = async (
+    collectionId: number,
+  ): Promise<'project' | 'collection'> => {
+    const collections = await this.prismaService.collection.findFirst({
+      where: { parent_collection_id: collectionId },
+    });
+
+    const projects = await this.prismaService.project.findFirst({
+      where: { collection_id: collectionId },
+    });
+
+    if (collections && projects)
+      throw new Error(
+        'A collection can not have both projects and collections as its subunits',
+      );
+
+    if (collections) return 'collection';
+    if (projects) return 'project';
   };
 
   private buildVotesMatrix = (

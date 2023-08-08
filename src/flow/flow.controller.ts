@@ -17,7 +17,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { VoteProjectsDTO } from './dto/voteProjects.dto';
 import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
-import { ProjectPairsResult } from './dto/projectPairsResult';
+import { PairsResult } from './dto/pairsResult';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -68,19 +68,28 @@ export class FlowController {
     );
   }
 
-  @ApiQuery({ name: 'cid', description: 'Collection id of the pairs' })
+  @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
   @ApiResponse({
-    type: ProjectPairsResult,
+    type: PairsResult,
     status: 200,
     description: 'Returns 3 pairs of comparisons + progress data',
   })
   @UseGuards(AuthGuard)
-  @Get('/projects/pairs')
+  @Get('/pairs')
   async getPairs(
     @Req() { userId }: AuthedReq,
     @Query('cid') collectionId: number,
   ) {
-    const pairs = await this.flowService.getPairs(userId, collectionId, 3);
+    let pairs: PairsResult;
+    const type = await this.flowService.getCollectionSubunitType(collectionId);
+    if (type === 'collection')
+      pairs = await this.flowService.getCollectionPairs(
+        userId,
+        collectionId,
+        3,
+      );
+    else if (type === 'project')
+      pairs = await this.flowService.getProjectPairs(userId, collectionId, 3);
 
     return pairs;
   }

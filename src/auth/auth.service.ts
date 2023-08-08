@@ -9,6 +9,16 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   constructor(private readonly prismaService: PrismaService) {}
 
+  /**
+   * 12 hours
+   */
+  public TokenExpirationDuration = 12 * 60 * 60 * 1000; // 12 hours
+
+  /**
+   * 2 minutes
+   */
+  public NonceExpirationDuration = 2 * 60 * 1000; // 2 minutes
+
   getUserId = async (walletAddress: string) => {
     const { id } = await this.prismaService.user.findFirst({
       select: { id: true },

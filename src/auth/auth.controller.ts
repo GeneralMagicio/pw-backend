@@ -81,7 +81,7 @@ export class AuthController {
       },
       data: {
         user_id: user.id,
-        expires_at: `${Date.now() + 30 * 60 * 1000}`, // in 30 mins
+        expires_at: `${Date.now() + this.authService.TokenExpirationDuration}`,
       },
     });
 
@@ -93,7 +93,7 @@ export class AuthController {
           ? 'pairwise.iran.liara.run'
           : undefined,
       secure: true,
-      expires: new Date(Date.now() + 30 * 60 * 1000),
+      expires: new Date(Date.now() + this.authService.TokenExpirationDuration),
     });
 
     res.status(200).send('Success');
@@ -110,7 +110,7 @@ export class AuthController {
     await this.prismaService.nonce.create({
       data: {
         nonce,
-        expires_at: `${Date.now() + 2 * 60 * 1000}`, // in 2 mins
+        expires_at: `${Date.now() + this.authService.NonceExpirationDuration}`,
       },
     });
     return nonce;

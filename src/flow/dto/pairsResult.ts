@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class ProjectPairsResult {
+export class PairsResult {
   @ApiProperty({
     type: 'array',
     items: {
@@ -13,5 +13,8 @@ export class ProjectPairsResult {
   totalPairs: number;
 
   @ApiProperty()
-  totalVotes: number;
+  votedPairs: number;
+
+  @ApiProperty()
+  type: 'project' | 'collection';
 }
