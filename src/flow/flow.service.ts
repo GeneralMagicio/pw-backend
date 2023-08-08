@@ -97,7 +97,10 @@ export class FlowService {
     return withSubunits;
   };
 
-  getCollectionRanking = async (userId: number, collectionId: number) => {
+  getCollectionRankingWithProjectType = async (
+    userId: number,
+    collectionId: number,
+  ) => {
     const allVotes = await this.prismaService.projectVote.findMany({
       where: {
         user_id: userId,
@@ -112,7 +115,96 @@ export class FlowService {
       },
     });
 
-    const matrix = this.buildVotesMatrix(allVotes, allProjects);
+    const mappingObject = allProjects.reduce(
+      (acc, project, index) => ({ ...acc, [index]: project.id }),
+      {},
+    );
+
+    const zeroBasedMappingFunction = (index: number) => mappingObject[index];
+
+    const matrix = this.buildVotesMatrix(
+      allVotes.map(({ project1_id, project2_id, picked_id }) => ({
+        id1: project1_id,
+        id2: project2_id,
+        picked_id: picked_id,
+      })),
+      allProjects.map(({ id }) => ({ id })),
+      zeroBasedMappingFunction,
+    );
+
+    matrix[0][2] = 1;
+    // matrix[3][8] = 1;
+    // matrix[8][5] = 1;
+    // matrix[4][9] = 1;
+    matrix[0][7] = 1;
+    matrix[7][8] = 1;
+    matrix[0][6] = 1;
+    // matrix[1][5] = 1;
+    // matrix[6][8] = 1;
+    matrix[0][5] = 1;
+    matrix[2][5] = 1;
+    // matrix[9][5] = 1;
+    matrix[0][4] = 1;
+    matrix[7][3] = 1;
+    matrix[6][1] = 1;
+    // matrix[2][7] = 1;
+    // matrix[6][5] = 1;
+    matrix[9][2] = 1;
+    matrix[0][3] = 1;
+    matrix[4][7] = 1;
+    // matrix[8][2] = 1;
+    // matrix[9][3] = 1;
+
+    console.log('matrix:', matrix);
+
+    const result = getRankingForSetOfDampingFactors(matrix);
+
+    const ranking = await Promise.all(
+      result.map(async (item, index) => ({
+        share: item,
+        project: await this.prismaService.project.findUnique({
+          where: { id: zeroBasedMappingFunction(index) },
+        }),
+      })),
+    );
+
+    return ranking.sort((a, b) => b.share - a.share);
+  };
+
+  getCollectionRankingWithCollectionType = async (
+    userId: number,
+    collectionId: number,
+  ) => {
+    const allVotes = await this.prismaService.collectionVote.findMany({
+      where: {
+        user_id: userId,
+        collection1: { parent_collection_id: collectionId },
+        collection2: { parent_collection_id: collectionId },
+      },
+    });
+
+    const allCollections = await this.prismaService.collection.findMany({
+      where: {
+        parent_collection_id: collectionId,
+      },
+    });
+
+    const mappingObject = allCollections.reduce(
+      (acc, project, index) => ({ ...acc, [index]: project.id }),
+      {},
+    );
+
+    const zeroBasedMappingFunction = (index: number) => mappingObject[index];
+
+    const matrix = this.buildVotesMatrix(
+      allVotes.map(({ collection1_id, collection2_id, picked_id }) => ({
+        id1: collection1_id,
+        id2: collection2_id,
+        picked_id: picked_id,
+      })),
+      allCollections.map(({ id }) => ({ id })),
+      zeroBasedMappingFunction,
+    );
 
     // matrix[0][2] = 1;
     // matrix[3][8] = 1;
@@ -137,8 +229,20 @@ export class FlowService {
     // matrix[8][2] = 1;
     // matrix[9][3] = 1;
 
-    console.log('matrix:', matrix);
-    return getRankingForSetOfDampingFactors(matrix);
+    // console.log('matrix:', matrix);
+
+    const result = getRankingForSetOfDampingFactors(matrix);
+
+    const ranking = await Promise.all(
+      result.map(async (item, index) => ({
+        share: item,
+        project: await this.prismaService.collection.findUnique({
+          where: { id: zeroBasedMappingFunction(index) },
+        }),
+      })),
+    );
+
+    return ranking.sort((a, b) => b.share - a.share);
   };
 
   getCollectionPairs = async (
@@ -327,30 +431,25 @@ export class FlowService {
 
   private buildVotesMatrix = (
     votes: {
-      project1_id: number;
-      project2_id: number;
+      id1: number;
+      id2: number;
       picked_id: number;
     }[],
     allProjects: { id: number }[],
+    zeroBasedMappingFunction: (i: number) => number,
   ) => {
-    // console.log(votes, allProjects);
-
     const n = allProjects.length;
     // an n*n zero matrix
     const matrix = generateZeroMatrix(n);
-    const zeroBasedMapping = allProjects.reduce(
-      (acc, project, index) => ({ ...acc, [index]: project.id }),
-      {},
-    );
 
     const getVote = (i: number, j: number) =>
       votes.find(
         (vote) =>
-          (vote.project1_id === zeroBasedMapping[i] &&
-            vote.project2_id === zeroBasedMapping[j]) ||
-          (vote.project1_id === zeroBasedMapping[j] &&
-            vote.project2_id === zeroBasedMapping[i]),
-      )?.picked_id === zeroBasedMapping[i]
+          (vote.id1 === zeroBasedMappingFunction(i) &&
+            vote.id2 === zeroBasedMappingFunction(j)) ||
+          (vote.id1 === zeroBasedMappingFunction(j) &&
+            vote.id2 === zeroBasedMappingFunction(i)),
+      )?.picked_id === zeroBasedMappingFunction(i)
         ? 1
         : 0;
 

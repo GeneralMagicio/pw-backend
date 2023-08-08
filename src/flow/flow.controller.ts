@@ -94,19 +94,26 @@ export class FlowController {
     return pairs;
   }
 
-  // @UseGuards(AuthGuard)
-  // @ApiQuery({ name: 'cid', description: 'Collection id of the ranking' })
+  @ApiQuery({ name: 'cid', description: 'Collection id of the ranking' })
+  @UseGuards(AuthGuard)
   @ApiResponse({ status: 200, description: 'Collection ranking' })
-  @Get('/projects/ranking/:cid')
+  @Get('/ranking/:cid')
   async getRanking(
-    // @Req() { userId }: AuthedReq,
+    @Req() { userId }: AuthedReq,
     @Param('cid') collectionId: number,
   ) {
-    const userId = 1;
-    const ranking = await this.flowService.getCollectionRanking(
-      userId,
-      collectionId,
-    );
+    let ranking;
+    const type = await this.flowService.getCollectionSubunitType(collectionId);
+    if (type === 'collection')
+      ranking = await this.flowService.getCollectionRankingWithCollectionType(
+        userId,
+        collectionId,
+      );
+    else if (type === 'project')
+      ranking = await this.flowService.getCollectionRankingWithProjectType(
+        userId,
+        collectionId,
+      );
 
     return ranking;
   }

@@ -17,7 +17,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { httpsOptions });
   // app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.use(cors({ credentials: true, origin: 'https://localhost:3001' }));
+  app.use(
+    cors({
+      credentials: true,
+      origin: [
+        'https://localhost:3001',
+        'https://staging.pairwise.generalmagic.io',
+      ],
+    }),
+  );
   app.use(cookieParser());
 
   const config = new DocumentBuilder()
