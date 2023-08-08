@@ -38,8 +38,62 @@ const toFixedNumber = (num: number, digits: number) => {
   return Math.round(num * pow) / pow;
 };
 
-export const calculateCollectionRanking = (input: number[][]) => {
-  let votesMatrix = [...input];
+const isRankingUseful = (ranking: number[]) => {
+  const numOfZeros = ranking.filter(
+    (score) => toFixedNumber(score, 2) <= 0.01,
+  ).length;
+
+  if (numOfZeros >= ranking.length / 2) return false;
+
+  const sortedRanking = [...ranking].sort();
+
+  const median = sortedRanking[Math.floor(sortedRanking.length / 2)];
+  const max = sortedRanking[sortedRanking.length - 1];
+
+  if (max / median > 5) return false;
+
+  return true;
+};
+
+function cloneArray<T extends unknown[]>(a: T): T {
+  const array = a.map((e) => (Array.isArray(e) ? cloneArray(e) : e)) as T;
+
+  return array;
+}
+
+export const getRankingForSetOfDampingFactors = (input: number[][]) => {
+  const dampingFactors = [
+    1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35,
+    0.3, 0.25, 0.2, 0.15, 0.1, 0.05,
+  ];
+  let isUseful = false;
+  let i = 0;
+  let ranking: number[] = [];
+  while (!isUseful && i < dampingFactors.length) {
+    try {
+      ranking = calculateCollectionRanking(input, dampingFactors[i]);
+      isUseful = isRankingUseful(ranking);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      if (!isUseful)
+        console.error('Useless damping factor:', dampingFactors[i]);
+      i += 1;
+    }
+  }
+
+  if (!ranking) {
+    console.error('No useful ranking available for this vote matrix');
+  }
+
+  return ranking;
+};
+
+export const calculateCollectionRanking = (
+  input: number[][],
+  dampingFactor = 1,
+) => {
+  let votesMatrix = cloneArray(input);
 
   validateVotesMatrix(votesMatrix);
 
@@ -70,8 +124,6 @@ export const calculateCollectionRanking = (input: number[][]) => {
   }
 
   // add a damping factor
-  const dampingFactor = 0.9;
-
   const dampingMatrix = matrix(
     Array(length).fill(Array(length).fill((1 - dampingFactor) / length)),
   );
@@ -84,12 +136,7 @@ export const calculateCollectionRanking = (input: number[][]) => {
   // compute the eigenvalue
   const { values, vectors } = eigs(votesMatrix, 0.01);
 
-  console.log('values', values);
-  console.log('vectors', vectors);
-
   const index = findEigenvalueOfOne(values as any);
-
-  console.log('index:', index);
 
   const eigenvectors = vectors
     .map((_, index, self) => column(self, index))

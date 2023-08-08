@@ -5,6 +5,7 @@ import { getPairwiseCombinations, sortCombinations } from 'src/utils';
 import {
   calculateCollectionRanking,
   generateZeroMatrix,
+  getRankingForSetOfDampingFactors,
 } from 'src/utils/mathematical-logic';
 
 @Injectable()
@@ -106,31 +107,30 @@ export class FlowService {
     const matrix = this.buildVotesMatrix(allVotes, allProjects);
 
     // matrix[0][2] = 1;
-    // matrix[0][3] = 1;
-    // matrix[0][4] = 1;
-    // matrix[0][5] = 1;
-    // matrix[0][6] = 1;
-    // matrix[0][7] = 1;
     // matrix[3][8] = 1;
-    matrix[8][5] = 1;
-    matrix[4][9] = 1;
+    // matrix[8][5] = 1;
+    // matrix[4][9] = 1;
+    matrix[0][7] = 1;
     matrix[7][8] = 1;
-    matrix[1][5] = 1;
-    matrix[6][8] = 1;
+    // matrix[0][6] = 1;
+    // matrix[1][5] = 1;
+    // matrix[6][8] = 1;
+    matrix[0][5] = 1;
     matrix[2][5] = 1;
-    matrix[9][5] = 1;
+    // matrix[9][5] = 1;
+    // matrix[0][4] = 1;
     matrix[7][3] = 1;
     matrix[6][1] = 1;
-    matrix[3][9] = 1;
-    matrix[2][7] = 1;
+    // matrix[2][7] = 1;
     // matrix[6][5] = 1;
-    // matrix[9][2] = 1;
-    // matrix[4][7] = 1;
+    matrix[9][2] = 1;
+    matrix[0][3] = 1;
+    matrix[4][7] = 1;
     // matrix[8][2] = 1;
     // matrix[9][3] = 1;
 
     console.log('matrix:', matrix);
-    return calculateCollectionRanking(matrix);
+    return getRankingForSetOfDampingFactors(matrix);
   };
 
   getPairs = async (userId: number, collectionId: number, count = 5) => {
