@@ -167,15 +167,9 @@ export class FlowService {
 
     idRanking = [...idRanking, ...votedProjectsRanking];
 
-    console.log('all Ids:', allIds);
-    console.log('voted projects', votedProjectsRanking);
-    console.log('id ranking:', idRanking);
-
     const combinations = getPairwiseCombinations(allIds);
 
     const sortedCombinations = sortCombinations(combinations, idRanking);
-
-    console.log('sorted comb:', sortedCombinations);
 
     const result = [];
     let i = 0;
@@ -211,7 +205,11 @@ export class FlowService {
       ),
     );
 
-    return pairs;
+    return {
+      pairs,
+      totalPairs: combinations.flat(0).length,
+      votedPairs: allVotes.length,
+    };
   };
 
   private buildVotesMatrix = (

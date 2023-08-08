@@ -17,6 +17,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { VoteProjectsDTO } from './dto/voteProjects.dto';
 import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
+import { ProjectPairsResult } from './dto/projectPairsResult';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -68,7 +69,11 @@ export class FlowController {
   }
 
   @ApiQuery({ name: 'cid', description: 'Collection id of the pairs' })
-  @ApiResponse({ status: 200, description: 'Returns 3 pairs of comparisons' })
+  @ApiResponse({
+    type: ProjectPairsResult,
+    status: 200,
+    description: 'Returns 3 pairs of comparisons + progress data',
+  })
   @UseGuards(AuthGuard)
   @Get('/projects/pairs')
   async getPairs(
@@ -83,7 +88,7 @@ export class FlowController {
   // @UseGuards(AuthGuard)
   // @ApiQuery({ name: 'cid', description: 'Collection id of the ranking' })
   @ApiResponse({ status: 200, description: 'Collection ranking' })
-  @Get('/collection/:cid/ranking')
+  @Get('/projects/ranking/:cid')
   async getRanking(
     // @Req() { userId }: AuthedReq,
     @Param('cid') collectionId: number,
