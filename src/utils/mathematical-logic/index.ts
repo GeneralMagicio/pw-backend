@@ -64,7 +64,7 @@ function cloneArray<T extends unknown[]>(a: T): T {
 export const getRankingForSetOfDampingFactors = (input: number[][]) => {
   const dampingFactors = [
     1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35,
-    0.3, 0.25, 0.2, 0.15, 0.1, 0.05,
+    0.3, 0.25, 0.2, 0.15, 0.1, 0.05, 0,
   ];
   let isUseful = false;
   let i = 0;
@@ -119,7 +119,8 @@ export const calculateCollectionRanking = (
       sum += cell;
     }
     for (let j = 0; j < length; j++) {
-      votesMatrix[j][i] = votesMatrix[j][i] / sum;
+      if (sum !== 0) votesMatrix[j][i] = votesMatrix[j][i] / sum;
+      else votesMatrix[j][i] = 0;
     }
   }
 
@@ -179,48 +180,3 @@ const divideBySum = (numbers: number[]) => {
 
   return numbers.map((item) => toFixedNumber(item / sum, 2));
 };
-
-// const checkConstantSign = (array: number[]) => {
-//   let index = 1;
-//   const sum = array[0];
-//   const direction = sum > 0 ? 'positive' : 'negative';
-//   while (index < array.length) {
-//     if (array[index] > 0 && direction === 'negative') return false;
-//     if (array[index] < 0 && direction === 'positive') return false;
-
-//     index++;
-//   }
-
-//   return true;
-// };
-
-// const result = calculateCollectionRanking([[0, 1, 0, 1], [0, 0, 1, 1], [1, 0, 0, 0], [0, 0, 1, 0]])
-// const result = calculateCollectionRanking([
-//   [0, 1, 0, 0],
-//   [0, 0, 1, 0],
-//   [0, 0, 0, 1],
-//   [0, 1, 0, 0],
-// ]);
-// const result = calculateCollectionRanking([
-//   [0, 1, 0, 1, 0, 1, 0],
-//   [0, 0, 1, 0, 0, 0, 1],
-//   [1, 0, 0, 1, 1, 0, 0],
-//   [0, 1, 0, 0, 0, 1, 1],
-//   [1, 1, 0, 1, 0, 0, 0],
-//   [0, 1, 1, 0, 1, 0, 1],
-//   [1, 0, 1, 0, 1, 0, 0],
-// ]);
-
-// console.log("eigenvalues:", result.values)
-// console.log("eigenvectors:", result.vectors)
-// console.log("---------------------")
-
-// // // console.log(result.vectors)
-
-// console.log(result);
-
-// console.log(column(result.vectors, 0))
-// console.log(column(result.vectors, 1))
-// console.log(column(result.vectors, 2))
-
-// const res = column(result.vectors, 3).map((row) => re(row))

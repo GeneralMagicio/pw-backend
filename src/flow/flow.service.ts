@@ -123,8 +123,6 @@ export class FlowService {
       zeroBasedMappingFunction,
     );
 
-    console.log('matrix:', matrix);
-
     const result = getRankingForSetOfDampingFactors(matrix);
 
     const ranking = await Promise.all(
