@@ -7,7 +7,7 @@ const readExcelFile = (
   const workbook = XLSX.readFile(filePath);
   const sheetNameList = workbook.SheetNames;
   const sheet1 = workbook.Sheets[sheetNameList[0]];
-  const data = XLSX.utils.sheet_to_json(sheet1, { header: 1 });
+  const data: any[][] = XLSX.utils.sheet_to_json(sheet1, { header: 1 });
 
   const result: Array<{ collection: string; name: string }> = [];
   for (let i = 1; i < data.length; i++) {

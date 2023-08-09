@@ -19,14 +19,14 @@ export class AuthService {
    */
   public NonceExpirationDuration = 2 * 60 * 1000; // 2 minutes
 
-  getUserId = async (walletAddress: string) => {
-    const { id } = await this.prismaService.user.findFirst({
-      select: { id: true },
-      where: { address: walletAddress },
-    });
+  // getUserId = async (walletAddress: string) => {
+  //   const { id } = await this.prismaService.user.findFirst({
+  //     select: { id: true },
+  //     where: { address: walletAddress },
+  //   });
 
-    return id;
-  };
+  //   return id;
+  // };
 
   cleanUpExpiredNonces = async () => {
     await this.prismaService.nonce.deleteMany({

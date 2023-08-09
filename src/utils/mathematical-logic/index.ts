@@ -33,7 +33,7 @@ const validateVotesMatrix = (votesMatrix: number[][]) => {
   return true;
 };
 
-const toFixedNumber = (num: number, digits: number) => {
+export const toFixedNumber = (num: number, digits: number) => {
   const pow = Math.pow(10, digits);
   return Math.round(num * pow) / pow;
 };
@@ -139,7 +139,7 @@ export const calculateCollectionRanking = (
   const index = findEigenvalueOfOne(values as any);
 
   const eigenvectors = vectors
-    .map((_, index, self) => column(self, index))
+    .map((_, i, self) => column(self, index))
     .map((vector) => re(vector))
     .map((vector) => vector.flat(1));
 

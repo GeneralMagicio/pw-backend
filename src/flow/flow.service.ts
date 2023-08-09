@@ -1,11 +1,10 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { subscribe } from 'diagnostics_channel';
 import { PrismaService } from 'src/prisma.service';
 import { getPairwiseCombinations, sortCombinations } from 'src/utils';
 import {
   generateZeroMatrix,
   getRankingForSetOfDampingFactors,
+  toFixedNumber,
 } from 'src/utils/mathematical-logic';
 
 @Injectable()
@@ -22,7 +21,7 @@ export class FlowService {
       include: { project1: true },
     });
 
-    return latestVote.project1.collection_id;
+    return latestVote?.project1.collection_id || null;
   };
 
   voteForProjects = async (
@@ -86,14 +85,7 @@ export class FlowService {
       where: { parent_collection_id: parentCollectionId },
     });
 
-    const withSubunits = Promise.all(
-      collections.map(async (collection) => ({
-        ...collection,
-        subunit: await this.getCollectionSubunitType(collection.id),
-      })),
-    );
-
-    return withSubunits;
+    return collections;
   };
 
   getCollectionRankingWithProjectType = async (
@@ -114,7 +106,7 @@ export class FlowService {
       },
     });
 
-    const mappingObject = allProjects.reduce(
+    const mappingObject: Record<number, number> = allProjects.reduce(
       (acc, project, index) => ({ ...acc, [index]: project.id }),
       {},
     );
@@ -149,7 +141,7 @@ export class FlowService {
 
   getCollectionRankingWithCollectionType = async (
     userId: number,
-    collectionId: number | null,
+    collectionId?: number,
   ) => {
     const allVotes = await this.prismaService.collectionVote.findMany({
       where: {
@@ -165,7 +157,7 @@ export class FlowService {
       },
     });
 
-    const mappingObject = allCollections.reduce(
+    const mappingObject: Record<number, number> = allCollections.reduce(
       (acc, project, index) => ({ ...acc, [index]: project.id }),
       {},
     );
@@ -198,7 +190,7 @@ export class FlowService {
 
   getCollectionPairs = async (
     userId: number,
-    parentCollection: number,
+    parentCollection?: number,
     count = 5,
   ) => {
     const allVotes = await this.prismaService.collectionVote.findMany({
@@ -255,7 +247,7 @@ export class FlowService {
       i++;
     }
 
-    const pairs = await Promise.all(
+    const res = await Promise.all(
       result.map((pair) =>
         this.prismaService.collection.findMany({
           where: {
@@ -272,11 +264,27 @@ export class FlowService {
       ),
     );
 
+    const pairs = await Promise.all(
+      res.map(
+        async (pair) =>
+          await Promise.all(
+            pair.map(async (collection) => ({
+              ...collection,
+              numOfChildren: await this.countNumOfProjects(collection.id),
+            })),
+          ),
+      ),
+    );
+
     return {
       pairs,
       totalPairs: combinations.flat(0).length,
       votedPairs: allVotes.length,
       type: 'collection' as const,
+      threshold: this.calculateThreshold(
+        allIds.length,
+        parentCollection ? false : true,
+      ),
     };
   };
 
@@ -357,19 +365,22 @@ export class FlowService {
       totalPairs: combinations.flat(0).length,
       votedPairs: allVotes.length,
       type: 'project' as const,
+      threshold: this.calculateThreshold(allIds.length),
     };
   };
 
   getCollectionSubunitType = async (
-    collectionId: number | null,
+    collectionId?: number,
   ): Promise<'project' | 'collection'> => {
     const collections = await this.prismaService.collection.findFirst({
       where: { parent_collection_id: collectionId },
     });
 
-    const projects = await this.prismaService.project.findFirst({
-      where: { collection_id: collectionId },
-    });
+    const projects = collectionId
+      ? await this.prismaService.project.findFirst({
+          where: { collection_id: collectionId },
+        })
+      : null;
 
     if (collections && projects)
       throw new Error(
@@ -377,7 +388,34 @@ export class FlowService {
       );
 
     if (collections) return 'collection';
-    if (projects) return 'project';
+    return 'project';
+  };
+
+  private calculateThreshold = (count: number, forceAll = false) => {
+    if (forceAll) return 1;
+    const threshold = toFixedNumber((2 * count) / (Math.pow(count, 2) / 2), 1);
+    return Math.min(threshold, 1);
+  };
+
+  private countNumOfProjects = async (collecionId: number) => {
+    const type = await this.getCollectionSubunitType(collecionId);
+    let count = 0;
+    if (type === 'collection') {
+      const children = await this.prismaService.collection.findMany({
+        select: { id: true },
+        where: { parent_collection_id: collecionId },
+      });
+      for (const child of children) {
+        count += await this.countNumOfProjects(child.id);
+      }
+    } else if (type === 'project') {
+      const projects = await this.prismaService.project.count({
+        where: { collection_id: collecionId },
+      });
+      count += projects;
+    }
+
+    return count;
   };
 
   private buildVotesMatrix = (
@@ -422,7 +460,7 @@ export class FlowService {
       arr.reduce((a, v) => (v === val ? a + 1 : a), 0);
 
     // Create a map to hold the frequency of each element
-    const frequencyMap = {};
+    const frequencyMap: Record<number, number> = {};
     ids.forEach((i) => (frequencyMap[i] = countOccurrences(ids, i)));
 
     // Create an array of unique elements
@@ -441,7 +479,7 @@ export class FlowService {
   private validateCollectionVote = async (
     collection1Id: number,
     collection2Id: number,
-    pickedId: number,
+    pickedId: number | null,
   ) => {
     if (collection1Id === collection2Id)
       throw new BadRequestException(
@@ -460,14 +498,18 @@ export class FlowService {
       this.prismaService.collection.findFirst({ where: { id: collection2Id } }),
     ]);
 
-    if (collection1.parent_collection_id !== collection2.parent_collection_id)
-      throw new BadRequestException('Collections should have a common parent');
+    if (
+      !collection1 ||
+      !collection2 ||
+      collection1.parent_collection_id !== collection2.parent_collection_id
+    )
+      throw new BadRequestException('Invalid pair of collections');
   };
 
   private validateProjectVote = async (
     project1Id: number,
     project2Id: number,
-    pickedId: number,
+    pickedId: number | null,
   ) => {
     if (project1Id === project2Id)
       throw new BadRequestException(
@@ -482,7 +524,11 @@ export class FlowService {
       this.prismaService.project.findFirst({ where: { id: project2Id } }),
     ]);
 
-    if (project1.collection_id !== project2.collection_id)
-      throw new BadRequestException('Projects should have a common collection');
+    if (
+      !project1 ||
+      !project2 ||
+      project1.collection_id !== project2.collection_id
+    )
+      throw new BadRequestException('Invalid pair of projects');
   };
 }

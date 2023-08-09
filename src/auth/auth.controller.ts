@@ -8,6 +8,7 @@ import {
   Res,
   Req,
   UseGuards,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
@@ -17,6 +18,7 @@ import { UsersService } from 'src/user/users.service';
 import { AuthGuard } from './auth.guard';
 import { LoginDTO } from './dto/login.dto';
 import { ApiResponse } from '@nestjs/swagger';
+import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 
 @Controller({ path: 'auth' })
 export class AuthController {
@@ -37,8 +39,8 @@ export class AuthController {
     description: "You're logged in and the user object is returned",
   })
   @Get('/isLoggedIn')
-  async isLoggedIn(@Req() req) {
-    return req.user;
+  async isLoggedIn(@Req() req: AuthedReq) {
+    return req.userId;
   }
 
   @Post('/logout')
@@ -68,6 +70,9 @@ export class AuthController {
     if (!user) {
       user = await this.usersService.create({ address, isBadgeHolder: true });
     }
+
+    if (!user)
+      throw new UnprocessableEntityException('User can not be created');
 
     await this.prismaService.nonce.deleteMany({
       where: {

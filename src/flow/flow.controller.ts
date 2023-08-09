@@ -78,7 +78,7 @@ export class FlowController {
   @Get('/pairs')
   async getPairs(
     @Req() { userId }: AuthedReq,
-    @Query('cid') collectionId: number,
+    @Query('cid') collectionId?: number,
   ) {
     let pairs: PairsResult;
     const type = await this.flowService.getCollectionSubunitType(collectionId);
@@ -88,19 +88,25 @@ export class FlowController {
         collectionId,
         3,
       );
-    else if (type === 'project')
+    else if (collectionId && type === 'project')
       pairs = await this.flowService.getProjectPairs(userId, collectionId, 3);
+    else pairs = [] as any;
 
     return pairs;
   }
 
-  @ApiQuery({ name: 'cid', description: 'Collection id of the ranking' })
+  @ApiQuery({
+    name: 'cid',
+    description:
+      'Collection id of the ranking (Skip if you look for top level collections)',
+    required: false,
+  })
   @UseGuards(AuthGuard)
   @ApiResponse({ status: 200, description: 'Collection ranking' })
-  @Get('/ranking/:cid')
+  @Get('/ranking')
   async getRanking(
     @Req() { userId }: AuthedReq,
-    @Param('cid') collectionId: number,
+    @Query('cid') collectionId?: number,
   ) {
     let ranking;
     const type = await this.flowService.getCollectionSubunitType(collectionId);
@@ -109,7 +115,7 @@ export class FlowController {
         userId,
         collectionId,
       );
-    else if (type === 'project')
+    else if (collectionId && type === 'project')
       ranking = await this.flowService.getCollectionRankingWithProjectType(
         userId,
         collectionId,
