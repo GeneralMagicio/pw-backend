@@ -52,6 +52,10 @@ export class FlowService {
     }
   };
 
+  getOveralRanking = async (cid = null) => {
+    console.log(cid);
+  };
+
   voteForCollections = async (
     userId: number,
     collection1Id: number,
@@ -226,6 +230,18 @@ export class FlowService {
 
     const combinations = getPairwiseCombinations(allIds);
 
+    if (allVotes.length === combinations.length)
+      return {
+        pairs: [],
+        totalPairs: combinations.length,
+        votedPairs: allVotes.length,
+        type: 'collection' as const,
+        threshold: this.calculateThreshold(
+          allIds.length,
+          parentCollection ? false : true,
+        ),
+      };
+
     const sortedCombinations = sortCombinations(combinations, idRanking);
 
     const result = [];
@@ -276,7 +292,7 @@ export class FlowService {
 
     return {
       pairs,
-      totalPairs: combinations.flat(0).length,
+      totalPairs: combinations.length,
       votedPairs: allVotes.length,
       type: 'collection' as const,
       threshold: this.calculateThreshold(
@@ -322,10 +338,20 @@ export class FlowService {
 
     const combinations = getPairwiseCombinations(allIds);
 
+    if (allVotes.length === combinations.length)
+      return {
+        pairs: [],
+        totalPairs: combinations.length,
+        votedPairs: allVotes.length,
+        type: 'project' as const,
+        threshold: this.calculateThreshold(allIds.length),
+      };
+
     const sortedCombinations = sortCombinations(combinations, idRanking);
 
     const result = [];
     let i = 0;
+
     while (result.length < count) {
       const combination = sortedCombinations[i];
       const px = combination[0];
@@ -360,7 +386,7 @@ export class FlowService {
 
     return {
       pairs,
-      totalPairs: combinations.flat(0).length,
+      totalPairs: combinations.length,
       votedPairs: allVotes.length,
       type: 'project' as const,
       threshold: this.calculateThreshold(allIds.length),
