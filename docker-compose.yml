@@ -1,0 +1,34 @@
+version: '3.9'
+
+services:
+  pw-backend:
+    build: 
+      context: .
+    container_name: pw-backend
+    networks:
+      - pw-backend
+    volumes:
+      - ./data:/usr/src/app/data
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    networks:
+      - pw-backend
+    ports:
+      - 80:80
+      - 443:443
+    env_file:
+      - .env
+    environment:
+      PW_BACKEND_URL: ${PW_BACKEND_URL:-}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile
+
+networks:
+  pw-backend:
+volumes:
+  caddy_data:
+  caddy_config:
