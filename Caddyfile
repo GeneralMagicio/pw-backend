@@ -1,0 +1,3 @@
+{$PW_BACKEND_URL} {
+  reverse_proxy pw-backend:3000
+}
