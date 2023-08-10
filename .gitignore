@@ -5,7 +5,7 @@
 
 # Envs
 
-.env
+.env*
 
 # Logs
 logs

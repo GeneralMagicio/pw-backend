@@ -86,10 +86,10 @@ export class FlowController {
       pairs = await this.flowService.getCollectionPairs(
         userId,
         collectionId,
-        3,
+        1,
       );
     else if (collectionId && type === 'project')
-      pairs = await this.flowService.getProjectPairs(userId, collectionId, 3);
+      pairs = await this.flowService.getProjectPairs(userId, collectionId, 1);
     else pairs = [] as any;
 
     return pairs;
