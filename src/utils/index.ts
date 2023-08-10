@@ -81,3 +81,5 @@ export const sortCombinations = (combinations: number[][], order: number[]) => {
 
   return sorted;
 };
+
+export const STAGING_API = 'pairwise.iran.liara.run/';

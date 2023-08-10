@@ -19,6 +19,7 @@ import { AuthGuard } from './auth.guard';
 import { LoginDTO } from './dto/login.dto';
 import { ApiResponse } from '@nestjs/swagger';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
+import { STAGING_API } from 'src/utils';
 
 @Controller({ path: 'auth' })
 export class AuthController {
@@ -49,10 +50,7 @@ export class AuthController {
     res.clearCookie('auth', {
       httpOnly: true,
       // sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
-      domain:
-        process.env.NODE_ENV === 'development'
-          ? undefined
-          : 'pairwise.generalmagic.io',
+      domain: process.env.NODE_ENV === 'development' ? undefined : STAGING_API,
       secure: true,
     });
     res.send('Logged out.');
@@ -93,10 +91,7 @@ export class AuthController {
     res.cookie('auth', nonce, {
       httpOnly: true,
       // sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
-      domain:
-        process.env.NODE_ENV === 'development'
-          ? undefined
-          : 'pairwise.generalmagic.io',
+      domain: process.env.NODE_ENV === 'development' ? undefined : STAGING_API,
       secure: true,
       expires: new Date(Date.now() + this.authService.TokenExpirationDuration),
     });
