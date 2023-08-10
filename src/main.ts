@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as fs from 'fs';
 import * as cors from 'cors';
 import * as cookieParser from 'cookie-parser';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   let httpsOptions = undefined;
@@ -14,7 +15,17 @@ async function bootstrap() {
     };
   }
   const app = await NestFactory.create(AppModule, { httpsOptions });
-  app.use(cors({ credentials: true, origin: 'https://localhost:3001' }));
+  // app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.use(
+    cors({
+      credentials: true,
+      origin: [
+        'https://localhost:3001',
+        'https://staging.pairwise.generalmagic.io',
+      ],
+    }),
+  );
   app.use(cookieParser());
 
   const config = new DocumentBuilder()
@@ -26,6 +37,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('swagger', app, document);
 
-  await app.listen(7070, '0.0.0.0');
+  await app.listen(process.env.PORT || 7070, '0.0.0.0');
 }
 bootstrap();

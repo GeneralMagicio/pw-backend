@@ -8,6 +8,7 @@ import {
   Res,
   Req,
   UseGuards,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
@@ -17,6 +18,7 @@ import { UsersService } from 'src/user/users.service';
 import { AuthGuard } from './auth.guard';
 import { LoginDTO } from './dto/login.dto';
 import { ApiResponse } from '@nestjs/swagger';
+import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 
 @Controller({ path: 'auth' })
 export class AuthController {
@@ -37,19 +39,20 @@ export class AuthController {
     description: "You're logged in and the user object is returned",
   })
   @Get('/isLoggedIn')
-  async isLoggedIn(@Req() req) {
-    return req.user;
+  async isLoggedIn(@Req() req: AuthedReq) {
+    return req.userId;
   }
 
   @Post('/logout')
   async logout(@Res() res: Response) {
+    // expire the token from the db because the expiration time of the tokens are rather long
     res.clearCookie('auth', {
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
+      // sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
       domain:
-        process.env.NODE_ENV === 'staging'
-          ? 'pairwise.iran.liara.run'
-          : undefined,
+        process.env.NODE_ENV === 'development'
+          ? undefined
+          : 'pairwise.generalmagic.io',
       secure: true,
     });
     res.send('Logged out.');
@@ -68,6 +71,9 @@ export class AuthController {
       user = await this.usersService.create({ address, isBadgeHolder: true });
     }
 
+    if (!user)
+      throw new UnprocessableEntityException('User can not be created');
+
     await this.prismaService.nonce.deleteMany({
       where: {
         user_id: user.id,
@@ -80,19 +86,19 @@ export class AuthController {
       },
       data: {
         user_id: user.id,
-        expires_at: `${Date.now() + 30 * 60 * 1000}`, // in 30 mins
+        expires_at: `${Date.now() + this.authService.TokenExpirationDuration}`,
       },
     });
 
     res.cookie('auth', nonce, {
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
+      // sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
       domain:
-        process.env.NODE_ENV === 'staging'
-          ? 'pairwise.iran.liara.run'
-          : undefined,
+        process.env.NODE_ENV === 'development'
+          ? undefined
+          : 'pairwise.generalmagic.io',
       secure: true,
-      expires: new Date(Date.now() + 30 * 60 * 1000),
+      expires: new Date(Date.now() + this.authService.TokenExpirationDuration),
     });
 
     res.status(200).send('Success');
@@ -109,7 +115,7 @@ export class AuthController {
     await this.prismaService.nonce.create({
       data: {
         nonce,
-        expires_at: `${Date.now() + 2 * 60 * 1000}`, // in 2 mins
+        expires_at: `${Date.now() + this.authService.NonceExpirationDuration}`,
       },
     });
     return nonce;

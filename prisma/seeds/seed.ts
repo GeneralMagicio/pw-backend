@@ -7,7 +7,7 @@ const readExcelFile = (
   const workbook = XLSX.readFile(filePath);
   const sheetNameList = workbook.SheetNames;
   const sheet1 = workbook.Sheets[sheetNameList[0]];
-  const data = XLSX.utils.sheet_to_json(sheet1, { header: 1 });
+  const data: any[][] = XLSX.utils.sheet_to_json(sheet1, { header: 1 });
 
   const result: Array<{ collection: string; name: string }> = [];
   for (let i = 1; i < data.length; i++) {
@@ -68,28 +68,25 @@ const seed = async () => {
   });
 
   await prisma.$connect();
-  // add space
 
-  // console.log('is defined:', prisma.space.create);
-  // const space = getSpace();
-  // // console.log('space',  space);
-  // await prisma.space.create({
-  //   data: space,
-  // });
+  const space = getSpace();
+  await prisma.space.create({
+    data: space,
+  });
 
-  // // add poll
-  // const poll = getPoll();
-  // await prisma.poll.create({
-  //   data: poll,
-  // });
+  // add poll
+  const poll = getPoll();
+  await prisma.poll.create({
+    data: poll,
+  });
 
-  // // add collections
-  // const collections = getCollections();
-  // await prisma.collection.createMany({
-  //   data: collections,
-  // });
+  // add collections
+  const collections = getCollections();
+  await prisma.collection.createMany({
+    data: collections,
+  });
 
-  // // add projects
+  // add projects
 
   const projects = getProjects();
   await prisma.project.createMany({

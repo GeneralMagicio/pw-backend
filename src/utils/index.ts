@@ -56,3 +56,28 @@ export const validateData = (
 export const hashData = (data: string): Promise<string> => {
   return bcrypt.hash(data, 10);
 };
+
+export const getPairwiseCombinations = (ids: number[]) => {
+  const combinations: number[][] = [];
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      combinations.push([ids[i], ids[j]]);
+    }
+  }
+  return combinations;
+};
+
+export const sortCombinations = (combinations: number[][], order: number[]) => {
+  const getScore = (item: number) => order.findIndex((el) => el === item);
+
+  const sorted = [...combinations];
+
+  sorted.sort((c1, c2) => {
+    const c1Score = getScore(c1[0]) + getScore(c1[1]);
+    const c2Score = getScore(c2[0]) + getScore(c2[1]);
+
+    return c1Score - c2Score;
+  });
+
+  return sorted;
+};

@@ -9,14 +9,24 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   constructor(private readonly prismaService: PrismaService) {}
 
-  getUserId = async (walletAddress: string) => {
-    const { id } = await this.prismaService.user.findFirst({
-      select: { id: true },
-      where: { address: walletAddress },
-    });
+  /**
+   * 12 hours
+   */
+  public TokenExpirationDuration = 12 * 60 * 60 * 1000; // 12 hours
 
-    return id;
-  };
+  /**
+   * 2 minutes
+   */
+  public NonceExpirationDuration = 2 * 60 * 1000; // 2 minutes
+
+  // getUserId = async (walletAddress: string) => {
+  //   const { id } = await this.prismaService.user.findFirst({
+  //     select: { id: true },
+  //     where: { address: walletAddress },
+  //   });
+
+  //   return id;
+  // };
 
   cleanUpExpiredNonces = async () => {
     await this.prismaService.nonce.deleteMany({
@@ -83,84 +93,4 @@ export class AuthService {
       return false;
     }
   };
-
-  // async login(
-  //   email: string,
-  //   password: string,
-  //   twoFAToken?: string,
-  // ): Promise<UserAuthToken> {
-  //   const user = await this.usersService.findOne({
-  //     where: { email },
-  //     include: { artist: true },
-  //   });
-
-  //   if (!user) {
-  //     throw new NotFoundException(`No user found for email: ${email}`);
-  //   }
-
-  //   if (user.status === UserStatus.RESTRICTED) {
-  //     throw new UnauthorizedException('Your account is inactive');
-  //   } else if (user.status === UserStatus.DELETED) {
-  //     throw new UnauthorizedException('Your account is deleted');
-  //   }
-
-  //   const passwordValid = await Utils.validatePassword(password, user.password);
-
-  //   if (user.twoFASecret) {
-  //     if (!twoFAToken) {
-  //       throw new UnauthorizedException('Two factor authentication required');
-  //     } else {
-  //       if (!this.isTwoFACodeValid(twoFAToken, user)) {
-  //         throw new BadRequestException(
-  //           'Invalid two factor authentication token',
-  //         );
-  //       }
-  //     }
-  //   }
-
-  //   if (!passwordValid) {
-  //     throw new BadRequestException('Invalid password');
-  //   }
-
-  //   if (isEmailNotVerified(user.status)) {
-  //     await this.requestEmailVerification(email);
-  //   }
-
-  //   return {
-  //     ...this.generateTokens({
-  //       user_id: user.id,
-  //     }),
-  //     user,
-  //   };
-  // }
-
-  // getUserFromToken(token: string): Promise<User> {
-  //   const decodedToken = this.jwtService.decode(token);
-
-  //   if (!decodedToken) {
-  //     throw new BadRequestException('Invalid token');
-  //   }
-
-  //   return this.usersService.findOne({
-  //     where: { id: decodedToken['user_id'] },
-  //     include: { artist: true },
-  //   });
-  // }
-
-  // private generateAccessToken(payload: { user_id: string }): string {
-  //   const securityConfig = this.configService.get<SecurityConfig>('security');
-  //   // TODO: Check if this is how to do this. This doesn't match the template
-  //   return this.jwtService.sign(payload, {
-  //     secret: securityConfig.jwt_access_secret,
-  //     expiresIn: securityConfig.expiresIn,
-  //   });
-  // }
-
-  // private generateRefreshToken(payload: { user_id: string }): string {
-  //   const securityConfig = this.configService.get<SecurityConfig>('security');
-  //   return this.jwtService.sign(payload, {
-  //     secret: securityConfig.jwt_refresh_secret,
-  //     expiresIn: securityConfig.refreshIn,
-  //   });
-  // }
 }
