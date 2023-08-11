@@ -18,6 +18,7 @@ import { VoteProjectsDTO } from './dto/voteProjects.dto';
 import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
+import { sortProjectId } from 'src/utils';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -46,12 +47,8 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Body() { project1Id, project2Id, pickedId }: VoteProjectsDTO,
   ) {
-    return this.flowService.voteForProjects(
-      userId,
-      project1Id,
-      project2Id,
-      pickedId,
-    );
+    const [id1, id2] = sortProjectId(project1Id, project2Id);
+    return await this.flowService.voteForProjects(userId, id1, id2, pickedId);
   }
 
   @UseGuards(AuthGuard)
@@ -60,10 +57,11 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Body() { collection1Id, collection2Id, pickedId }: VoteCollectionsDTO,
   ) {
-    return this.flowService.voteForCollections(
+    const [id1, id2] = sortProjectId(collection1Id, collection2Id);
+    return await this.flowService.voteForCollections(
       userId,
-      collection1Id,
-      collection2Id,
+      id1,
+      id2,
       pickedId,
     );
   }
@@ -136,4 +134,40 @@ export class FlowController {
       where: { user_id: userId },
     });
   }
+
+  // @Get('/correctInvalid')
+  // async checkForInvalid() {
+  //   const allInvalidVotes = await this.prismaService.projectVote.findMany({
+  //     select: { id: true, project1_id: true, project2_id: true },
+  //     where: {
+  //       project1_id: { lt: this.prismaService.projectVote.fields.project2_id },
+  //     },
+  //   });
+
+  //   console.log('number of votes:', allInvalidVotes.length);
+
+  // for (let i = 0; i < allInvalidVotes.length; i++) {
+  //   const item = allInvalidVotes[i];
+  //   console.log('this id was invalid:', item.id);
+  //   await this.prismaService.projectVote.update({
+  //     where: { id: item.id },
+  //     data: { project1_id: item.project2_id, project2_id: item.project1_id },
+  //   });
+  // }
+
+  // allVotes.forEach((vote, i, votes) => {
+  //   const index = votes.findIndex(
+  //     (vote2) =>
+  //       (vote.id !== vote2.id &&
+  //         vote.user_id === vote2.user_id &&
+  //         vote.project1_id === vote2.project1_id &&
+  //         vote.project2_id === vote2.project2_id) ||
+  //       (vote.id !== vote2.id &&
+  //         vote.user_id === vote2.user_id &&
+  //         vote.project1_id === vote2.project2_id &&
+  //         vote.project2_id === vote2.project1_id),
+  //   );
+  //   if (index !== -1) console.log(vote, votes[index]);
+  // });
+  // }
 }

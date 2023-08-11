@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { getPairwiseCombinations, sortCombinations } from 'src/utils';
 import {
@@ -510,6 +515,11 @@ export class FlowService {
         'Collection 1 and collection 2 ids should be different',
       );
 
+    if (collection1Id > collection2Id)
+      throw new InternalServerErrorException(
+        'Conventionally, collection1Id must be less than collection2Id',
+      );
+
     if (
       pickedId !== null &&
       pickedId !== collection1Id &&
@@ -538,6 +548,11 @@ export class FlowService {
     if (project1Id === project2Id)
       throw new BadRequestException(
         'Project 1 and project 2 ids should be different',
+      );
+
+    if (project1Id > project2Id)
+      throw new InternalServerErrorException(
+        'Conventionally, project1Id must be less than project2Id',
       );
 
     if (pickedId !== null && pickedId !== project1Id && pickedId !== project2Id)

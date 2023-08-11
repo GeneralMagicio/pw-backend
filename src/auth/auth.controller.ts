@@ -49,7 +49,7 @@ export class AuthController {
     // expire the token from the db because the expiration time of the tokens are rather long
     res.clearCookie('auth', {
       httpOnly: true,
-      // sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
+      sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
       domain: process.env.NODE_ENV === 'development' ? undefined : STAGING_API,
       secure: true,
     });
@@ -90,7 +90,7 @@ export class AuthController {
 
     res.cookie('auth', nonce, {
       httpOnly: true,
-      // sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
+      sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
       domain: process.env.NODE_ENV === 'development' ? undefined : STAGING_API,
       secure: true,
       expires: new Date(Date.now() + this.authService.TokenExpirationDuration),
