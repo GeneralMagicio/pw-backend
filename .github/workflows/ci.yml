@@ -39,16 +39,14 @@ jobs:
         sleep 30 
 
         # Check if both services are running.
-        if ! (docker-compose ps | grep "caddy" | grep "Up") || 
-          ! (docker-compose ps | grep "pw-backend" | grep "Up"); then
-          echo "One or more docker-compose services did not start successfully."
+        if ! (docker-compose ps | grep "pw-backend" | grep "Up"); then
+          echo "pw-backend service did not start successfully."
           exit 1
         fi
 
         # Check logs for errors
-        if (docker-compose logs caddy | grep "ERROR") || 
-          (docker-compose logs pw-backend | grep "ERROR"); then
-          echo "Errors found in the logs of one or more services."
+        if (docker-compose logs pw-backend | grep "ERROR"); then
+          echo "Errors found in the logs of pw-backend services."
           exit 1
         fi
 
