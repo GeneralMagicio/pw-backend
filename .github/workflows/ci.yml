@@ -27,9 +27,9 @@ jobs:
 
     - name: Update .env file
       run: |
-        echo "DATABASE_URL='postgresql://postgres:postgres@postgres:5432/my_db?connect_timeout=30&pool_timeout=30&socket_timeout=30'" >> .env && \
-        echo "NODE_ENV='production'" >> .env && \
-        echo "PORT=7070" >> .env && \
+        echo "DATABASE_URL=\"postgresql://postgres:postgres@postgres:5432/my_db\"" >> .env
+        echo "NODE_ENV='production'" >> .env
+        echo "PORT=7070" >> .env
         echo "PW_BACKEND_URL='localhost'" >> .env
 
     - name: Test docker-compose setup
