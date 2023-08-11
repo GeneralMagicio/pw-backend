@@ -135,6 +135,26 @@ export class FlowController {
     });
   }
 
+  // @UseGuards(AuthGuard)
+  // @ApiResponse({ status: 200, description: 'All your voting data is removed' })
+  // @Get('/insertImage')
+  // async insertImages(@Req() { userId }: AuthedReq) {
+  //   const collections = await this.prismaService.collection.findMany({
+  //     select: { id: true, name: true },
+  //   });
+
+  //   await Promise.all(
+  //     collections.map(async (collection) => {
+  //       await this.prismaService.collection.update({
+  //         where: { id: collection.id },
+  //         data: {
+  //           image: `https://wsrv.nl/?url=pairwise.cupofjoy.store/rpgf2/${collection.name}.png`,
+  //         },
+  //       });
+  //     }),
+  //   );
+  // }
+
   // @Get('/correctInvalid')
   // async checkForInvalid() {
   //   const allInvalidVotes = await this.prismaService.projectVote.findMany({

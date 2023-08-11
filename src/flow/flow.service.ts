@@ -35,7 +35,7 @@ export class FlowService {
     project2Id: number,
     pickedId: number | null,
   ) => {
-    this.validateProjectVote(project1Id, project2Id, pickedId);
+    await this.validateProjectVote(project1Id, project2Id, pickedId);
     const payload = {
       user_id: userId,
       project1_id: project1Id,
@@ -67,7 +67,7 @@ export class FlowService {
     collection2Id: number,
     pickedId: number | null,
   ) => {
-    this.validateCollectionVote(collection1Id, collection2Id, pickedId);
+    await this.validateCollectionVote(collection1Id, collection2Id, pickedId);
     const payload = {
       user_id: userId,
       collection1_id: collection1Id,
@@ -401,22 +401,25 @@ export class FlowService {
   getCollectionSubunitType = async (
     collectionId?: number,
   ): Promise<'project' | 'collection'> => {
-    const collections = await this.prismaService.collection.findFirst({
+    const collection = await this.prismaService.collection.findFirst({
       where: { parent_collection_id: collectionId },
     });
 
-    const projects = collectionId
+    const project = collectionId
       ? await this.prismaService.project.findFirst({
           where: { collection_id: collectionId },
         })
       : null;
 
-    if (collections && projects)
-      throw new Error(
+    if (collection && project)
+      throw new InternalServerErrorException(
         'A collection can not have both projects and collections as its subunits',
       );
 
-    if (collections) return 'collection';
+    if (!collection && !project)
+      throw new BadRequestException('Invalid collection id');
+
+    if (collection) return 'collection';
     return 'project';
   };
 
