@@ -1,0 +1,54 @@
+name: deploy-pipeline
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Define the PostgreSQL service
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: my_db
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Update .env file
+      run: |
+        echo "DATABASE_URL='postgresql://postgres:postgres@postgres/my_db?connect_timeout=30&pool_timeout=30&socket_timeout=30'" >> .env
+        echo "NODE_ENV='production' >> .env
+        echo "PORT=7070" >> .env
+
+    - name: Test docker-compose setup
+      run: |
+        docker-compose build
+        docker-compose up -d
+        sleep 30 
+
+        # Check if both services are running.
+        if ! (docker-compose ps | grep "caddy" | grep "Up") || 
+          ! (docker-compose ps | grep "pw-backend" | grep "Up"); then
+          echo "One or more docker-compose services did not start successfully."
+          exit 1
+        fi
+
+        # Check logs for errors
+        if (docker-compose logs caddy | grep "ERROR") || 
+          (docker-compose logs pw-backend | grep "ERROR"); then
+          echo "Errors found in the logs of one or more services."
+          exit 1
+        fi
+
+        docker-compose down
