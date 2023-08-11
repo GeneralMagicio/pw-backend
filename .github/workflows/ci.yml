@@ -27,6 +27,9 @@ jobs:
 
     - name: Update .env file
       run: |
+        echo "DATABASE_URL='postgresql://postgres:postgres@postgres:5432/my_db'" >> .env
+        echo "NODE_ENV='production'" >> .env
+        echo "PORT=7070" >> .env
         echo "PW_BACKEND_URL='localhost'" >> .env
 
     - name: Test docker-compose setup
@@ -50,8 +53,3 @@ jobs:
         fi
 
         docker-compose down
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@postgres:5432/my_db
-        NODE_ENV: production
-        PORT: 7070
-        PW_BACKEND_URL: localhost
