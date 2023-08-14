@@ -101,19 +101,24 @@ export class FlowService {
     userId: number,
     collectionId: number,
   ) => {
-    const allVotes = await this.prismaService.projectVote.findMany({
-      where: {
-        user_id: userId,
-        project1: { collection_id: collectionId },
-        project2: { collection_id: collectionId },
-      },
-    });
-
-    const allProjects = await this.prismaService.project.findMany({
-      where: {
-        collection_id: collectionId,
-      },
-    });
+    const [collection, allVotes, allProjects] = await Promise.all([
+      this.prismaService.collection.findUnique({
+        where: { id: collectionId },
+        select: { name: true },
+      }),
+      this.prismaService.projectVote.findMany({
+        where: {
+          user_id: userId,
+          project1: { collection_id: collectionId },
+          project2: { collection_id: collectionId },
+        },
+      }),
+      this.prismaService.project.findMany({
+        where: {
+          collection_id: collectionId,
+        },
+      }),
+    ]);
 
     const mappingObject: Record<number, number> = allProjects.reduce(
       (acc, project, index) => ({ ...acc, [index]: project.id }),
@@ -143,26 +148,34 @@ export class FlowService {
       })),
     );
 
-    return ranking.sort((a, b) => b.share - a.share);
+    return {
+      collectionTitle: collection?.name,
+      ranking: ranking.sort((a, b) => b.share - a.share),
+    };
   };
 
   getCollectionRankingWithCollectionType = async (
     userId: number,
     collectionId?: number,
   ) => {
-    const allVotes = await this.prismaService.collectionVote.findMany({
-      where: {
-        user_id: userId,
-        collection1: { parent_collection_id: collectionId },
-        collection2: { parent_collection_id: collectionId },
-      },
-    });
-
-    const allCollections = await this.prismaService.collection.findMany({
-      where: {
-        parent_collection_id: collectionId,
-      },
-    });
+    const [collection, allVotes, allCollections] = await Promise.all([
+      this.prismaService.collection.findFirst({
+        select: { name: true },
+        where: { id: collectionId || -1 },
+      }),
+      this.prismaService.collectionVote.findMany({
+        where: {
+          user_id: userId,
+          collection1: { parent_collection_id: collectionId },
+          collection2: { parent_collection_id: collectionId },
+        },
+      }),
+      this.prismaService.collection.findMany({
+        where: {
+          parent_collection_id: collectionId,
+        },
+      }),
+    ]);
 
     const mappingObject: Record<number, number> = allCollections.reduce(
       (acc, project, index) => ({ ...acc, [index]: project.id }),
@@ -192,7 +205,10 @@ export class FlowService {
       })),
     );
 
-    return ranking.sort((a, b) => b.share - a.share);
+    return {
+      collectionTitle: collection?.name || 'Root',
+      ranking: ranking.sort((a, b) => b.share - a.share),
+    };
   };
 
   getCollectionPairs = async (
