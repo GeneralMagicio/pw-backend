@@ -200,19 +200,24 @@ export class FlowService {
     parentCollection?: number,
     count = 5,
   ) => {
-    const allVotes = await this.prismaService.collectionVote.findMany({
-      where: {
-        user_id: userId,
-        collection1: { parent_collection_id: parentCollection },
-        collection2: { parent_collection_id: parentCollection },
-      },
-    });
-
-    const allCollections = await this.prismaService.collection.findMany({
-      where: {
-        parent_collection_id: parentCollection,
-      },
-    });
+    const [collection, allVotes, allCollections] = await Promise.all([
+      this.prismaService.collection.findUnique({
+        where: { id: parentCollection || -1 },
+        select: { name: true },
+      }),
+      this.prismaService.collectionVote.findMany({
+        where: {
+          user_id: userId,
+          collection1: { parent_collection_id: parentCollection },
+          collection2: { parent_collection_id: parentCollection },
+        },
+      }),
+      this.prismaService.collection.findMany({
+        where: {
+          parent_collection_id: parentCollection,
+        },
+      }),
+    ]);
 
     const votedIds = allVotes.reduce(
       (acc, vote) => [...acc, vote.collection1_id, vote.collection2_id],
@@ -240,6 +245,7 @@ export class FlowService {
         pairs: [],
         totalPairs: combinations.length,
         votedPairs: allVotes.length,
+        collectionTitle: collection?.name || 'Root',
         type: 'collection' as const,
         threshold: this.calculateThreshold(
           allIds.length,
@@ -300,6 +306,7 @@ export class FlowService {
       totalPairs: combinations.length,
       votedPairs: allVotes.length,
       type: 'collection' as const,
+      collectionTitle: collection?.name || 'Root',
       threshold: this.calculateThreshold(
         allIds.length,
         parentCollection ? false : true,
@@ -308,19 +315,24 @@ export class FlowService {
   };
 
   getProjectPairs = async (userId: number, collectionId: number, count = 5) => {
-    const allVotes = await this.prismaService.projectVote.findMany({
-      where: {
-        user_id: userId,
-        project1: { collection_id: collectionId },
-        project2: { collection_id: collectionId },
-      },
-    });
-
-    const allProjects = await this.prismaService.project.findMany({
-      where: {
-        collection_id: collectionId,
-      },
-    });
+    const [collection, allVotes, allProjects] = await Promise.all([
+      this.prismaService.collection.findUnique({
+        where: { id: collectionId },
+        select: { name: true },
+      }),
+      this.prismaService.projectVote.findMany({
+        where: {
+          user_id: userId,
+          project1: { collection_id: collectionId },
+          project2: { collection_id: collectionId },
+        },
+      }),
+      this.prismaService.project.findMany({
+        where: {
+          collection_id: collectionId,
+        },
+      }),
+    ]);
 
     const votedIds = allVotes.reduce(
       (acc, vote) => [...acc, vote.project1_id, vote.project2_id],
@@ -348,6 +360,7 @@ export class FlowService {
         pairs: [],
         totalPairs: combinations.length,
         votedPairs: allVotes.length,
+        collectionTitle: collection?.name,
         type: 'project' as const,
         threshold: this.calculateThreshold(allIds.length),
       };
@@ -393,6 +406,7 @@ export class FlowService {
       pairs,
       totalPairs: combinations.length,
       votedPairs: allVotes.length,
+      collectionTitle: collection?.name,
       type: 'project' as const,
       threshold: this.calculateThreshold(allIds.length),
     };
