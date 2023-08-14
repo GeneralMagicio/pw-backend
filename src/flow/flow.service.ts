@@ -296,6 +296,7 @@ export class FlowService {
             pair.map(async (collection) => ({
               ...collection,
               numOfChildren: await this.countNumOfProjects(collection.id),
+              childProjects: await this.getChildProjects(collection.id),
             })),
           ),
       ),
@@ -441,6 +442,27 @@ export class FlowService {
     if (forceAll) return 1;
     const threshold = toFixedNumber((2 * count) / (Math.pow(count, 2) / 2), 1);
     return Math.min(threshold, 1);
+  };
+
+  private getChildProjects = async (collecionId: number) => {
+    const type = await this.getCollectionSubunitType(collecionId);
+    const result: unknown[] = [];
+    if (type === 'collection') {
+      const children = await this.prismaService.collection.findMany({
+        select: { id: true },
+        where: { parent_collection_id: collecionId },
+      });
+      for (const child of children) {
+        result.push(await this.getChildProjects(child.id));
+      }
+    } else if (type === 'project') {
+      const projects = await this.prismaService.project.findMany({
+        where: { collection_id: collecionId },
+      });
+      result.push(projects);
+    }
+
+    return result;
   };
 
   private countNumOfProjects = async (collecionId: number) => {
