@@ -14,6 +14,7 @@ model User {
   created_at      DateTime         @default(now())
   collectionVotes CollectionVote[]
   projectVotes    ProjectVote[]
+  expertiseVotes  ExpertiseVote[]
   results         Result[]
   nonce           Nonce?
 }
@@ -55,7 +56,10 @@ model Collection {
   projects             Project[]
   options1             CollectionVote[] @relation("VoteToCollection1")
   options2             CollectionVote[] @relation("VoteToCollection2")
+  expertiseOptions1    ExpertiseVote[]  @relation("ExpertiseVoteToCollection1")
+  expertiseOptions2    ExpertiseVote[]  @relation("ExpertiseVoteToCollection2")
   voted                CollectionVote[] @relation("Voted")
+  expertiseVoted       ExpertiseVote[]  @relation("ExpertiseVoted")
 }
 
 model Result {
@@ -80,6 +84,22 @@ model Project {
   options1      ProjectVote[] @relation("VoteToProject1")
   options2      ProjectVote[] @relation("VoteToProject2")
   voted         ProjectVote[] @relation("Voted")
+}
+
+model ExpertiseVote {
+  id             Int         @id @default(autoincrement())
+  user_id        Int
+  collection1_id Int
+  collection2_id Int
+  picked_id      Int?
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @default(now())
+  user           User        @relation(fields: [user_id], references: [id])
+  collection1    Collection  @relation("ExpertiseVoteToCollection1", fields: [collection1_id], references: [id])
+  collection2    Collection  @relation("ExpertiseVoteToCollection2", fields: [collection2_id], references: [id])
+  picked         Collection? @relation("ExpertiseVoted", fields: [picked_id], references: [id])
+
+  @@unique([collection1_id, collection2_id, user_id])
 }
 
 model CollectionVote {

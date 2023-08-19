@@ -19,14 +19,59 @@ export class FlowService {
 
   // This would determine the latest collection a user has voted in
   // So they can pick up where they've left off
-  determineLatestCollection = async (userId: number) => {
-    const latestVote = await this.prismaService.projectVote.findFirst({
+  determineResumeVoting = async (userId: number) => {
+    const latestProjectVote = await this.prismaService.projectVote.findFirst({
       where: { user_id: userId },
       orderBy: { updated_at: 'desc' },
       include: { project1: true },
     });
 
-    return latestVote?.project1.collection_id || null;
+    const latestCollectionVote =
+      await this.prismaService.collectionVote.findFirst({
+        where: { user_id: userId },
+        orderBy: { updated_at: 'desc' },
+        include: { collection1: true },
+      });
+
+    if (!latestProjectVote && !latestCollectionVote) return null;
+
+    if (latestCollectionVote && latestProjectVote) {
+      if (latestProjectVote.updated_at > latestCollectionVote.updated_at)
+        return latestProjectVote.project1.collection_id;
+      else return latestCollectionVote.collection1.parent_collection_id;
+    }
+
+    return (
+      latestProjectVote?.project1.collection_id ||
+      latestCollectionVote?.collection1.parent_collection_id
+    );
+  };
+
+  collectionIsLocked = async (
+    userId: number,
+    collectionId: number,
+  ): Promise<boolean> => {
+    const collection = await this.prismaService.collection.findUnique({
+      where: { id: collectionId },
+      include: { parent_collection: true },
+    });
+
+    if (!collection) throw new Error('Collection id invalid');
+
+    const isTopLevel = collection.parent_collection === null;
+
+    if (!isTopLevel)
+      return this.collectionIsLocked(userId, collection.parent_collection_id!);
+
+    const nextCollection = await this.getNextHigherExpertiseCollection(
+      userId,
+      collectionId,
+    );
+
+    // it's the collection with the highest expertise
+    if (nextCollection === null) return false;
+    if (await this.hasThresholdVotes(nextCollection.id, userId)) return false;
+    return true;
   };
 
   voteForProjects = async (
@@ -59,6 +104,34 @@ export class FlowService {
 
   getOveralRanking = async (cid = null) => {
     console.log(cid);
+  };
+
+  voteForExpertise = async (
+    userId: number,
+    collection1Id: number,
+    collection2Id: number,
+    pickedId: number | null,
+  ) => {
+    await this.validateExpertiseVote(collection1Id, collection2Id, pickedId);
+    const payload = {
+      user_id: userId,
+      collection1_id: collection1Id,
+      collection2_id: collection2Id,
+      picked_id: pickedId,
+    };
+    const vote = await this.prismaService.expertiseVote.findFirst({
+      where: { ...payload, picked_id: undefined },
+    });
+    if (vote) {
+      await this.prismaService.expertiseVote.update({
+        data: payload,
+        where: { id: vote.id },
+      });
+    } else {
+      await this.prismaService.expertiseVote.create({
+        data: payload,
+      });
+    }
   };
 
   voteForCollections = async (
@@ -152,6 +225,86 @@ export class FlowService {
       collectionTitle: collection?.name,
       ranking: ranking.sort((a, b) => b.share - a.share),
     };
+  };
+
+  getExpertiseRanking = async (userId: number) => {
+    const [allVotes, allCollections] = await Promise.all([
+      this.prismaService.expertiseVote.findMany({
+        where: {
+          user_id: userId,
+          collection1: { parent_collection_id: null },
+          collection2: { parent_collection_id: null },
+        },
+      }),
+      this.prismaService.collection.findMany({
+        where: {
+          parent_collection_id: null,
+        },
+      }),
+    ]);
+
+    const mappingObject: Record<number, number> = allCollections.reduce(
+      (acc, project, index) => ({ ...acc, [index]: project.id }),
+      {},
+    );
+
+    const zeroBasedMappingFunction = (index: number) => mappingObject[index];
+
+    const matrix = this.buildVotesMatrix(
+      allVotes.map(({ collection1_id, collection2_id, picked_id }) => ({
+        id1: collection1_id,
+        id2: collection2_id,
+        picked_id: picked_id,
+      })),
+      allCollections.map(({ id }) => ({ id })),
+      zeroBasedMappingFunction,
+    );
+
+    const result = getRankingForSetOfDampingFactors(matrix);
+
+    const ranking = await Promise.all(
+      result.map(async (item, index) => ({
+        share: item,
+        project: await this.prismaService.collection.findUnique({
+          where: { id: zeroBasedMappingFunction(index) },
+        }),
+      })),
+    );
+
+    return {
+      collectionTitle: 'Root',
+      ranking: ranking.sort((a, b) => b.share - a.share),
+    };
+  };
+
+  getNextHigherExpertiseCollection = async (
+    userId: number,
+    collectionId: number,
+  ) => {
+    const { ranking } = await this.getExpertiseRanking(userId);
+
+    const index = ranking.findIndex(
+      (item) => item.project?.id === collectionId,
+    );
+
+    if (index === 0) return null;
+
+    return ranking[index - 1].project;
+  };
+
+  getPreviousLowerExpertiseCollection = async (
+    userId: number,
+    collectionId: number,
+  ) => {
+    const { ranking } = await this.getExpertiseRanking(userId);
+
+    const index = ranking.findIndex(
+      (item) => item.project?.id === collectionId,
+    );
+
+    if (index === ranking.length - 1) return null;
+
+    return ranking[index + 1].project;
   };
 
   getCollectionRankingWithCollectionType = async (
@@ -454,6 +607,57 @@ export class FlowService {
     return 'project';
   };
 
+  hasThresholdVotes = async (
+    collectionId: number,
+    userId: number,
+  ): Promise<boolean> => {
+    const type = await this.getCollectionSubunitType(collectionId);
+    const collection = await this.prismaService.collection.findUnique({
+      where: { id: collectionId },
+      include: {
+        projects: type === 'project',
+        subCollections: type === 'collection',
+      },
+    });
+    if (!collection) throw new BadRequestException('Collection id invalid');
+
+    const { projects, subCollections, parent_collection_id } = collection;
+
+    const count = type === 'project' ? projects.length : subCollections.length;
+
+    const threshold = this.calculateThreshold(
+      count,
+      parent_collection_id === null,
+    );
+    let numOfVotes: number;
+
+    if (type === 'collection') {
+      numOfVotes = await this.prismaService.collectionVote.count({
+        where: {
+          user_id: userId,
+          OR: [
+            { collection1: { parent_collection_id } },
+            { collection2: { parent_collection_id } },
+          ],
+        },
+      });
+    } else {
+      numOfVotes = await this.prismaService.collectionVote.count({
+        where: {
+          user_id: userId,
+          OR: [
+            { collection1: { parent_collection_id } },
+            { collection2: { parent_collection_id } },
+          ],
+        },
+      });
+    }
+
+    const maxNumOfVotes = (count * (count - 1)) / 2;
+
+    return numOfVotes / maxNumOfVotes > threshold;
+  };
+
   private calculateThreshold = (count: number, forceAll = false) => {
     if (forceAll) return 1;
     const threshold = toFixedNumber((2 * count) / (Math.pow(count, 2) / 2), 1);
@@ -558,6 +762,49 @@ export class FlowService {
     );
 
     return uniqueElements;
+  };
+
+  private validateExpertiseVote = async (
+    collection1Id: number,
+    collection2Id: number,
+    pickedId: number | null,
+  ) => {
+    if (collection1Id === collection2Id)
+      throw new BadRequestException(
+        'Collection 1 and collection 2 ids should be different',
+      );
+
+    if (collection1Id > collection2Id)
+      throw new InternalServerErrorException(
+        'Conventionally, collection1Id must be less than collection2Id',
+      );
+
+    if (
+      pickedId !== null &&
+      pickedId !== collection1Id &&
+      pickedId !== collection2Id
+    )
+      throw new BadRequestException('Picked collection invalid id');
+
+    const [collection1, collection2] = await Promise.all([
+      this.prismaService.collection.findFirst({ where: { id: collection1Id } }),
+      this.prismaService.collection.findFirst({ where: { id: collection2Id } }),
+    ]);
+
+    if (
+      !collection1 ||
+      !collection2 ||
+      collection1.parent_collection_id !== collection2.parent_collection_id
+    )
+      throw new BadRequestException('Invalid pair of collections');
+
+    if (
+      collection1.parent_collection_id !== null ||
+      collection2.parent_collection_id !== null
+    )
+      throw new BadRequestException(
+        'Expertise vote can be only done between top-level collections',
+      );
   };
 
   private validateCollectionVote = async (
