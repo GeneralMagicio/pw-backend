@@ -11,6 +11,7 @@ import {
   getRankingForSetOfDampingFactors,
   toFixedNumber,
 } from 'src/utils/mathematical-logic';
+import { combinations } from 'mathjs';
 
 @Injectable()
 export class FlowService {
@@ -45,6 +46,47 @@ export class FlowService {
       latestProjectVote?.project1.collection_id ||
       latestCollectionVote?.collection1.parent_collection_id
     );
+  };
+
+  hasAnsweredMainQuestions = async (userId: number) => {
+    const [answeredExpertise, answeredImpact] = await Promise.all([
+      this.hasAnsweredExpertise(userId),
+      this.hasAnsweredImpact(userId),
+    ]);
+
+    return answeredExpertise && answeredImpact;
+  };
+
+  hasAnsweredExpertise = async (userId: number) => {
+    const [expertiseVotes, topLevelCollections] = await Promise.all([
+      this.prismaService.expertiseVote.findMany({
+        where: { user_id: userId },
+      }),
+      this.prismaService.collection.findMany({
+        where: { parent_collection_id: null },
+      }),
+    ]);
+
+    return (
+      expertiseVotes.length === combinations(topLevelCollections.length, 2)
+    );
+  };
+
+  hasAnsweredImpact = async (userId: number) => {
+    const [topLevelVotes, topLevelCollections] = await Promise.all([
+      this.prismaService.collectionVote.findMany({
+        where: {
+          user_id: userId,
+          collection1: { parent_collection_id: null },
+          collection2: { parent_collection_id: null },
+        },
+      }),
+      this.prismaService.collection.findMany({
+        where: { parent_collection_id: null },
+      }),
+    ]);
+
+    return topLevelVotes.length === combinations(topLevelCollections.length, 2);
   };
 
   collectionIsLocked = async (
@@ -484,6 +526,119 @@ export class FlowService {
     };
   };
 
+  getExpertisePairs = async (userId: number, count = 5) => {
+    const parentCollection = null;
+    const [allVotes, allCollections] = await Promise.all([
+      this.prismaService.collectionVote.findMany({
+        where: {
+          user_id: userId,
+          collection1: { parent_collection_id: parentCollection },
+          collection2: { parent_collection_id: parentCollection },
+        },
+      }),
+      this.prismaService.collection.findMany({
+        where: {
+          parent_collection_id: parentCollection,
+        },
+      }),
+    ]);
+
+    const votedIds = allVotes.reduce(
+      (acc, vote) => [...acc, vote.collection1_id, vote.collection2_id],
+      [] as number[],
+    );
+
+    const allIds = allCollections.map((collection) => collection.id);
+
+    const votedCollectionsRanking = this.determineIdRanking(votedIds);
+
+    // ascending id rankings (i.e., the last element has been voted the most)
+    let idRanking: number[] = [];
+
+    for (let i = 0; i < allIds.length; i++) {
+      const value = allIds[i];
+      if (!votedCollectionsRanking.includes(value)) idRanking.push(value);
+    }
+
+    idRanking = [...idRanking, ...votedCollectionsRanking];
+
+    const combinations = getPairwiseCombinations(allIds);
+
+    if (allVotes.length === combinations.length)
+      return {
+        pairs: [],
+        totalPairs: combinations.length,
+        votedPairs: allVotes.length,
+        collectionTitle: 'Expertise',
+        type: 'collection' as const,
+        threshold: this.calculateThreshold(
+          allIds.length,
+          parentCollection ? false : true,
+        ),
+      };
+
+    const sortedCombinations = sortCombinations(combinations, idRanking);
+
+    const result = [];
+    let i = 0;
+    while (result.length < count) {
+      const combination = sortedCombinations[i];
+      const px = combination[0];
+      const py = combination[1];
+      const index = allVotes.findIndex(
+        (vote) =>
+          (vote.collection1_id === px && vote.collection2_id === py) ||
+          (vote.collection1_id === py && vote.collection2_id === px),
+      );
+
+      if (index === -1) result.push(combination);
+
+      i++;
+    }
+
+    const res = await Promise.all(
+      result.map((pair) =>
+        this.prismaService.collection.findMany({
+          where: {
+            OR: [
+              {
+                id: pair[0],
+              },
+              {
+                id: pair[1],
+              },
+            ],
+          },
+        }),
+      ),
+    );
+
+    const pairs = await Promise.all(
+      res.map(
+        async (pair) =>
+          await Promise.all(
+            pair.map(async (collection) => ({
+              ...collection,
+              numOfChildren: await this.countNumOfProjects(collection.id),
+              childProjects: await this.getChildProjects(collection.id),
+            })),
+          ),
+      ),
+    );
+
+    return {
+      pairs,
+      totalPairs: combinations.length,
+      votedPairs: allVotes.length,
+      type: 'collection' as const,
+      collectionTitle: 'Expertise',
+      threshold: this.calculateThreshold(
+        allIds.length,
+        parentCollection ? false : true,
+      ),
+    };
+  };
+
   getProjectPairs = async (userId: number, collectionId: number, count = 5) => {
     const [collection, allVotes, allProjects] = await Promise.all([
       this.prismaService.collection.findUnique({
@@ -625,10 +780,7 @@ export class FlowService {
 
     const count = type === 'project' ? projects.length : subCollections.length;
 
-    const threshold = this.calculateThreshold(
-      count,
-      parent_collection_id === null,
-    );
+    const threshold = this.calculateThreshold(count, type === 'collection');
     let numOfVotes: number;
 
     if (type === 'collection') {
@@ -653,15 +805,13 @@ export class FlowService {
       });
     }
 
-    const maxNumOfVotes = (count * (count - 1)) / 2;
-
-    return numOfVotes / maxNumOfVotes > threshold;
+    return numOfVotes / combinations(count, 2) > threshold;
   };
 
   private calculateThreshold = (count: number, forceAll = false) => {
     if (forceAll) return 1;
-    const threshold = toFixedNumber((2 * count) / (Math.pow(count, 2) / 2), 1);
-    return Math.min(threshold, 1);
+    const threshold = 0.4;
+    return threshold;
   };
 
   private getChildProjects = async (collecionId: number) => {
