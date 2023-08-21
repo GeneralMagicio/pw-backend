@@ -21,31 +21,61 @@ export class FlowService {
   // This would determine the latest collection a user has voted in
   // So they can pick up where they've left off
   determineResumeVoting = async (userId: number) => {
-    const latestProjectVote = await this.prismaService.projectVote.findFirst({
-      where: { user_id: userId },
-      orderBy: { updated_at: 'desc' },
-      include: { project1: true },
-    });
+    const [latestProjectVote, latestCollectionVote, latestExpertiseVote] =
+      await Promise.all([
+        this.prismaService.projectVote.findFirst({
+          where: { user_id: userId },
+          orderBy: { updated_at: 'desc' },
+          include: { project1: true },
+        }),
+        this.prismaService.collectionVote.findFirst({
+          where: { user_id: userId },
+          orderBy: { updated_at: 'desc' },
+          include: { collection1: true },
+        }),
+        this.prismaService.expertiseVote.findFirst({
+          where: { user_id: userId },
+          orderBy: { updated_at: 'desc' },
+          include: { collection1: true },
+        }),
+      ]);
 
-    const latestCollectionVote =
-      await this.prismaService.collectionVote.findFirst({
-        where: { user_id: userId },
-        orderBy: { updated_at: 'desc' },
-        include: { collection1: true },
-      });
+    // No votes whatsoever
+    if (!latestProjectVote && !latestCollectionVote && !latestExpertiseVote)
+      return -1;
 
-    if (!latestProjectVote && !latestCollectionVote) return null;
+    if (
+      latestProjectVote &&
+      latestProjectVote.updated_at > (latestCollectionVote?.updated_at || 0) &&
+      latestProjectVote.updated_at > (latestExpertiseVote?.updated_at || 0)
+    )
+      return {
+        type: 'project',
+        collectionId: latestProjectVote.project1.collection_id,
+      };
 
-    if (latestCollectionVote && latestProjectVote) {
-      if (latestProjectVote.updated_at > latestCollectionVote.updated_at)
-        return latestProjectVote.project1.collection_id;
-      else return latestCollectionVote.collection1.parent_collection_id;
-    }
+    if (
+      latestCollectionVote &&
+      latestCollectionVote.updated_at > (latestProjectVote?.updated_at || 0) &&
+      latestCollectionVote.updated_at > (latestExpertiseVote?.updated_at || 0)
+    )
+      return {
+        type: 'collection',
+        collectionId: latestCollectionVote.collection1.parent_collection_id,
+      };
 
-    return (
-      latestProjectVote?.project1.collection_id ||
-      latestCollectionVote?.collection1.parent_collection_id
-    );
+    if (
+      latestExpertiseVote &&
+      latestExpertiseVote.updated_at >
+        (latestCollectionVote?.updated_at || 0) &&
+      latestExpertiseVote.updated_at > (latestProjectVote?.updated_at || 0)
+    )
+      return {
+        type: 'expertise',
+        collectionId: latestExpertiseVote.collection1.parent_collection_id,
+      };
+
+    return -1;
   };
 
   hasAnsweredMainQuestions = async (userId: number) => {
@@ -93,6 +123,10 @@ export class FlowService {
     userId: number,
     collectionId: number,
   ): Promise<boolean> => {
+    const mainQuestionsAnswered = await this.hasAnsweredMainQuestions(userId);
+
+    if (!mainQuestionsAnswered) return true;
+
     const collection = await this.prismaService.collection.findUnique({
       where: { id: collectionId },
       include: { parent_collection: true },
@@ -204,12 +238,21 @@ export class FlowService {
     }
   };
 
-  getCollections = async (parentCollectionId?: number) => {
+  getCollections = async (
+    userId: number,
+    parentCollectionId: number | null,
+  ) => {
     const collections = await this.prismaService.collection.findMany({
       where: { parent_collection_id: parentCollectionId },
     });
 
-    return collections;
+    const withLock = await Promise.all(
+      collections.map(async (collection) => ({
+        ...collection,
+        locked: await this.collectionIsLocked(userId, collection.id),
+      })),
+    );
+    return withLock;
   };
 
   getCollectionRankingWithProjectType = async (
@@ -529,7 +572,7 @@ export class FlowService {
   getExpertisePairs = async (userId: number, count = 5) => {
     const parentCollection = null;
     const [allVotes, allCollections] = await Promise.all([
-      this.prismaService.collectionVote.findMany({
+      this.prismaService.expertiseVote.findMany({
         where: {
           user_id: userId,
           collection1: { parent_collection_id: parentCollection },
@@ -570,7 +613,6 @@ export class FlowService {
         totalPairs: combinations.length,
         votedPairs: allVotes.length,
         collectionTitle: 'Expertise',
-        type: 'collection' as const,
         threshold: this.calculateThreshold(
           allIds.length,
           parentCollection ? false : true,
@@ -630,7 +672,6 @@ export class FlowService {
       pairs,
       totalPairs: combinations.length,
       votedPairs: allVotes.length,
-      type: 'collection' as const,
       collectionTitle: 'Expertise',
       threshold: this.calculateThreshold(
         allIds.length,
@@ -659,6 +700,8 @@ export class FlowService {
       }),
     ]);
 
+    if (!collection) throw new BadRequestException('Invalid collection id');
+
     const votedIds = allVotes.reduce(
       (acc, vote) => [...acc, vote.project1_id, vote.project2_id],
       [] as number[],
@@ -685,7 +728,7 @@ export class FlowService {
         pairs: [],
         totalPairs: combinations.length,
         votedPairs: allVotes.length,
-        collectionTitle: collection?.name,
+        collectionTitle: collection.name,
         type: 'project' as const,
         threshold: this.calculateThreshold(allIds.length),
       };
@@ -731,7 +774,7 @@ export class FlowService {
       pairs,
       totalPairs: combinations.length,
       votedPairs: allVotes.length,
-      collectionTitle: collection?.name,
+      collectionTitle: collection.name,
       type: 'project' as const,
       threshold: this.calculateThreshold(allIds.length),
     };

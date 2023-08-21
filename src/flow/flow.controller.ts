@@ -17,7 +17,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { VoteProjectsDTO } from './dto/voteProjects.dto';
 import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
-import { PairsResult } from './dto/pairsResult';
+import { ExpertisePairs, PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
 
 @Controller({ path: 'flow' })
@@ -30,15 +30,42 @@ export class FlowController {
 
   @UseGuards(AuthGuard)
   @ApiQuery({
-    name: 'pid',
+    name: 'cid',
     description:
       'Parent id of the collections (skip if you want the top level collections)',
     required: false,
   })
   @Get('/collections')
-  async getCollections(@Query('pid') parentId?: number) {
-    const collections = await this.flowService.getCollections(parentId);
+  async getCollections(
+    @Req() { userId }: AuthedReq,
+    @Query('cid') parentId?: number,
+  ) {
+    const collections = await this.flowService.getCollections(
+      userId,
+      parentId || null,
+    );
     return collections;
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('/status')
+  async getStatus(@Req() { userId }: AuthedReq) {
+    const [checkpoint, impact, expertise] = await Promise.all([
+      this.flowService.determineResumeVoting(userId),
+      this.flowService.hasAnsweredImpact(userId),
+      this.flowService.hasAnsweredExpertise(userId),
+    ]);
+    return { checkpoint, impact, expertise };
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('/expertise/vote')
+  async voteExpertise(
+    @Req() { userId }: AuthedReq,
+    @Body() { collection1Id, collection2Id, pickedId }: VoteCollectionsDTO,
+  ) {
+    const [id1, id2] = sortProjectId(collection1Id, collection2Id);
+    return await this.flowService.voteForExpertise(userId, id1, id2, pickedId);
   }
 
   @UseGuards(AuthGuard)
@@ -66,11 +93,27 @@ export class FlowController {
     );
   }
 
+  @ApiResponse({
+    type: PairsResult,
+    status: 200,
+    description: 'Returns a pair + progress data',
+  })
+  @UseGuards(AuthGuard)
+  @Get('/expertise/pairs')
+  async getExpertisePairs(@Req() { userId }: AuthedReq) {
+    const pairs: ExpertisePairs = await this.flowService.getExpertisePairs(
+      userId,
+      1,
+    );
+
+    return pairs;
+  }
+
   @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
   @ApiResponse({
     type: PairsResult,
     status: 200,
-    description: 'Returns 3 pairs of comparisons + progress data',
+    description: 'Returns a pair of comparisons + progress data',
   })
   @UseGuards(AuthGuard)
   @Get('/pairs')
@@ -91,6 +134,15 @@ export class FlowController {
     else pairs = [] as any;
 
     return pairs;
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Expertise ranking' })
+  @Get('/expertise/ranking')
+  async getExpertiseRanking(@Req() { userId }: AuthedReq) {
+    const ranking = await this.flowService.getExpertiseRanking(userId);
+
+    return ranking;
   }
 
   @ApiQuery({

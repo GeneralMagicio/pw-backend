@@ -10,14 +10,14 @@ export class AuthService {
   constructor(private readonly prismaService: PrismaService) {}
 
   /**
-   * 12 hours
+   * 24 hours
    */
-  public TokenExpirationDuration = 12 * 60 * 60 * 1000; // 12 hours
+  public TokenExpirationDuration = 24 * 60 * 60 * 1000;
 
   /**
    * 2 minutes
    */
-  public NonceExpirationDuration = 2 * 60 * 1000; // 2 minutes
+  public NonceExpirationDuration = 2 * 60 * 1000;
 
   // getUserId = async (walletAddress: string) => {
   //   const { id } = await this.prismaService.user.findFirst({
