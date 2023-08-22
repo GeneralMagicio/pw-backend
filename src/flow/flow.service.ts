@@ -808,36 +808,45 @@ export class FlowService {
     });
     if (!collection) throw new BadRequestException('Collection id invalid');
 
-    const { projects, subCollections, parent_collection_id } = collection;
+    const { projects, subCollections } = collection;
 
     const count = type === 'project' ? projects.length : subCollections.length;
 
     const threshold = this.calculateThreshold(count, type === 'collection');
-    let numOfVotes: number;
+    let numOfVotes = 0;
 
     if (type === 'collection') {
       numOfVotes = await this.prismaService.collectionVote.count({
         where: {
           user_id: userId,
-          OR: [
-            { collection1: { parent_collection_id } },
-            { collection2: { parent_collection_id } },
-          ],
+          collection1: { parent_collection_id: collectionId },
+          collection2: { parent_collection_id: collectionId },
         },
       });
-    } else {
-      numOfVotes = await this.prismaService.collectionVote.count({
+    } else if (type === 'project') {
+      numOfVotes = await this.prismaService.projectVote.count({
         where: {
           user_id: userId,
-          OR: [
-            { collection1: { parent_collection_id } },
-            { collection2: { parent_collection_id } },
-          ],
+          project1: { collection_id: collectionId },
+          project2: { collection_id: collectionId },
         },
       });
     }
 
     return numOfVotes / combinations(count, 2) > threshold;
+  };
+
+  calculateOverallProgress = async (userId: number) => {
+    const [allCollections, finishedCollections] = await Promise.all([
+      this.prismaService.collection.findMany(),
+      this.prismaService.userCollectionFinish.findMany({
+        where: { user_id: userId },
+      }),
+    ]);
+
+    return Math.ceil(
+      (finishedCollections.length / allCollections.length) * 100,
+    );
   };
 
   private hasSubcollections = async (collectionId: number) => {

@@ -145,6 +145,15 @@ export class FlowController {
     return ranking;
   }
 
+  @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Overall progress' })
+  @Get('/progress')
+  async getProgress(@Req() { userId }: AuthedReq) {
+    const progress = await this.flowService.calculateOverallProgress(userId);
+
+    return progress;
+  }
+
   @ApiQuery({
     name: 'cid',
     description:
@@ -170,6 +179,12 @@ export class FlowController {
         userId,
         collectionId,
       );
+
+    if (collectionId) {
+      await this.prismaService.userCollectionFinish.create({
+        data: { user_id: userId, collection_id: collectionId },
+      });
+    }
 
     return ranking;
   }
