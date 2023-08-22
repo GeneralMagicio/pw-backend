@@ -246,13 +246,14 @@ export class FlowService {
       where: { parent_collection_id: parentCollectionId },
     });
 
-    const withLock = await Promise.all(
+    const withAdditionalFields = await Promise.all(
       collections.map(async (collection) => ({
         ...collection,
         locked: await this.collectionIsLocked(userId, collection.id),
+        hasSubcollections: await this.hasSubcollections(collection.id),
       })),
     );
-    return withLock;
+    return withAdditionalFields;
   };
 
   getCollectionRankingWithProjectType = async (
@@ -501,10 +502,7 @@ export class FlowService {
         votedPairs: allVotes.length,
         collectionTitle: collection?.name || 'Root',
         type: 'collection' as const,
-        threshold: this.calculateThreshold(
-          allIds.length,
-          parentCollection ? false : true,
-        ),
+        threshold: this.calculateThreshold(allIds.length, true),
       };
 
     const sortedCombinations = sortCombinations(combinations, idRanking);
@@ -562,10 +560,7 @@ export class FlowService {
       votedPairs: allVotes.length,
       type: 'collection' as const,
       collectionTitle: collection?.name || 'Root',
-      threshold: this.calculateThreshold(
-        allIds.length,
-        parentCollection ? false : true,
-      ),
+      threshold: this.calculateThreshold(allIds.length, true),
     };
   };
 
@@ -613,10 +608,7 @@ export class FlowService {
         totalPairs: combinations.length,
         votedPairs: allVotes.length,
         collectionTitle: 'Expertise',
-        threshold: this.calculateThreshold(
-          allIds.length,
-          parentCollection ? false : true,
-        ),
+        threshold: this.calculateThreshold(allIds.length, true),
       };
 
     const sortedCombinations = sortCombinations(combinations, idRanking);
@@ -673,10 +665,7 @@ export class FlowService {
       totalPairs: combinations.length,
       votedPairs: allVotes.length,
       collectionTitle: 'Expertise',
-      threshold: this.calculateThreshold(
-        allIds.length,
-        parentCollection ? false : true,
-      ),
+      threshold: this.calculateThreshold(allIds.length, true),
     };
   };
 
@@ -849,6 +838,15 @@ export class FlowService {
     }
 
     return numOfVotes / combinations(count, 2) > threshold;
+  };
+
+  private hasSubcollections = async (collectionId: number) => {
+    const subCollections = await this.prismaService.collection.findMany({
+      select: { id: true },
+      where: { parent_collection_id: collectionId },
+    });
+
+    return subCollections.length > 0;
   };
 
   private calculateThreshold = (count: number, forceAll = false) => {

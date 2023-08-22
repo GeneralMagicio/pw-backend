@@ -12,7 +12,7 @@ export class AuthService {
   /**
    * 24 hours
    */
-  public TokenExpirationDuration = 24 * 60 * 60 * 1000;
+  public TokenExpirationDuration = 48 * 60 * 60 * 1000;
 
   /**
    * 2 minutes
