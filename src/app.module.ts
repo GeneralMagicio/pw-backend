@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './user/users.module';
 import { MocksModule } from './mock/mock.module';
 import { FlowModule } from './flow/flow.module';
+import { CollectionModule } from './collection/colleciton.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { FlowModule } from './flow/flow.module';
     UsersModule,
     MocksModule,
     FlowModule,
+    CollectionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
