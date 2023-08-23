@@ -278,33 +278,23 @@ export class FlowService {
 
   getNextCollection = async (
     userId: number,
-    parentCollectionId?: number,
+    parentCollectionId?: number | null,
   ): Promise<number | null> => {
     const lastFinishedCollection = (
       await this.prismaService.userCollectionFinish.findFirst({
         where: {
           user_id: userId,
-          collection: parentCollectionId
-            ? { parent_collection_id: parentCollectionId }
-            : undefined,
+          collection:
+            parentCollectionId !== undefined
+              ? { parent_collection_id: parentCollectionId }
+              : undefined,
         },
         include: { collection: { include: { parent_collection: true } } },
         orderBy: { updated_at: 'desc' },
       })
     )?.collection;
 
-    if (!lastFinishedCollection)
-      throw new ForbiddenException('No collection finished yet!');
-
-    const finishedSiblings =
-      await this.prismaService.userCollectionFinish.findMany({
-        select: { collection_id: true },
-        where: {
-          collection: {
-            parent_collection_id: lastFinishedCollection.parent_collection_id,
-          },
-        },
-      });
+    if (!lastFinishedCollection) return null;
 
     if (lastFinishedCollection.parent_collection_id === null)
       return (
@@ -315,6 +305,16 @@ export class FlowService {
           )
         )?.id || null
       );
+
+    const finishedSiblings =
+      await this.prismaService.userCollectionFinish.findMany({
+        select: { collection_id: true },
+        where: {
+          collection: {
+            parent_collection_id: lastFinishedCollection.parent_collection_id,
+          },
+        },
+      });
 
     const unFinishedSiblings = await this.prismaService.collection.findMany({
       where: {
@@ -329,8 +329,9 @@ export class FlowService {
       lastFinishedCollection?.parent_collection?.parent_collection_id;
 
     // If not, Go to the sibling of the parent (recursive)
-    if (unFinishedSiblings.length === 0 && grandparentId)
+    if (unFinishedSiblings.length === 0 && grandparentId !== undefined) {
       return this.getNextCollection(userId, grandparentId);
+    }
 
     return null;
   };
