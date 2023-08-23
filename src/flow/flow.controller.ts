@@ -19,12 +19,14 @@ import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { ExpertisePairs, PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
+import { CollectionService } from 'src/collection/collection.service';
 
 @Controller({ path: 'flow' })
 export class FlowController {
   private readonly logger = new Logger(FlowController.name);
   constructor(
     private readonly flowService: FlowService,
+    private readonly collectionService: CollectionService,
     private readonly prismaService: PrismaService,
   ) {}
 
@@ -181,12 +183,27 @@ export class FlowController {
       );
 
     if (collectionId) {
-      await this.prismaService.userCollectionFinish.create({
-        data: { user_id: userId, collection_id: collectionId },
+      await this.prismaService.userCollectionFinish.upsert({
+        create: { user_id: userId, collection_id: collectionId },
+        update: { user_id: userId, collection_id: collectionId },
+        where: {
+          user_id_collection_id: {
+            user_id: userId,
+            collection_id: collectionId,
+          },
+        },
       });
     }
 
-    return ranking;
+    const nextCollectionId = await this.flowService.getNextCollection(userId);
+    const nextCollection = nextCollectionId
+      ? await this.collectionService.getCollection(nextCollectionId)
+      : null;
+
+    return {
+      ...ranking,
+      nextCollection,
+    };
   }
 
   @UseGuards(AuthGuard)

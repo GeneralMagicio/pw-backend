@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -12,11 +13,15 @@ import {
   toFixedNumber,
 } from 'src/utils/mathematical-logic';
 import { combinations } from 'mathjs';
+import { CollectionService } from 'src/collection/collection.service';
 
 @Injectable()
 export class FlowService {
   private readonly logger = new Logger(FlowService.name);
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly collectionService: CollectionService,
+  ) {}
 
   // This would determine the latest collection a user has voted in
   // So they can pick up where they've left off
@@ -269,6 +274,65 @@ export class FlowService {
       }),
     );
     return withAdditionalFields;
+  };
+
+  getNextCollection = async (
+    userId: number,
+    parentCollectionId?: number,
+  ): Promise<number | null> => {
+    const lastFinishedCollection = (
+      await this.prismaService.userCollectionFinish.findFirst({
+        where: {
+          user_id: userId,
+          collection: parentCollectionId
+            ? { parent_collection_id: parentCollectionId }
+            : undefined,
+        },
+        include: { collection: { include: { parent_collection: true } } },
+        orderBy: { updated_at: 'desc' },
+      })
+    )?.collection;
+
+    if (!lastFinishedCollection)
+      throw new ForbiddenException('No collection finished yet!');
+
+    const finishedSiblings =
+      await this.prismaService.userCollectionFinish.findMany({
+        select: { collection_id: true },
+        where: {
+          collection: {
+            parent_collection_id: lastFinishedCollection.parent_collection_id,
+          },
+        },
+      });
+
+    if (lastFinishedCollection.parent_collection_id === null)
+      return (
+        (
+          await this.getPreviousLowerExpertiseCollection(
+            userId,
+            lastFinishedCollection.id,
+          )
+        )?.id || null
+      );
+
+    const unFinishedSiblings = await this.prismaService.collection.findMany({
+      where: {
+        parent_collection_id: lastFinishedCollection.parent_collection_id,
+        id: { notIn: finishedSiblings.map((item) => item.collection_id) },
+      },
+    });
+
+    if (unFinishedSiblings.length > 0) return unFinishedSiblings[0].id;
+
+    const grandparentId =
+      lastFinishedCollection?.parent_collection?.parent_collection_id;
+
+    // If not, Go to the sibling of the parent (recursive)
+    if (unFinishedSiblings.length === 0 && grandparentId)
+      return this.getNextCollection(userId, grandparentId);
+
+    return null;
   };
 
   getCollectionRankingWithProjectType = async (
