@@ -247,11 +247,26 @@ export class FlowService {
     });
 
     const withAdditionalFields = await Promise.all(
-      collections.map(async (collection) => ({
-        ...collection,
-        locked: await this.collectionIsLocked(userId, collection.id),
-        hasSubcollections: await this.hasSubcollections(collection.id),
-      })),
+      collections.map(async (collection) => {
+        const [locked, hasSubcollections, finishedStatus] = await Promise.all([
+          this.collectionIsLocked(userId, collection.id),
+          this.hasSubcollections(collection.id),
+          this.prismaService.userCollectionFinish.findUnique({
+            where: {
+              user_id_collection_id: {
+                collection_id: collection.id,
+                user_id: userId,
+              },
+            },
+          }),
+        ]);
+        return {
+          ...collection,
+          locked,
+          hasSubcollections,
+          voted: finishedStatus !== null,
+        };
+      }),
     );
     return withAdditionalFields;
   };
