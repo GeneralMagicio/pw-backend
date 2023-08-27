@@ -91,4 +91,4 @@ export const sortProjectId = (
     : [project1Id, project2Id];
 };
 
-export const STAGING_API = 'pairwise.iran.liara.run';
+export const STAGING_API = 'pairwise.cupofjoy.store';

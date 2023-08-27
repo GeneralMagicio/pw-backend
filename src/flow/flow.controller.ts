@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Logger,
   Param,
@@ -169,6 +170,14 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Query('cid') collectionId?: number,
   ) {
+    if (collectionId) {
+      const hasThresholdVotes = await this.flowService.hasThresholdVotes(
+        collectionId,
+        userId,
+      );
+      if (!hasThresholdVotes)
+        throw new ForbiddenException('Threshold votes missing');
+    }
     let ranking;
     const type = await this.flowService.getCollectionSubunitType(collectionId);
     if (type === 'collection')
@@ -215,6 +224,14 @@ export class FlowController {
     });
 
     await this.prismaService.collectionVote.deleteMany({
+      where: { user_id: userId },
+    });
+
+    await this.prismaService.userCollectionFinish.deleteMany({
+      where: { user_id: userId },
+    });
+
+    await this.prismaService.expertiseVote.deleteMany({
       where: { user_id: userId },
     });
   }
