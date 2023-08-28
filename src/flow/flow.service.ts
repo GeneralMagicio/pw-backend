@@ -915,7 +915,7 @@ export class FlowService {
       });
     }
 
-    return numOfVotes / combinations(count, 2) > threshold;
+    return numOfVotes / combinations(count, 2) >= threshold;
   };
 
   calculateOverallProgress = async (userId: number) => {
