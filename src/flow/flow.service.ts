@@ -688,6 +688,7 @@ export class FlowService {
         totalPairs: combinations.length,
         votedPairs: allVotes.length,
         collectionTitle: 'Expertise',
+        type: 'expertise',
         threshold: this.calculateThreshold(allIds.length, true),
       };
 
@@ -745,6 +746,7 @@ export class FlowService {
       totalPairs: combinations.length,
       votedPairs: allVotes.length,
       collectionTitle: 'Expertise',
+      type: 'expertise',
       threshold: this.calculateThreshold(allIds.length, true),
     };
   };
