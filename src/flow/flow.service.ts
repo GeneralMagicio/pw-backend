@@ -962,7 +962,7 @@ export class FlowService {
       result.push(projects);
     }
 
-    return result;
+    return result.flat();
   };
 
   private countNumOfProjects = async (collecionId: number) => {
