@@ -124,7 +124,20 @@ export class FlowService {
     return topLevelVotes.length === combinations(topLevelCollections.length, 2);
   };
 
-  collectionIsLocked = async (
+  isCollectionFinished = async (userId: number, collectionId: number) => {
+    const status = await this.prismaService.userCollectionFinish.findUnique({
+      where: {
+        user_id_collection_id: {
+          collection_id: collectionId,
+          user_id: userId,
+        },
+      },
+    });
+
+    return status !== null;
+  };
+
+  isCollectionLocked = async (
     userId: number,
     collectionId: number,
   ): Promise<boolean> => {
@@ -142,7 +155,7 @@ export class FlowService {
     const isTopLevel = collection.parent_collection === null;
 
     if (!isTopLevel)
-      return this.collectionIsLocked(userId, collection.parent_collection_id!);
+      return this.isCollectionLocked(userId, collection.parent_collection_id!);
 
     const nextCollection = await this.getNextHigherExpertiseCollection(
       userId,
@@ -151,7 +164,8 @@ export class FlowService {
 
     // it's the collection with the highest expertise
     if (nextCollection === null) return false;
-    if (await this.hasThresholdVotes(nextCollection.id, userId)) return false;
+    if (await this.isCollectionFinished(userId, nextCollection.id))
+      return false;
     return true;
   };
 
@@ -253,23 +267,16 @@ export class FlowService {
 
     const withAdditionalFields = await Promise.all(
       collections.map(async (collection) => {
-        const [locked, hasSubcollections, finishedStatus] = await Promise.all([
-          this.collectionIsLocked(userId, collection.id),
+        const [locked, hasSubcollections, voted] = await Promise.all([
+          this.isCollectionLocked(userId, collection.id),
           this.hasSubcollections(collection.id),
-          this.prismaService.userCollectionFinish.findUnique({
-            where: {
-              user_id_collection_id: {
-                collection_id: collection.id,
-                user_id: userId,
-              },
-            },
-          }),
+          this.isCollectionFinished(userId, collection.id),
         ]);
         return {
           ...collection,
           locked,
           hasSubcollections,
-          voted: finishedStatus !== null,
+          voted,
         };
       }),
     );
