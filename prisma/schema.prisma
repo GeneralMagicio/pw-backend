@@ -8,14 +8,16 @@ generator client {
 }
 
 model User {
-  id              Int              @id @default(autoincrement())
-  address         String
-  isBadgeHolder   Int
-  created_at      DateTime         @default(now())
-  collectionVotes CollectionVote[]
-  projectVotes    ProjectVote[]
-  results         Result[]
-  nonce           Nonce?
+  id                 Int                    @id @default(autoincrement())
+  address            String
+  isBadgeHolder      Int
+  created_at         DateTime               @default(now())
+  collectionVotes    CollectionVote[]
+  projectVotes       ProjectVote[]
+  expertiseVotes     ExpertiseVote[]
+  results            Result[]
+  nonce              Nonce?
+  finishedCollection UserCollectionFinish[]
 }
 
 model Space {
@@ -43,18 +45,23 @@ model Poll {
 }
 
 model Collection {
-  id                   Int              @id @default(autoincrement())
+  id                   Int                    @id @default(autoincrement())
   name                 String
   poll_id              Int
   parent_collection_id Int?
-  created_at           DateTime         @default(now())
-  poll                 Poll             @relation(fields: [poll_id], references: [id])
-  parent_collection    Collection?      @relation("CollectionToCollection", fields: [parent_collection_id], references: [id])
-  subCollections       Collection[]     @relation("CollectionToCollection")
+  image                String?
+  created_at           DateTime               @default(now())
+  poll                 Poll                   @relation(fields: [poll_id], references: [id])
+  parent_collection    Collection?            @relation("CollectionToCollection", fields: [parent_collection_id], references: [id])
+  subCollections       Collection[]           @relation("CollectionToCollection")
   projects             Project[]
-  options1             CollectionVote[] @relation("VoteToCollection1")
-  options2             CollectionVote[] @relation("VoteToCollection2")
-  voted                CollectionVote[] @relation("Voted")
+  options1             CollectionVote[]       @relation("VoteToCollection1")
+  options2             CollectionVote[]       @relation("VoteToCollection2")
+  expertiseOptions1    ExpertiseVote[]        @relation("ExpertiseVoteToCollection1")
+  expertiseOptions2    ExpertiseVote[]        @relation("ExpertiseVoteToCollection2")
+  voted                CollectionVote[]       @relation("Voted")
+  expertiseVoted       ExpertiseVote[]        @relation("ExpertiseVoted")
+  usersWhoFinished     UserCollectionFinish[]
 }
 
 model Result {
@@ -72,12 +79,29 @@ model Project {
   url           String
   description   String
   collection_id Int
+  image         String?
   created_at    DateTime      @default(now())
   collection    Collection    @relation(fields: [collection_id], references: [id])
   results       Result[]
   options1      ProjectVote[] @relation("VoteToProject1")
   options2      ProjectVote[] @relation("VoteToProject2")
   voted         ProjectVote[] @relation("Voted")
+}
+
+model ExpertiseVote {
+  id             Int         @id @default(autoincrement())
+  user_id        Int
+  collection1_id Int
+  collection2_id Int
+  picked_id      Int?
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @default(now())
+  user           User        @relation(fields: [user_id], references: [id])
+  collection1    Collection  @relation("ExpertiseVoteToCollection1", fields: [collection1_id], references: [id])
+  collection2    Collection  @relation("ExpertiseVoteToCollection2", fields: [collection2_id], references: [id])
+  picked         Collection? @relation("ExpertiseVoted", fields: [picked_id], references: [id])
+
+  @@unique([collection1_id, collection2_id, user_id])
 }
 
 model CollectionVote {
@@ -101,7 +125,7 @@ model ProjectVote {
   user_id     Int
   project1_id Int
   project2_id Int
-  picked_id   Int?     
+  picked_id   Int?
   created_at  DateTime @default(now())
   updated_at  DateTime @default(now())
   user        User     @relation(fields: [user_id], references: [id])
@@ -119,4 +143,14 @@ model Nonce {
   expires_at String
   created_at DateTime @default(now())
   user       User?    @relation(fields: [user_id], references: [id])
+}
+
+model UserCollectionFinish {
+  user_id       Int
+  collection_id Int
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now())
+  collection    Collection @relation(fields: [collection_id], references: [id])
+  user          User       @relation(fields: [user_id], references: [id])
+  @@id([user_id, collection_id])
 }
