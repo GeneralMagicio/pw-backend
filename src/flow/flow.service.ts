@@ -124,6 +124,25 @@ export class FlowService {
     return topLevelVotes.length === combinations(topLevelCollections.length, 2);
   };
 
+  isCollectionStarted = async (userId: number, collectionId: number) => {
+    // for collections with only projects
+    const projecVotes = await this.prismaService.projectVote.findFirst({
+      select: { id: true },
+      where: { user_id: userId, project1: { collection_id: collectionId } },
+    });
+
+    // for collections with subcollections
+    const collectionVote = await this.prismaService.collectionVote.findFirst({
+      select: { id: true },
+      where: {
+        user_id: userId,
+        collection1: { parent_collection_id: collectionId },
+      },
+    });
+
+    return projecVotes || collectionVote;
+  };
+
   isCollectionFinished = async (userId: number, collectionId: number) => {
     const status = await this.prismaService.userCollectionFinish.findUnique({
       where: {
@@ -267,16 +286,19 @@ export class FlowService {
 
     const withAdditionalFields = await Promise.all(
       collections.map(async (collection) => {
-        const [locked, hasSubcollections, voted] = await Promise.all([
-          this.isCollectionLocked(userId, collection.id),
-          this.hasSubcollections(collection.id),
-          this.isCollectionFinished(userId, collection.id),
-        ]);
+        const [locked, hasSubcollections, finished, started] =
+          await Promise.all([
+            this.isCollectionLocked(userId, collection.id),
+            this.hasSubcollections(collection.id),
+            this.isCollectionFinished(userId, collection.id),
+            this.isCollectionStarted(userId, collection.id),
+          ]);
         return {
           ...collection,
           locked,
           hasSubcollections,
-          voted,
+          finished,
+          started,
         };
       }),
     );

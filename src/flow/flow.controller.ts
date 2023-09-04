@@ -214,11 +214,10 @@ export class FlowController {
     };
   }
 
-  // @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard)
   @ApiResponse({ status: 200, description: 'All your voting data is removed' })
   @Get('/dangerouslyRemoveData')
-  async removeMydata() {
-    const userId = 4;
+  async removeMydata(@Req() { userId }: AuthedReq) {
     await this.prismaService.projectVote.deleteMany({
       where: { user_id: userId },
     });
