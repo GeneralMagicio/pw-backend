@@ -140,7 +140,7 @@ export class FlowService {
       },
     });
 
-    return projecVotes || collectionVote;
+    return projecVotes !== null || collectionVote !== null;
   };
 
   isCollectionFinished = async (userId: number, collectionId: number) => {
@@ -173,8 +173,14 @@ export class FlowService {
 
     const isTopLevel = collection.parent_collection === null;
 
-    if (!isTopLevel)
-      return this.isCollectionLocked(userId, collection.parent_collection_id!);
+    if (!isTopLevel) {
+      const [isParentLocked, isParentFinished] = await Promise.all([
+        this.isCollectionLocked(userId, collection.parent_collection_id!),
+        this.isCollectionFinished(userId, collection.parent_collection_id!),
+      ]);
+
+      return !isParentFinished && isParentLocked;
+    }
 
     const nextCollection = await this.getNextHigherExpertiseCollection(
       userId,
@@ -216,8 +222,54 @@ export class FlowService {
     }
   };
 
-  getOveralRanking = async (cid = null) => {
-    console.log(cid);
+  getOveralRanking = async (
+    userId: number,
+    cid: number | null = null,
+    coefficient = 1,
+  ): Promise<any> => {
+    let result = [];
+    const collections = await this.prismaService.collection.findMany({
+      select: { id: true, name: true },
+      where: { parent_collection_id: cid },
+    });
+
+    const res = await this.getCollectionRanking(userId, cid);
+
+    const { ranking } = res;
+
+    console.log('--------------------------------');
+    console.log('collection id"', cid);
+    console.log('coeff"', coefficient);
+    console.log('ranking:', ranking);
+    console.log('--------------------------------');
+
+    if (collections.length === 0) {
+      result = ranking.map((item) => ({
+        name: item.project?.name,
+        id: item.project?.id,
+        share: toFixedNumber(item.share * coefficient, 4),
+      }));
+      return result;
+    }
+
+    return Promise.all(
+      collections.map(async (collection) => ({
+        collectionTitle: collection.name,
+        votingPower:
+          coefficient *
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          ranking.find((c) => c.project.id === collection.id).share,
+        ranking: await this.getOveralRanking(
+          userId,
+          collection.id,
+          coefficient *
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            ranking.find((c) => c.project.id === collection.id).share,
+        ),
+      })),
+    );
   };
 
   voteForExpertise = async (
@@ -365,6 +417,26 @@ export class FlowService {
     return null;
   };
 
+  getCollectionRanking = async (
+    userId: number,
+    collectionId: number | null,
+  ) => {
+    const type = await this.getCollectionSubunitType(collectionId);
+    if (collectionId && type === 'project') {
+      const ranking = await this.getCollectionRankingWithProjectType(
+        userId,
+        collectionId,
+      );
+      return ranking;
+    } else {
+      const ranking = await this.getCollectionRankingWithCollectionType(
+        userId,
+        collectionId,
+      );
+      return ranking;
+    }
+  };
+
   getCollectionRankingWithProjectType = async (
     userId: number,
     collectionId: number,
@@ -504,7 +576,7 @@ export class FlowService {
 
   getCollectionRankingWithCollectionType = async (
     userId: number,
-    collectionId?: number,
+    collectionId: number | null,
   ) => {
     const [collection, allVotes, allCollections] = await Promise.all([
       this.prismaService.collection.findFirst({
@@ -881,7 +953,7 @@ export class FlowService {
   };
 
   getCollectionSubunitType = async (
-    collectionId?: number,
+    collectionId: number | null,
   ): Promise<'project' | 'collection'> => {
     const collection = await this.prismaService.collection.findFirst({
       where: { parent_collection_id: collectionId },
