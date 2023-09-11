@@ -50,7 +50,7 @@ const isRankingUseful = (ranking: number[]) => {
   const median = sortedRanking[Math.floor(sortedRanking.length / 2)];
   const max = sortedRanking[sortedRanking.length - 1];
 
-  if (max / median > 10) return false;
+  if (max / median > 5) return false;
 
   return true;
 };
