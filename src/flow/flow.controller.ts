@@ -124,7 +124,9 @@ export class FlowController {
     @Query('cid') collectionId?: number,
   ) {
     let pairs: PairsResult;
-    const type = await this.flowService.getCollectionSubunitType(collectionId);
+    const type = await this.flowService.getCollectionSubunitType(
+      collectionId || null,
+    );
     if (type === 'collection')
       pairs = await this.flowService.getCollectionPairs(
         userId,
@@ -178,11 +180,13 @@ export class FlowController {
         throw new ForbiddenException('Threshold votes missing');
     }
     let ranking;
-    const type = await this.flowService.getCollectionSubunitType(collectionId);
+    const type = await this.flowService.getCollectionSubunitType(
+      collectionId || null,
+    );
     if (type === 'collection')
       ranking = await this.flowService.getCollectionRankingWithCollectionType(
         userId,
-        collectionId,
+        collectionId || null,
       );
     else if (collectionId && type === 'project')
       ranking = await this.flowService.getCollectionRankingWithProjectType(
@@ -212,6 +216,14 @@ export class FlowController {
       ...ranking,
       nextCollection,
     };
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Overall ranking' })
+  @Get('/ranking/overall')
+  async getOverallRanking(@Req() { userId }: AuthedReq) {
+    const result = await this.flowService.getOveralRanking(userId);
+    return result;
   }
 
   @UseGuards(AuthGuard)

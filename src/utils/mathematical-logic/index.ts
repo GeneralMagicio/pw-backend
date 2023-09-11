@@ -74,10 +74,7 @@ export const getRankingForSetOfDampingFactors = (input: number[][]) => {
       ranking = calculateCollectionRanking(input, dampingFactors[i]);
       isUseful = isRankingUseful(ranking);
     } catch (e) {
-      console.error(e);
     } finally {
-      if (!isUseful)
-        console.error('Useless damping factor:', dampingFactors[i]);
       i += 1;
     }
   }
