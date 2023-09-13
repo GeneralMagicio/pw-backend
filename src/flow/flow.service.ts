@@ -179,7 +179,7 @@ export class FlowService {
         this.isCollectionFinished(userId, collection.parent_collection_id!),
       ]);
 
-      return !isParentFinished && isParentLocked;
+      return !isParentFinished || isParentLocked;
     }
 
     const nextCollection = await this.getNextHigherExpertiseCollection(

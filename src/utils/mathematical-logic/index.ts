@@ -50,7 +50,7 @@ const isRankingUseful = (ranking: number[]) => {
   const median = sortedRanking[Math.floor(sortedRanking.length / 2)];
   const max = sortedRanking[sortedRanking.length - 1];
 
-  if (max / median > 10) return false;
+  if (max / median > 5) return false;
 
   return true;
 };
@@ -74,10 +74,7 @@ export const getRankingForSetOfDampingFactors = (input: number[][]) => {
       ranking = calculateCollectionRanking(input, dampingFactors[i]);
       isUseful = isRankingUseful(ranking);
     } catch (e) {
-      console.error(e);
     } finally {
-      if (!isUseful)
-        console.error('Useless damping factor:', dampingFactors[i]);
       i += 1;
     }
   }
