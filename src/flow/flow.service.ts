@@ -254,6 +254,7 @@ export class FlowService {
 
     return Promise.all(
       collections.map(async (collection) => ({
+        id: collection.id,
         collectionTitle: collection.name,
         votingPower:
           coefficient *
