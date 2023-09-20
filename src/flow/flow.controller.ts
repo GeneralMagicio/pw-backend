@@ -227,6 +227,14 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
+  // @ApiResponse({ status: 200, description: 'Overall ranking' })
+  @Get('/ts')
+  async getLastActivity(@Req() { userId }: AuthedReq) {
+    const timestamp = await this.flowService.getLastActivityTimestamp(userId);
+    return timestamp;
+  }
+
+  @UseGuards(AuthGuard)
   @ApiResponse({ status: 200, description: 'All your voting data is removed' })
   @Get('/dangerouslyRemoveData')
   async removeMydata(@Req() { userId }: AuthedReq) {

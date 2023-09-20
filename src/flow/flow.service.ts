@@ -83,6 +83,35 @@ export class FlowService {
     return -1;
   };
 
+  getLastActivityTimestamp = async (userId: number) => {
+    const [latestProjectVote, latestCollectionVote, latestExpertiseVote] =
+      await Promise.all([
+        this.prismaService.projectVote.findFirst({
+          where: { user_id: userId },
+          orderBy: { updated_at: 'desc' },
+          include: { project1: true },
+        }),
+        this.prismaService.collectionVote.findFirst({
+          where: { user_id: userId },
+          orderBy: { updated_at: 'desc' },
+          include: { collection1: true },
+        }),
+        this.prismaService.expertiseVote.findFirst({
+          where: { user_id: userId },
+          orderBy: { updated_at: 'desc' },
+          include: { collection1: true },
+        }),
+      ]);
+
+    return [
+      latestProjectVote?.updated_at,
+      latestCollectionVote?.updated_at,
+      latestExpertiseVote?.updated_at,
+    ]
+      .sort()[2]
+      ?.getTime();
+  };
+
   hasAnsweredMainQuestions = async (userId: number) => {
     const [answeredExpertise, answeredImpact] = await Promise.all([
       this.hasAnsweredExpertise(userId),
@@ -236,12 +265,6 @@ export class FlowService {
     const res = await this.getCollectionRanking(userId, cid);
 
     const { ranking } = res;
-
-    console.log('--------------------------------');
-    console.log('collection id"', cid);
-    console.log('coeff"', coefficient);
-    console.log('ranking:', ranking);
-    console.log('--------------------------------');
 
     if (collections.length === 0) {
       result = ranking.map((item) => ({
