@@ -248,10 +248,9 @@ export class FlowController {
     });
 
     if (result) {
-      await this.prismaService.editedRanking.updateMany({
+      await this.prismaService.editedRanking.update({
         where: {
-          user_id: userId,
-          collection_id: collectionId || null,
+          id: result.id,
         },
         data: {
           ranking: JSON.stringify(ranking),

@@ -50,7 +50,7 @@ const isRankingUseful = (ranking: number[]) => {
   const median = sortedRanking[Math.floor(sortedRanking.length / 2)];
   const max = sortedRanking[sortedRanking.length - 1];
 
-  if (max / median > 5) return false;
+  if (max / median > 15) return false;
 
   return true;
 };
@@ -85,6 +85,38 @@ export const getRankingForSetOfDampingFactors = (input: number[][]) => {
 
   return ranking;
 };
+
+const validate = (input: { share: number }[]) => {
+  const sum = input.reduce((acc, curr) => (acc += curr.share), 0);
+
+  if (sum === 1) return true;
+
+  return false;
+};
+
+export function makeIt100<T>(input: T & { share: number }[]) {
+  let result = [...input];
+
+  console.log('initial data:', result);
+  let breakLimit = 0;
+  while (!validate(result) && breakLimit < 100) {
+    const sum = result.reduce((acc, curr) => (acc += curr.share), 0);
+
+    const temp = result.map((item) => ({
+      ...item,
+      share: (item.share * 1) / sum,
+    }));
+
+    result = temp.map((item) => ({
+      ...item,
+      share: toFixedNumber(item.share, 6),
+    }));
+
+    breakLimit++;
+  }
+
+  return result;
+}
 
 export const calculateCollectionRanking = (
   input: number[][],

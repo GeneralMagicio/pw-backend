@@ -10,6 +10,7 @@ import { getPairwiseCombinations, sortCombinations } from 'src/utils';
 import {
   generateZeroMatrix,
   getRankingForSetOfDampingFactors,
+  makeIt100,
   toFixedNumber,
 } from 'src/utils/mathematical-logic';
 import { combinations } from 'mathjs';
@@ -535,7 +536,7 @@ export class FlowService {
 
     return {
       collectionTitle: collection?.name,
-      ranking: ranking.sort((a, b) => b.share - a.share),
+      ranking: makeIt100(ranking.sort((a, b) => b.share - a.share)),
     };
   };
 
@@ -684,7 +685,8 @@ export class FlowService {
       collectionTitle: collection?.name || 'Root',
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      ranking: ranking.sort((a, b) => b.share - a.share),
+      // ranking: ranking.sort((a, b) => b.share - a.share),
+      ranking: makeIt100(ranking.sort((a, b) => b.share - a.share)),
     };
   };
 
