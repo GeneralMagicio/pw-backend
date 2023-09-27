@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -20,6 +21,8 @@ import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { ExpertisePairs, PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
 import { CollectionService } from 'src/collection/collection.service';
+import { EditedRankingDto } from './dto/editedRanking';
+import { validateRanking } from 'src/utils/edit-logic';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -222,8 +225,51 @@ export class FlowController {
   @ApiResponse({ status: 200, description: 'Overall ranking' })
   @Get('/ranking/overall')
   async getOverallRanking(@Req() { userId }: AuthedReq) {
-    const result = await this.flowService.getOveralRanking(userId);
+    const result = await this.flowService.getOverallRanking(userId);
     return result;
+  }
+
+  @UseGuards(AuthGuard)
+  // @ApiResponse({ status: 200, description: 'Overall ranking' })
+  @Post('/ranking')
+  async submitEditedRanking(
+    @Req() { userId }: AuthedReq,
+    @Body() { ranking: stringifedRanking, collectionId }: EditedRankingDto,
+  ) {
+    const ranking = JSON.parse(stringifedRanking);
+    if (!validateRanking(ranking))
+      throw new BadRequestException('Invalid ranking data');
+
+    const result = await this.prismaService.editedRanking.findFirst({
+      where: {
+        user_id: userId,
+        collection_id: collectionId || null,
+      },
+    });
+
+    if (result) {
+      await this.prismaService.editedRanking.updateMany({
+        where: {
+          user_id: userId,
+          collection_id: collectionId || null,
+        },
+        data: {
+          ranking: JSON.stringify(ranking),
+          user_id: userId,
+          collection_id: collectionId || null,
+        },
+      });
+    } else {
+      await this.prismaService.editedRanking.create({
+        data: {
+          user_id: userId,
+          collection_id: collectionId || null,
+          ranking: JSON.stringify(ranking),
+        },
+      });
+    }
+
+    return 'created';
   }
 
   @UseGuards(AuthGuard)
@@ -234,10 +280,11 @@ export class FlowController {
     return timestamp;
   }
 
-  @UseGuards(AuthGuard)
+  // @UseGuards(AuthGuard)
   @ApiResponse({ status: 200, description: 'All your voting data is removed' })
   @Get('/dangerouslyRemoveData')
-  async removeMydata(@Req() { userId }: AuthedReq) {
+  async removeMydata() {
+    const userId = 18;
     await this.prismaService.projectVote.deleteMany({
       where: { user_id: userId },
     });

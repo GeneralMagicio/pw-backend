@@ -14,6 +14,7 @@ import {
 } from 'src/utils/mathematical-logic';
 import { combinations } from 'mathjs';
 import { CollectionService } from 'src/collection/collection.service';
+import { CollectionRanking } from './types';
 
 @Injectable()
 export class FlowService {
@@ -251,11 +252,21 @@ export class FlowService {
     }
   };
 
-  getOveralRanking = async (
+  getOverallRanking = async (
     userId: number,
     cid: number | null = null,
     coefficient = 1,
   ): Promise<any> => {
+    const editedRanking = await this.prismaService.editedRanking.findFirst({
+      select: { ranking: true },
+      where: {
+        user_id: userId,
+        collection_id: null,
+      },
+    });
+
+    if (editedRanking) return JSON.parse(editedRanking.ranking);
+
     let result = [];
     const collections = await this.prismaService.collection.findMany({
       select: { id: true, name: true },
@@ -284,7 +295,7 @@ export class FlowService {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           ranking.find((c) => c.project.id === collection.id).share,
-        ranking: await this.getOveralRanking(
+        ranking: await this.getOverallRanking(
           userId,
           collection.id,
           coefficient *
@@ -464,7 +475,17 @@ export class FlowService {
   getCollectionRankingWithProjectType = async (
     userId: number,
     collectionId: number,
-  ) => {
+  ): Promise<CollectionRanking> => {
+    const editedRanking = await this.prismaService.editedRanking.findFirst({
+      select: { ranking: true },
+      where: {
+        user_id: userId,
+        collection_id: collectionId,
+      },
+    });
+
+    if (editedRanking) return JSON.parse(editedRanking.ranking);
+
     const [collection, allVotes, allProjects] = await Promise.all([
       this.prismaService.collection.findUnique({
         where: { id: collectionId },
@@ -601,7 +622,17 @@ export class FlowService {
   getCollectionRankingWithCollectionType = async (
     userId: number,
     collectionId: number | null,
-  ) => {
+  ): Promise<CollectionRanking> => {
+    const editedRanking = await this.prismaService.editedRanking.findFirst({
+      select: { ranking: true },
+      where: {
+        user_id: userId,
+        collection_id: collectionId,
+      },
+    });
+
+    if (editedRanking) return JSON.parse(editedRanking.ranking);
+
     const [collection, allVotes, allCollections] = await Promise.all([
       this.prismaService.collection.findFirst({
         select: { name: true },
@@ -651,6 +682,8 @@ export class FlowService {
 
     return {
       collectionTitle: collection?.name || 'Root',
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       ranking: ranking.sort((a, b) => b.share - a.share),
     };
   };
