@@ -53,6 +53,25 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
+  // @ApiQuery({
+  //   name: 'cid',
+  //   description:
+  //     'Parent id of the collections (skip if you want the top level collections)',
+  //   required: false,
+  // })
+  @Get('/superProjects')
+  async getSuperProjects(
+    @Req() { userId }: AuthedReq,
+    @Query('cid') parentId: number,
+  ) {
+    const superProjects = await this.flowService.getSuperProjects(
+      userId,
+      parentId,
+    );
+    return superProjects;
+  }
+
+  @UseGuards(AuthGuard)
   @Get('/status')
   async getStatus(@Req() { userId }: AuthedReq) {
     const [checkpoint, impact, expertise] = await Promise.all([
@@ -81,6 +100,21 @@ export class FlowController {
   ) {
     const [id1, id2] = sortProjectId(project1Id, project2Id);
     return await this.flowService.voteForProjects(userId, id1, id2, pickedId);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('/subprojects/vote')
+  async voteSubProjects(
+    @Req() { userId }: AuthedReq,
+    @Body() { project1Id, project2Id, pickedId }: VoteProjectsDTO,
+  ) {
+    const [id1, id2] = sortProjectId(project1Id, project2Id);
+    return await this.flowService.voteForSubProjects(
+      userId,
+      id1,
+      id2,
+      pickedId,
+    );
   }
 
   @UseGuards(AuthGuard)
@@ -143,11 +177,45 @@ export class FlowController {
     return pairs;
   }
 
+  // @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
+  // @ApiResponse({
+  //   type: PairsResult,
+  //   status: 200,
+  //   description: 'Returns a pair of comparisons + progress data',
+  // })
+  @UseGuards(AuthGuard)
+  @Get('/subprojects/pairs')
+  async getSubProjectPairs(
+    @Req() { userId }: AuthedReq,
+    @Query('pid') projectId: number,
+  ) {
+    const pairs = await this.flowService.getSubProjectPairs(
+      userId,
+      projectId,
+      1,
+    );
+
+    return pairs;
+  }
+
   @UseGuards(AuthGuard)
   @ApiResponse({ status: 200, description: 'Expertise ranking' })
   @Get('/expertise/ranking')
   async getExpertiseRanking(@Req() { userId }: AuthedReq) {
     const ranking = await this.flowService.getExpertiseRanking(userId);
+
+    return ranking;
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Expertise ranking' })
+  @Get('/subprojects/ranking')
+  async getSubProjectsRanking(
+    @Req() { userId }: AuthedReq,
+    @Query('pid') projectId: number,
+  ) {
+    // TODO: check voting threshold
+    const ranking = await this.flowService.getProjectRanking(userId, projectId);
 
     return ranking;
   }
@@ -283,22 +351,22 @@ export class FlowController {
   @ApiResponse({ status: 200, description: 'All your voting data is removed' })
   @Get('/dangerouslyRemoveData')
   async removeMydata() {
-    const userId = 18;
+    const userId = 1;
     await this.prismaService.projectVote.deleteMany({
       where: { user_id: userId },
     });
 
-    await this.prismaService.collectionVote.deleteMany({
-      where: { user_id: userId },
-    });
+    // await this.prismaService.collectionVote.deleteMany({
+    //   where: { user_id: userId },
+    // });
 
     await this.prismaService.userCollectionFinish.deleteMany({
       where: { user_id: userId },
     });
 
-    await this.prismaService.expertiseVote.deleteMany({
-      where: { user_id: userId },
-    });
+    // await this.prismaService.expertiseVote.deleteMany({
+    //   where: { user_id: userId },
+    // });
   }
 
   // @UseGuards(AuthGuard)

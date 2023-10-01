@@ -14,6 +14,7 @@ model User {
   created_at         DateTime               @default(now())
   collectionVotes    CollectionVote[]
   projectVotes       ProjectVote[]
+  subProjectVotes    SubProjectVote[]
   expertiseVotes     ExpertiseVote[]
   results            Result[]
   nonce              Nonce?
@@ -83,11 +84,26 @@ model Project {
   collection_id Int
   image         String?
   created_at    DateTime      @default(now())
+  subProjects   SubProject[]
   collection    Collection    @relation(fields: [collection_id], references: [id])
   results       Result[]
   options1      ProjectVote[] @relation("VoteToProject1")
   options2      ProjectVote[] @relation("VoteToProject2")
   voted         ProjectVote[] @relation("Voted")
+}
+
+model SubProject {
+  id          Int              @id @default(autoincrement())
+  name        String
+  url         String
+  description String
+  project_id  Int
+  image       String?
+  created_at  DateTime         @default(now())
+  project     Project          @relation(fields: [project_id], references: [id])
+  options1    SubProjectVote[] @relation("VoteToProject1")
+  options2    SubProjectVote[] @relation("VoteToProject2")
+  voted       SubProjectVote[] @relation("Voted")
 }
 
 model ExpertiseVote {
@@ -136,6 +152,22 @@ model ProjectVote {
   picked      Project? @relation("Voted", fields: [picked_id], references: [id])
 
   @@unique([project1_id, project2_id, user_id])
+}
+
+model SubProjectVote {
+  id            Int         @id @default(autoincrement())
+  user_id       Int
+  subProject1Id Int
+  subProject2Id Int
+  picked_id     Int?
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @default(now())
+  user          User        @relation(fields: [user_id], references: [id])
+  subProject1   SubProject  @relation("VoteToProject1", fields: [subProject1Id], references: [id])
+  subProject2   SubProject  @relation("VoteToProject2", fields: [subProject2Id], references: [id])
+  picked        SubProject? @relation("Voted", fields: [picked_id], references: [id])
+
+  @@unique([subProject1Id, subProject2Id, user_id])
 }
 
 model Nonce {
