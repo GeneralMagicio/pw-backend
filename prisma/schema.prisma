@@ -8,18 +8,19 @@ generator client {
 }
 
 model User {
-  id                 Int                    @id @default(autoincrement())
-  address            String
-  isBadgeHolder      Int
-  created_at         DateTime               @default(now())
-  collectionVotes    CollectionVote[]
-  projectVotes       ProjectVote[]
-  subProjectVotes    SubProjectVote[]
-  expertiseVotes     ExpertiseVote[]
-  results            Result[]
-  nonce              Nonce?
-  finishedCollection UserCollectionFinish[]
-  editedRanking      EditedRanking[]
+  id                        Int                          @id @default(autoincrement())
+  address                   String
+  isBadgeHolder             Int
+  created_at                DateTime                     @default(now())
+  collectionVotes           CollectionVote[]
+  projectVotes              ProjectVote[]
+  subProjectVotes           SubProjectVote[]
+  expertiseVotes            ExpertiseVote[]
+  results                   Result[]
+  nonce                     Nonce?
+  finishedCollection        UserCollectionFinish[]
+  finishedCompositeProjects UserCompositeProjectFinish[]
+  editedRanking             EditedRanking[]
 }
 
 model Space {
@@ -77,19 +78,20 @@ model Result {
 }
 
 model Project {
-  id            Int           @id @default(autoincrement())
-  name          String
-  url           String
-  description   String
-  collection_id Int
-  image         String?
-  created_at    DateTime      @default(now())
-  subProjects   SubProject[]
-  collection    Collection    @relation(fields: [collection_id], references: [id])
-  results       Result[]
-  options1      ProjectVote[] @relation("VoteToProject1")
-  options2      ProjectVote[] @relation("VoteToProject2")
-  voted         ProjectVote[] @relation("Voted")
+  id                     Int                          @id @default(autoincrement())
+  name                   String
+  url                    String
+  description            String
+  collection_id          Int
+  image                  String?
+  created_at             DateTime                     @default(now())
+  subProjects            SubProject[]
+  collection             Collection                   @relation(fields: [collection_id], references: [id])
+  usersCompositeProjects UserCompositeProjectFinish[]
+  results                Result[]
+  options1               ProjectVote[]                @relation("VoteToProject1")
+  options2               ProjectVote[]                @relation("VoteToProject2")
+  voted                  ProjectVote[]                @relation("Voted")
 }
 
 model SubProject {
@@ -201,4 +203,15 @@ model UserCollectionFinish {
   user          User       @relation(fields: [user_id], references: [id])
 
   @@id([user_id, collection_id])
+}
+
+model UserCompositeProjectFinish {
+  user_id    Int
+  project_id Int
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  project    Project  @relation(fields: [project_id], references: [id])
+  user       User     @relation(fields: [user_id], references: [id])
+
+  @@id([user_id, project_id])
 }

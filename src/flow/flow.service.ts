@@ -174,6 +174,15 @@ export class FlowService {
     return projecVotes !== null || collectionVote !== null;
   };
 
+  isCompositeProjectStarted = async (userId: number, projectId: number) => {
+    const votes = await this.prismaService.subProjectVote.findFirst({
+      select: { id: true },
+      where: { user_id: userId, subProject1: { project_id: projectId } },
+    });
+
+    return votes !== null;
+  };
+
   isCollectionFinished = async (userId: number, collectionId: number) => {
     const status = await this.prismaService.userCollectionFinish.findUnique({
       where: {
@@ -183,6 +192,20 @@ export class FlowService {
         },
       },
     });
+
+    return status !== null;
+  };
+
+  isCompositeProjectFinished = async (userId: number, collectionId: number) => {
+    const status =
+      await this.prismaService.userCompositeProjectFinish.findUnique({
+        where: {
+          user_id_project_id: {
+            project_id: collectionId,
+            user_id: userId,
+          },
+        },
+      });
 
     return status !== null;
   };
@@ -223,6 +246,29 @@ export class FlowService {
     if (await this.isCollectionFinished(userId, nextCollection.id))
       return false;
     return true;
+  };
+
+  isCompositeProjectLocked = async (
+    userId: number,
+    projectId: number,
+  ): Promise<boolean> => {
+    const mainQuestionsAnswered = await this.hasAnsweredMainQuestions(userId);
+
+    if (!mainQuestionsAnswered) return true;
+
+    const project = await this.prismaService.project.findUnique({
+      where: { id: projectId },
+      include: { collection: true },
+    });
+
+    if (!project) throw new Error('project id invalid');
+
+    const [isParentLocked, isParentFinished] = await Promise.all([
+      this.isCollectionLocked(userId, project.collection_id),
+      this.isCollectionFinished(userId, project.collection_id),
+    ]);
+
+    return !isParentFinished || isParentLocked;
   };
 
   voteForProjects = async (
@@ -402,19 +448,24 @@ export class FlowService {
 
     const withAdditionalFields = await Promise.all(
       collections.map(async (collection) => {
-        const [locked, hasSubcollections, hasSuperProjects, finished, started] =
-          await Promise.all([
-            this.isCollectionLocked(userId, collection.id),
-            this.hasSubcollections(collection.id),
-            this.hasSuperProjects(collection.id),
-            this.isCollectionFinished(userId, collection.id),
-            this.isCollectionStarted(userId, collection.id),
-          ]);
+        const [
+          locked,
+          hasSubcollections,
+          hasCompositeProjects,
+          finished,
+          started,
+        ] = await Promise.all([
+          this.isCollectionLocked(userId, collection.id),
+          this.hasSubcollections(collection.id),
+          this.hasCompositeProjects(collection.id),
+          this.isCollectionFinished(userId, collection.id),
+          this.isCollectionStarted(userId, collection.id),
+        ]);
         return {
           ...collection,
           locked,
           hasSubcollections,
-          hasSuperProjects,
+          hasCompositeProjects,
           finished,
           started,
         };
@@ -423,8 +474,8 @@ export class FlowService {
     return withAdditionalFields;
   };
 
-  getSuperProjects = async (userId: number, parentCollectionId: number) => {
-    const superProjects = await this.prismaService.project.findMany({
+  getCompositeProjects = async (userId: number, parentCollectionId: number) => {
+    const compositeProjects = await this.prismaService.project.findMany({
       where: {
         collection_id: parentCollectionId,
         subProjects: {
@@ -435,24 +486,23 @@ export class FlowService {
       },
     });
 
-    // const withAdditionalFields = await Promise.all(
-    //   collections.map(async (collection) => {
-    //     const [locked, finished, started] = await Promise.all([
-    //       this.isCollectionLocked(userId, collection.id),
-    //       this.isCollectionFinished(userId, collection.id),
-    //       this.isCollectionStarted(userId, collection.id),
-    //     ]);
-    //     return {
-    //       ...collection,
-    //       locked,
-    //       hasSubcollections,
-    //       hasSuperProjects,
-    //       finished,
-    //       started,
-    //     };
-    //   }),
-    // );
-    return superProjects;
+    const withAdditionalFields = await Promise.all(
+      compositeProjects.map(async (project) => {
+        const [locked, finished, started] = await Promise.all([
+          this.isCompositeProjectLocked(userId, project.id),
+          this.isCompositeProjectFinished(userId, project.id),
+          this.isCompositeProjectStarted(userId, project.id),
+        ]);
+        return {
+          ...project,
+          locked,
+          finished,
+          started,
+        };
+      }),
+    );
+
+    return withAdditionalFields;
   };
 
   getNextCollection = async (
@@ -602,10 +652,7 @@ export class FlowService {
     };
   };
 
-  getProjectRanking = async (
-    userId: number,
-    projectId: number,
-  ): Promise<CollectionRanking> => {
+  getProjectRanking = async (userId: number, projectId: number) => {
     // const editedRanking = await this.prismaService.editedRanking.findFirst({
     //   select: { ranking: true },
     //   where: {
@@ -657,7 +704,7 @@ export class FlowService {
     const ranking = await Promise.all(
       result.map(async (item, index) => ({
         share: item,
-        project: await this.prismaService.project.findUnique({
+        project: await this.prismaService.subProject.findUnique({
           where: { id: zeroBasedMappingFunction(index) },
         }),
       })),
@@ -1330,13 +1377,13 @@ export class FlowService {
     return subCollections.length > 0;
   };
 
-  private hasSuperProjects = async (collectionId: number) => {
-    const superProjects = await this.prismaService.subProject.findMany({
+  private hasCompositeProjects = async (collectionId: number) => {
+    const compositeProjects = await this.prismaService.subProject.findMany({
       select: { id: true },
       where: { project: { collection_id: collectionId } },
     });
 
-    return superProjects.length > 0;
+    return compositeProjects.length > 0;
   };
 
   private calculateThreshold = (count: number, forceAll = false) => {

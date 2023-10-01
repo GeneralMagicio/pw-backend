@@ -59,16 +59,16 @@ export class FlowController {
   //     'Parent id of the collections (skip if you want the top level collections)',
   //   required: false,
   // })
-  @Get('/superProjects')
-  async getSuperProjects(
+  @Get('/compositeProjects')
+  async getCompositeProjects(
     @Req() { userId }: AuthedReq,
     @Query('cid') parentId: number,
   ) {
-    const superProjects = await this.flowService.getSuperProjects(
+    const compositeProjects = await this.flowService.getCompositeProjects(
       userId,
       parentId,
     );
-    return superProjects;
+    return compositeProjects;
   }
 
   @UseGuards(AuthGuard)
@@ -216,6 +216,17 @@ export class FlowController {
   ) {
     // TODO: check voting threshold
     const ranking = await this.flowService.getProjectRanking(userId, projectId);
+
+    await this.prismaService.userCompositeProjectFinish.upsert({
+      create: { user_id: userId, project_id: projectId },
+      update: { user_id: userId, project_id: projectId },
+      where: {
+        user_id_project_id: {
+          user_id: userId,
+          project_id: projectId,
+        },
+      },
+    });
 
     return ranking;
   }
