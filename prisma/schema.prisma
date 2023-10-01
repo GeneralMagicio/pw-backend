@@ -18,6 +18,7 @@ model User {
   results            Result[]
   nonce              Nonce?
   finishedCollection UserCollectionFinish[]
+  editedRanking      EditedRanking[]
 }
 
 model Space {
@@ -62,6 +63,7 @@ model Collection {
   voted                CollectionVote[]       @relation("Voted")
   expertiseVoted       ExpertiseVote[]        @relation("ExpertiseVoted")
   usersWhoFinished     UserCollectionFinish[]
+  editedRankings       EditedRanking[]
 }
 
 model Result {
@@ -145,12 +147,26 @@ model Nonce {
   user       User?    @relation(fields: [user_id], references: [id])
 }
 
+model EditedRanking {
+  id            Int         @id @default(autoincrement())
+  user_id       Int
+  collection_id Int?
+  ranking       String
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @default(now())
+  user          User        @relation(fields: [user_id], references: [id])
+  collection    Collection? @relation(fields: [collection_id], references: [id])
+
+  @@unique([user_id, collection_id])
+}
+
 model UserCollectionFinish {
   user_id       Int
   collection_id Int
-  created_at    DateTime @default(now())
-  updated_at    DateTime @default(now())
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @default(now())
   collection    Collection @relation(fields: [collection_id], references: [id])
   user          User       @relation(fields: [user_id], references: [id])
+
   @@id([user_id, collection_id])
 }
