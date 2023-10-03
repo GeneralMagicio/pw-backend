@@ -23,6 +23,7 @@ import { sortProjectId } from 'src/utils';
 import { CollectionService } from 'src/collection/collection.service';
 import { EditedRankingDto } from './dto/editedRanking';
 import { validateRanking } from 'src/utils/edit-logic';
+import { CollectionRanking } from './types';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -260,7 +261,7 @@ export class FlowController {
       if (!hasThresholdVotes)
         throw new ForbiddenException('Threshold votes missing');
     }
-    let ranking;
+    let ranking: any;
     const type = await this.flowService.getCollectionSubunitType(
       collectionId || null,
     );
@@ -291,8 +292,21 @@ export class FlowController {
     // const nextCollectionId = await this.flowService.getNextCollection(userId);
     const nextCollection = null;
 
-    return {
+    const votingPower = collectionId
+      ? await this.flowService.getCollectionVotingPower(collectionId, userId)
+      : 1;
+
+    const newRanking: CollectionRanking = {
       ...ranking,
+      ranking: ranking.ranking.map((el: any) => ({
+        ...el,
+        share: el.share * votingPower,
+      })),
+    };
+
+    return {
+      ...newRanking,
+      votingPower,
       nextCollection,
     };
   }
@@ -361,13 +375,13 @@ export class FlowController {
   async removeMydata() {
     const userId = 1;
 
-    // await this.prismaService.collectionVote.deleteMany({
-    //   where: { user_id: userId },
-    // });
+    await this.prismaService.collectionVote.deleteMany({
+      where: { user_id: userId },
+    });
 
-    // await this.prismaService.expertiseVote.deleteMany({
-    //   where: { user_id: userId },
-    // });
+    await this.prismaService.expertiseVote.deleteMany({
+      where: { user_id: userId },
+    });
 
     await this.prismaService.projectVote.deleteMany({
       where: { user_id: userId },

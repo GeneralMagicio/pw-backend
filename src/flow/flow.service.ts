@@ -16,6 +16,7 @@ import {
 import { combinations } from 'mathjs';
 import { CollectionService } from 'src/collection/collection.service';
 import { CollectionRanking } from './types';
+import { OverallRankingType } from 'src/utils/edit-logic';
 
 @Injectable()
 export class FlowService {
@@ -338,7 +339,7 @@ export class FlowService {
     userId: number,
     cid: number | null = null,
     coefficient = 1,
-  ): Promise<any> => {
+  ): Promise<OverallRankingType[]> => {
     const editedRanking = await this.prismaService.editedRanking.findFirst({
       select: { ranking: true },
       where: {
@@ -387,6 +388,8 @@ export class FlowService {
             };
         }),
       );
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       return result;
     }
 
@@ -593,6 +596,37 @@ export class FlowService {
     }
 
     return null;
+  };
+
+  getCollectionVotingPower = async (
+    collectionId: number,
+    userId: number,
+  ): Promise<number> => {
+    const collection = await this.prismaService.collection.findUnique({
+      where: { id: collectionId },
+      select: { parent_collection_id: true },
+    });
+
+    if (!collection) throw Error('');
+
+    const ranking = await this.getCollectionRanking(
+      userId,
+      collection.parent_collection_id,
+    );
+    const { share } = ranking.ranking.find(
+      (item) => item.project?.id === collectionId,
+    )!;
+    // return share;
+    if (collection?.parent_collection_id === null) {
+      return share;
+    } else {
+      return (
+        (await this.getCollectionVotingPower(
+          collection.parent_collection_id!,
+          userId,
+        )) * share
+      );
+    }
   };
 
   getCollectionRanking = async (
