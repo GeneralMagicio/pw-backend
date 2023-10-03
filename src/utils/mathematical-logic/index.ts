@@ -97,7 +97,6 @@ const validate = (input: { share: number }[]) => {
 export function makeIt100<T>(input: T & { share: number }[]) {
   let result = [...input];
 
-  console.log('initial data:', result);
   let breakLimit = 0;
   while (!validate(result) && breakLimit < 100) {
     const sum = result.reduce((acc, curr) => (acc += curr.share), 0);

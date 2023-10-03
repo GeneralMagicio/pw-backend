@@ -29,7 +29,6 @@ export class FlowController {
   private readonly logger = new Logger(FlowController.name);
   constructor(
     private readonly flowService: FlowService,
-    private readonly collectionService: CollectionService,
     private readonly prismaService: PrismaService,
   ) {}
 
@@ -289,10 +288,8 @@ export class FlowController {
       });
     }
 
-    const nextCollectionId = await this.flowService.getNextCollection(userId);
-    const nextCollection = nextCollectionId
-      ? await this.collectionService.getCollection(nextCollectionId)
-      : null;
+    // const nextCollectionId = await this.flowService.getNextCollection(userId);
+    const nextCollection = null;
 
     return {
       ...ranking,
@@ -363,21 +360,34 @@ export class FlowController {
   @Get('/dangerouslyRemoveData')
   async removeMydata() {
     const userId = 1;
-    await this.prismaService.projectVote.deleteMany({
-      where: { user_id: userId },
-    });
 
     // await this.prismaService.collectionVote.deleteMany({
     //   where: { user_id: userId },
     // });
 
+    // await this.prismaService.expertiseVote.deleteMany({
+    //   where: { user_id: userId },
+    // });
+
+    await this.prismaService.projectVote.deleteMany({
+      where: { user_id: userId },
+    });
+
     await this.prismaService.userCollectionFinish.deleteMany({
       where: { user_id: userId },
     });
 
-    // await this.prismaService.expertiseVote.deleteMany({
-    //   where: { user_id: userId },
-    // });
+    await this.prismaService.userCompositeProjectFinish.deleteMany({
+      where: { user_id: userId },
+    });
+
+    await this.prismaService.subProjectVote.deleteMany({
+      where: { user_id: userId },
+    });
+
+    await this.prismaService.editedRanking.deleteMany({
+      where: { user_id: userId },
+    });
   }
 
   // @UseGuards(AuthGuard)

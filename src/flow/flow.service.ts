@@ -20,10 +20,7 @@ import { CollectionRanking } from './types';
 @Injectable()
 export class FlowService {
   private readonly logger = new Logger(FlowService.name);
-  constructor(
-    private readonly prismaService: PrismaService,
-    private readonly collectionService: CollectionService,
-  ) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
   // This would determine the latest collection a user has voted in
   // So they can pick up where they've left off
@@ -134,7 +131,11 @@ export class FlowService {
     ]);
 
     return (
-      expertiseVotes.length === combinations(topLevelCollections.length, 2)
+      expertiseVotes.length >
+      Math.floor(
+        this.calculateThreshold(topLevelCollections.length, true) *
+          combinations(topLevelCollections.length, 2),
+      )
     );
   };
 
@@ -152,7 +153,13 @@ export class FlowService {
       }),
     ]);
 
-    return topLevelVotes.length === combinations(topLevelCollections.length, 2);
+    return (
+      topLevelVotes.length >
+      Math.floor(
+        this.calculateThreshold(topLevelCollections.length, true) *
+          combinations(topLevelCollections.length, 2),
+      )
+    );
   };
 
   isCollectionStarted = async (userId: number, collectionId: number) => {
@@ -348,24 +355,47 @@ export class FlowService {
       where: { parent_collection_id: cid },
     });
 
+    const superProjects = await this.prismaService.project.findMany({
+      where: {
+        collection_id: cid || 0,
+        subProjects: { some: { id: { gt: 0 } } },
+      },
+      select: { id: true, name: true },
+    });
+
     const res = await this.getCollectionRanking(userId, cid);
 
     const { ranking } = res;
 
     if (collections.length === 0) {
-      result = ranking.map((item) => ({
-        name: item.project?.name,
-        id: item.project?.id,
-        share: toFixedNumber(item.share * coefficient, 4),
-      }));
+      result = await Promise.all(
+        ranking.map(async (item) => {
+          if (superProjects.some((el) => el.id === item.project?.id)) {
+            return this.formatProjectRankingForOverallRanking(
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-ignore
+              await this.getProjectRanking(userId, item.project!.id!),
+              toFixedNumber(item.share * coefficient, 4),
+              item.project!.id!,
+            );
+          } else
+            return {
+              name: item.project?.name,
+              id: item.project?.id,
+              share: toFixedNumber(item.share * coefficient, 4),
+              type: 'project',
+            };
+        }),
+      );
       return result;
     }
 
     return Promise.all(
       collections.map(async (collection) => ({
+        type: 'collection',
         id: collection.id,
         collectionTitle: collection.name,
-        votingPower:
+        share:
           coefficient *
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
@@ -1387,8 +1417,8 @@ export class FlowService {
   };
 
   private calculateThreshold = (count: number, forceAll = false) => {
-    if (forceAll) return 1;
-    const threshold = 0.4;
+    if (forceAll) return 0.4;
+    const threshold = 0.25;
     return threshold;
   };
 
@@ -1568,6 +1598,27 @@ export class FlowService {
       collection1.parent_collection_id !== collection2.parent_collection_id
     )
       throw new BadRequestException('Invalid pair of collections');
+  };
+
+  private formatProjectRankingForOverallRanking = (
+    input: CollectionRanking,
+    share: number,
+    id: number,
+  ) => {
+    const newRanking = input.ranking.map((item) => ({
+      id: item.project?.id,
+      share: item.share * share,
+      name: item.project?.name,
+      type: 'project',
+    }));
+
+    return {
+      collectionTitle: input.collectionTitle,
+      ranking: newRanking,
+      share,
+      id,
+      type: 'composite project',
+    };
   };
 
   private validateProjectVote = async (
