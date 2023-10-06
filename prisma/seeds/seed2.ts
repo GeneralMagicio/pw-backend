@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient, ProjectType } from '@prisma/client';
 import * as XLSX from 'xlsx';
 
 const prisma = new PrismaClient({
@@ -27,10 +27,10 @@ const getPoll = (): Prisma.PollUncheckedCreateInput => ({
   space_id: 1,
 });
 
-const getCollections = (): Prisma.CollectionUncheckedCreateInput[] => [
+const getCollections = () => [
   { name: 'Infrastructure', poll_id: 1, parent_collection_id: null },
   { name: 'Governance', poll_id: 1, parent_collection_id: null },
-  { name: 'Defi', poll_id: 1, parent_collection_id: null },
+  { name: 'DeFi', poll_id: 1, parent_collection_id: null },
   {
     name: 'NFT Platforms',
     poll_id: 1,
@@ -78,6 +78,23 @@ const getCollections = (): Prisma.CollectionUncheckedCreateInput[] => [
   },
 ];
 
+const subProjects = [
+  { name: 'Aragon Client', parentId: 33 },
+  { name: 'Aragon Connnect', parentId: 33 },
+  { name: 'Aragon Voice', parentId: 33 },
+  { name: 'Aragon Agreements', parentId: 33 },
+  { name: 'Aragon Court', parentId: 33 },
+  { name: 'Aragon Fundraising', parentId: 33 },
+  { name: 'Aragon SDK', parentId: 33 },
+  { name: 'ANT', parentId: 33 },
+  { name: 'Lens', parentId: 67 },
+  { name: 'Merch', parentId: 67 },
+  { name: 'Aave Flash Loans', parentId: 67 },
+  { name: 'Aave Safety Module', parentId: 67 },
+  { name: 'Aave Governance', parentId: 67 },
+  { name: 'Aave Token (AAVE)', parentId: 67 },
+];
+
 const descriptions = [
   'This is a decentralized oracle network that provides real-world data to smart contracts on the blockchain. It allows blockchains to interact with external data sources and systems in a secure, trustless way.',
   'Our project enables the creation and management of decentralized organizations on Ethereum. It provides tools for governance, fundraising, payroll, accounting, and collaboration while maintaining transparency through blockchain technology.',
@@ -91,16 +108,32 @@ const descriptions = [
   'We allow users to establish a unique identity on the blockchain while keeping personal information private. It uses cryptographic attestations for identity verification and credit scoring without exposing sensitive data publicly.',
 ];
 
+const addSubProjects = async () => {
+  for (const subProject of subProjects) {
+    await prisma.project.create({
+      data: {
+        name: subProject.name,
+        parentId: subProject.parentId,
+        type: ProjectType.project,
+        description:
+          descriptions[Math.floor(Math.random() * descriptions.length)],
+        url: 'Some url',
+        poll_id: 1,
+      },
+    });
+  }
+};
+
 async function addDescriptions() {
-  const res = await prisma.subProject.findMany({
+  const res = await prisma.project.findMany({
     select: { id: true },
-    where: { id: { gt: 0 } },
+    // where: { id: { gt: 0 } },
   });
 
   const ids = res.map((item) => item.id);
 
   for (const el of ids) {
-    await prisma.subProject.update({
+    await prisma.project.update({
       where: { id: el },
       data: {
         description:
@@ -117,11 +150,11 @@ async function insertDataFromExcel() {
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
   const jsonData: Row[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
 
-  for (let i = 180; i < jsonData.length; i++) {
+  for (let i = 40; i < jsonData.length; i++) {
     const row = jsonData[i];
     // console.log(row);
     // if (i > 30) return;
-    const collection = await prisma.collection.findFirst({
+    const collection = await prisma.project.findFirst({
       where: {
         name: row.Category.split('')
           .filter((c) => c !== ':')
@@ -139,7 +172,9 @@ async function insertDataFromExcel() {
         image: row.Image,
         description: 'Description',
         url: 'Some url',
-        collection_id: collection.id,
+        parentId: collection.id,
+        poll_id: 1,
+        type: ProjectType.project,
       },
     });
   }
@@ -154,7 +189,7 @@ const main = async () => {
     },
   });
 
-  // await prisma.$connect();
+  await prisma.$connect();
 
   // const space = getSpace();
   // await prisma.space.create({
@@ -169,6 +204,21 @@ const main = async () => {
 
   // // add collections
   // const collections = getCollections();
+  // for (const collection of collections) {
+  //   await prisma.project.create({
+  //     data: {
+  //       name: collection.name,
+  //       // image: row.Image,
+  //       description: 'Description',
+  //       url: 'Some url',
+  //       parentId: collection.parent_collection_id,
+  //       poll_id: collection.poll_id,
+  //       type: ProjectType.collection,
+  //     },
+  //   });
+  // }
+  // collections.forEach(async (collection) => {
+  // });
   // await prisma.collection.createMany({
   //   data: collections,
   // });
@@ -176,7 +226,9 @@ const main = async () => {
   // add projects
   // await insertDataFromExcel();
 
-  await addDescriptions();
+  // await addDescriptions();
+
+  await addSubProjects();
 
   await prisma.$disconnect();
 };

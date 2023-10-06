@@ -9,7 +9,7 @@ export interface CollectionRanking {
       name: string;
       url: string;
       description: string;
-      collection_id: number;
+      parentId: number;
       image: string | null;
       created_at: Date;
     } | null;

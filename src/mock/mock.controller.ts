@@ -1,4 +1,5 @@
 import { Controller, Get, Logger } from '@nestjs/common';
+import { ProjectType } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 
 @Controller({ path: 'mock' })
@@ -8,7 +9,9 @@ export class MockController {
 
   @Get('/collections')
   async getCollections() {
-    const collections = await this.prismaService.collection.findMany();
+    const collections = await this.prismaService.project.findMany({
+      where: { type: ProjectType.collection },
+    });
 
     return collections;
   }

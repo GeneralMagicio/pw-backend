@@ -1,4 +1,4 @@
-import { ApiProperty, OmitType } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class PairsResult {
   @ApiProperty({
@@ -17,9 +17,6 @@ export class PairsResult {
 
   @ApiProperty()
   collectionTitle: string;
-
-  @ApiProperty()
-  type: 'project' | 'collection';
 }
 
-export class ExpertisePairs extends OmitType(PairsResult, ['type'] as const) {}
+export class ExpertisePairs extends PairsResult {}

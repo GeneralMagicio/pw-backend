@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { ProjectType } from '@prisma/client';
 import { FlowService } from 'src/flow/flow.service';
 import { PrismaService } from 'src/prisma.service';
 
@@ -11,8 +12,8 @@ export class CollectionService {
   ) {}
 
   getCollection = async (id: number, userId: number) => {
-    const collection = await this.prismaService.collection.findUnique({
-      where: { id },
+    const collection = await this.prismaService.project.findUnique({
+      where: { id, type: ProjectType.project },
     });
 
     if (!collection) throw new BadRequestException('Invalid id');
