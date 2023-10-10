@@ -15,7 +15,12 @@ import {
 } from 'src/utils/mathematical-logic';
 import { combinations } from 'mathjs';
 import { CollectionService } from 'src/collection/collection.service';
-import { CollectionRanking } from './types';
+import {
+  CollectionRanking,
+  CollectionRanking2,
+  EditingCollectionRanking,
+  ProjectRanking,
+} from './types';
 import { OverallRankingType } from 'src/utils/edit-logic';
 import { ProjectType } from '@prisma/client';
 
@@ -146,7 +151,10 @@ export class FlowService {
     if (!mainQuestionsAnswered) return true;
 
     const collection = await this.prismaService.project.findUnique({
-      where: { id: collectionId, type: ProjectType.project },
+      where: {
+        id: collectionId,
+        type: { in: [ProjectType.composite_project, ProjectType.collection] },
+      },
       include: { parent: true },
     });
 
@@ -203,6 +211,34 @@ export class FlowService {
     }
   };
 
+  private expertiseVote = async (
+    userId: number,
+    collection1Id: number,
+    collection2Id: number,
+    pickedId: number | null,
+  ) => {
+    // await this.validateProjectVote(project1Id, project2Id, pickedId);
+    const payload = {
+      user_id: userId,
+      collection1_id: collection1Id,
+      collection2_id: collection2Id,
+      picked_id: pickedId,
+    };
+    const vote = await this.prismaService.expertiseVote.findFirst({
+      where: { ...payload, picked_id: undefined },
+    });
+    if (vote) {
+      await this.prismaService.expertiseVote.update({
+        data: payload,
+        where: { id: vote.id },
+      });
+    } else {
+      await this.prismaService.expertiseVote.create({
+        data: payload,
+      });
+    }
+  };
+
   voteForProjects = async (
     userId: number,
     project1Id: number,
@@ -218,24 +254,38 @@ export class FlowService {
     cid: number | null = null,
     coefficient = 1,
   ): Promise<OverallRankingType[]> => {
-    const editedRanking = await this.prismaService.editedRanking.findFirst({
-      select: { ranking: true },
-      where: {
-        user_id: userId,
-        collection_id: null,
-      },
-    });
+    // const editedRanking = await this.prismaService.editedRanking.findFirst({
+    //   select: { ranking: true },
+    //   where: {
+    //     user_id: userId,
+    //     collection_id: null,
+    //   },
+    // });
 
-    if (editedRanking) return JSON.parse(editedRanking.ranking);
+    // if (editedRanking) return JSON.parse(editedRanking.ranking);
 
     let result = [];
-    const collections = await this.prismaService.project.findMany({
-      select: { id: true, name: true },
-      where: {
-        parentId: cid,
-        type: { in: [ProjectType.composite_project, ProjectType.collection] },
-      },
-    });
+    const [collection, collections] = await Promise.all([
+      this.prismaService.project.findUnique({
+        where: { id: cid || -1 },
+      }),
+      this.prismaService.project.findMany({
+        select: { id: true, name: true },
+        where: {
+          parentId: cid,
+          type: { in: [ProjectType.composite_project, ProjectType.collection] },
+        },
+      }),
+    ]);
+
+    // let coefficient = 1;
+    // if (collection?.parentId) {
+    //   const parentRanking = await this.getOverallRanking(
+    //     userId,
+    //     collection.parentId,
+    //   );
+    //   coefficient = parentRanking.find((el) => el.id === cid)?.share || 1;
+    // }
 
     const res = await this.getRanking(userId, cid);
 
@@ -245,7 +295,7 @@ export class FlowService {
       result = ranking.map((item) => ({
         name: item.project?.name,
         id: item.project?.id,
-        share: toFixedNumber(item.share * coefficient, 4),
+        share: toFixedNumber(item.share * coefficient, 6),
         type: item.project?.type,
       }));
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -253,8 +303,10 @@ export class FlowService {
       return result;
     }
 
-    return Promise.all(
-      collections.map(async (collection) => ({
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return Promise.all([
+      ...collections.map(async (collection) => ({
         type: 'collection',
         id: collection.id,
         collectionTitle: collection.name,
@@ -272,7 +324,15 @@ export class FlowService {
             ranking.find((c) => c.project.id === collection.id).share,
         ),
       })),
-    );
+      ...ranking
+        .filter((el) => el.project?.type === 'project')
+        .map((item) => ({
+          name: item.project?.name,
+          id: item.project?.id,
+          share: toFixedNumber(item.share * coefficient, 6),
+          type: 'project',
+        })),
+    ]);
   };
 
   voteForExpertise = async (
@@ -282,7 +342,7 @@ export class FlowService {
     pickedId: number | null,
   ) => {
     await this.validateExpertiseVote(collection1Id, collection2Id, pickedId);
-    await this.vote(userId, collection1Id, collection2Id, pickedId);
+    await this.expertiseVote(userId, collection1Id, collection2Id, pickedId);
   };
 
   voteForCollections = async (
@@ -385,9 +445,11 @@ export class FlowService {
   };
 
   getCollectionVotingPower = async (
-    collectionId: number,
+    collectionId: number | null,
     userId: number,
   ): Promise<number> => {
+    if (collectionId === null) return 1;
+
     const collection = await this.prismaService.project.findUnique({
       where: { id: collectionId, type: ProjectType.collection },
       select: { parentId: true },
@@ -411,26 +473,18 @@ export class FlowService {
     }
   };
 
+  /**
+   * This method calculates ranking in a collection/composite project based on the votes
+   * @param userId
+   * @param collectionId
+   * @returns
+   */
   getRanking = async (
     userId: number,
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
-    // const editedRanking = await this.prismaService.editedRanking.findFirst({
-    //   select: { ranking: true },
-    //   where: {
-    //     user_id: userId,
-    //     collection_id: collectionId,
-    //   },
-    // });
-
-    // if (editedRanking) return JSON.parse(editedRanking.ranking);
-
-    const [collection, allVotes, allChildren] = await Promise.all([
-      this.prismaService.project.findUnique({
-        where: { id: collectionId || -1, type: ProjectType.collection },
-        select: { name: true },
-      }),
+    const [allVotes, allChildren] = await Promise.all([
       this.prismaService.vote.findMany({
         where: {
           user_id: userId,
@@ -473,11 +527,20 @@ export class FlowService {
       })),
     );
 
+    // const votingPower = await this.getCollectionVotingPower(
+    //   collectionId,
+    //   userId,
+    // );
+
+    // const finalRanking = ranking
+    //   .map((el) => ({ ...el, share: el.share * votingPower }))
+    //   .sort((a, b) => b.share - a.share);
+
     return {
-      collectionTitle: collection?.name,
+      // collectionTitle: collection?.name,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      ranking: makeIt100(ranking.sort((a, b) => b.share - a.share)),
+      ranking: ranking.sort((a, b) => b.share - a.share),
     };
   };
 
@@ -528,7 +591,7 @@ export class FlowService {
 
     return {
       collectionTitle: 'Root',
-      ranking: ranking.sort((a, b) => b.share - a.share),
+      ranking: makeIt100(ranking.sort((a, b) => b.share - a.share)),
     };
   };
 
@@ -562,7 +625,7 @@ export class FlowService {
     return ranking[index + 1].project;
   };
 
-  getPairs = async (userId: number, parentCollection?: number, count = 5) => {
+  getPairs = async (userId: number, parentCollection?: number, count = 1) => {
     const [collection, allVotes, allChildren] = await Promise.all([
       this.prismaService.project.findUnique({
         where: {
@@ -673,7 +736,7 @@ export class FlowService {
     };
   };
 
-  getExpertisePairs = async (userId: number, count = 5) => {
+  getExpertisePairs = async (userId: number, count = 1) => {
     const parentCollection = null;
     const [allVotes, allCollections] = await Promise.all([
       this.prismaService.expertiseVote.findMany({
@@ -817,6 +880,44 @@ export class FlowService {
     });
 
     return numOfVotes / combinations(count, 2) >= threshold;
+  };
+
+  private formatRanking = (ranking: CollectionRanking2['ranking']) => {
+    return ranking.map((el) => ({
+      id: el.id,
+      share: el.share,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      name: el?.name || el?.collectionTitle,
+    }));
+  };
+
+  breakOverallRankingDown = (input: CollectionRanking2) => {
+    const overallRanking: CollectionRanking2 = JSON.parse(
+      JSON.stringify(input),
+    );
+    const lists: { id: number; ranking: ProjectRanking[] }[] = [];
+
+    lists.push({
+      id: input.id,
+      ranking: this.formatRanking(input.ranking) as ProjectRanking[],
+    });
+
+    for (let i = 0; i < overallRanking.ranking.length; i++) {
+      const row = overallRanking.ranking[i];
+      if (row.type !== 'project') {
+        // if lists.push(...this.breakOverallRankingDown(row));
+        if (row.ranking.some((p) => p.type !== 'project')) {
+          lists.push(...this.breakOverallRankingDown(row));
+        } else
+          lists.push({
+            id: row.id,
+            ranking: this.formatRanking(row.ranking) as ProjectRanking[],
+          });
+      }
+    }
+
+    return lists;
   };
 
   // calculateOverallProgress = async (userId: number) => {

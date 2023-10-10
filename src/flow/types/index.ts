@@ -16,6 +16,33 @@ export interface CollectionRanking {
   }[];
 }
 
+export interface CollectionRanking2 {
+  type: 'collection' | 'composite project';
+  id: number;
+  collectionTitle: string;
+  share: number;
+  ranking: (CollectionRanking2 | ProjectRanking)[];
+}
+
+export interface ProjectRanking {
+  type: 'project';
+  id: number;
+  share: number;
+  name: string;
+}
+
+export interface EditingCollectionRanking extends CollectionRanking2 {
+  locked: boolean;
+  error: boolean;
+  expanded: boolean;
+  ranking: (EditingCollectionRanking | EditingProjectRanking)[];
+}
+
+export interface EditingProjectRanking extends ProjectRanking {
+  locked: boolean;
+  error: boolean;
+}
+
 // type A =
 //   | (GetResult<
 //       {

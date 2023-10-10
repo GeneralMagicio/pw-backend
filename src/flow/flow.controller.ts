@@ -195,8 +195,8 @@ export class FlowController {
       ? await this.flowService.getCollectionVotingPower(collectionId, userId)
       : 1;
 
-    const newRanking: CollectionRanking = {
-      ...ranking,
+    const newRanking = {
+      collectionTitle: 'title',
       ranking: ranking.ranking.map((el: any) => ({
         ...el,
         share: el.share * votingPower,
@@ -215,6 +215,21 @@ export class FlowController {
   @Get('/ranking/overall')
   async getOverallRanking(@Req() { userId }: AuthedReq) {
     const result = await this.flowService.getOverallRanking(userId);
+    return result;
+  }
+
+  // @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Overall ranking' })
+  @Post('/break')
+  async break(@Body() { ranking: stringifedRanking }: { ranking: string }) {
+    // console.log(stringifedRanking);
+    const result = this.flowService.breakOverallRankingDown({
+      type: 'collection',
+      collectionTitle: 'root',
+      id: -1,
+      share: 1,
+      ranking: stringifedRanking as any,
+    });
     return result;
   }
 
