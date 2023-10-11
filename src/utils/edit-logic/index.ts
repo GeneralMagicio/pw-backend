@@ -2,7 +2,7 @@ import { toFixedNumber } from '../mathematical-logic';
 
 export interface OverallRankingType {
   id: number;
-  collectionTitle: string;
+  name: string;
   type: 'composite project' | 'collection';
   share: number;
   ranking: OverallRankingType[] | Rank[];
@@ -45,7 +45,7 @@ export const validateRanking = (ranking: OverallRankingType[]) => {
   const flattenedRanking = flattenRankingData({
     ranking,
     id: -1,
-    collectionTitle: 'Root',
+    name: 'Root',
     share: 1,
     type: 'collection',
   });

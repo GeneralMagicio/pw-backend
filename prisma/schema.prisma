@@ -16,7 +16,7 @@ model User {
   expertiseVotes     ExpertiseVote[]
   nonce              Nonce?
   finishedCollection UserCollectionFinish[]
-  editedRanking      EditedRanking[]
+  shares             Share[]
 }
 
 model Space {
@@ -65,7 +65,7 @@ model Project {
   options1             Vote[]                 @relation("VoteToProject1")
   options2             Vote[]                 @relation("VoteToProject2")
   voted                Vote[]                 @relation("Voted")
-  editedRankings       EditedRanking[]
+  shares               Share[]
   expertiseColleciton1 ExpertiseVote[]        @relation("ExpertiseVote1")
   expertiseColleciton2 ExpertiseVote[]        @relation("ExpertiseVote2")
   expertiseVoted       ExpertiseVote[]        @relation("Voted")
@@ -113,17 +113,17 @@ model Nonce {
   user       User?    @relation(fields: [user_id], references: [id])
 }
 
-model EditedRanking {
-  id            Int      @id @default(autoincrement())
-  user_id       Int
-  collection_id Int?
-  ranking       String
-  created_at    DateTime @default(now())
-  updated_at    DateTime @default(now())
-  user          User     @relation(fields: [user_id], references: [id])
-  collection    Project? @relation(fields: [collection_id], references: [id])
+model Share {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  project_id Int
+  share      Float
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id])
+  project    Project  @relation(fields: [project_id], references: [id])
 
-  @@unique([user_id, collection_id])
+  @@unique([user_id, project_id])
 }
 
 model UserCollectionFinish {

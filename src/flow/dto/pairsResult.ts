@@ -16,7 +16,7 @@ export class PairsResult {
   votedPairs: number;
 
   @ApiProperty()
-  collectionTitle: string;
+  name: string;
 }
 
 export class ExpertisePairs extends PairsResult {}

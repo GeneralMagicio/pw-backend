@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -20,9 +19,6 @@ import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { ExpertisePairs, PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
-import { EditedRankingDto } from './dto/editedRanking';
-import { validateRanking } from 'src/utils/edit-logic';
-import { CollectionRanking } from './types';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -173,10 +169,13 @@ export class FlowController {
       if (!hasThresholdVotes)
         throw new ForbiddenException('Threshold votes missing');
     }
-    const ranking = await this.flowService.getRanking(
-      userId,
-      collectionId || null,
-    );
+    const [ranking, votingPower, collection] = await Promise.all([
+      this.flowService.getRanking(userId, collectionId || null),
+      this.flowService.getCollectionVotingPower(collectionId || null, userId),
+      this.prismaService.project.findFirst({
+        where: { id: collectionId || -1 },
+      }),
+    ]);
 
     if (collectionId) {
       await this.prismaService.userCollectionFinish.upsert({
@@ -191,22 +190,12 @@ export class FlowController {
       });
     }
 
-    const votingPower = collectionId
-      ? await this.flowService.getCollectionVotingPower(collectionId, userId)
-      : 1;
-
-    const newRanking = {
-      collectionTitle: 'title',
-      ranking: ranking.ranking.map((el: any) => ({
-        ...el,
-        share: el.share * votingPower,
-      })),
-    };
-
     return {
-      ...newRanking,
-      votingPower,
-      // nextCollection,
+      ranking,
+      type: collection?.type || 'collection',
+      name: collection?.name || 'root',
+      share: votingPower,
+      id: collection?.id || -1,
     };
   }
 
@@ -219,58 +208,44 @@ export class FlowController {
   }
 
   // @UseGuards(AuthGuard)
-  @ApiResponse({ status: 200, description: 'Overall ranking' })
-  @Post('/break')
-  async break(@Body() { ranking: stringifedRanking }: { ranking: string }) {
-    // console.log(stringifedRanking);
-    const result = this.flowService.breakOverallRankingDown({
-      type: 'collection',
-      collectionTitle: 'root',
-      id: -1,
-      share: 1,
-      ranking: stringifedRanking as any,
-    });
-    return result;
-  }
+  // @ApiResponse({ status: 200, description: 'Overall ranking' })
+  // @Post('/break')
+  // async break(@Body() { ranking: stringifedRanking }: { ranking: string }) {
+  //   // console.log(stringifedRanking);
+  //   const result = this.flowService.breakOverallRankingDown({
+  //     type: 'collection',
+  //     name: 'root',
+  //     id: -1,
+  //     share: 1,
+  //     ranking: stringifedRanking as any,
+  //   });
+  //   return result;
+  // }
 
   @UseGuards(AuthGuard)
   // @ApiResponse({ status: 200, description: 'Overall ranking' })
   @Post('/ranking')
-  async submitEditedRanking(
-    @Req() { userId }: AuthedReq,
-    @Body() { ranking: stringifedRanking, collectionId }: EditedRankingDto,
-  ) {
-    const ranking = JSON.parse(stringifedRanking);
-    if (!validateRanking(ranking))
-      throw new BadRequestException('Invalid ranking data');
+  async submitEditedRanking(@Req() { userId }: AuthedReq, @Body() input: any) {
+    // validate that sigma of items is equal to parent
+    // no negative number
+    // all siblings are present
 
-    const result = await this.prismaService.editedRanking.findFirst({
-      where: {
-        user_id: userId,
-        collection_id: collectionId || null,
-      },
-    });
+    // console.log(input);
 
-    if (result) {
-      await this.prismaService.editedRanking.update({
-        where: {
-          id: result.id,
-        },
-        data: {
-          ranking: JSON.stringify(ranking),
-          user_id: userId,
-          collection_id: collectionId || null,
-        },
-      });
-    } else {
-      await this.prismaService.editedRanking.create({
-        data: {
-          user_id: userId,
-          collection_id: collectionId || null,
-          ranking: JSON.stringify(ranking),
-        },
-      });
-    }
+    // console.log(this.flowService.breakOverallRankingDown(input.shares as any));
+
+    await this.flowService.addManyShares(
+      this.flowService
+        .breakOverallRankingDown(input.shares as any)
+        .reduce(
+          (acc, curr) => [
+            ...acc,
+            ...curr.ranking.map((el) => ({ id: el.id, share: el.share })),
+          ],
+          [] as { id: number; share: number }[],
+        ),
+      userId,
+    );
 
     return 'created';
   }
@@ -313,9 +288,9 @@ export class FlowController {
     //   where: { user_id: userId },
     // });
 
-    await this.prismaService.editedRanking.deleteMany({
-      where: { user_id: userId },
-    });
+    // await this.prismaService.editedRanking.deleteMany({
+    //   where: { user_id: userId },
+    // });
   }
 
   // @UseGuards(AuthGuard)
