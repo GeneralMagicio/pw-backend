@@ -1,4 +1,4 @@
-import { add, column, eigs, matrix, multiply, re } from 'mathjs';
+import Matrix, { EigenvalueDecomposition } from 'ml-matrix';
 
 export const generateZeroMatrix = (n: number): number[][] => {
   const matrix: number[][] = [];
@@ -40,10 +40,10 @@ export const toFixedNumber = (num: number, digits: number) => {
 
 const isRankingUseful = (ranking: number[]) => {
   const numOfZeros = ranking.filter(
-    (score) => toFixedNumber(score, 2) <= 0.01,
+    (score) => toFixedNumber(score, 3) <= 0.001,
   ).length;
 
-  if (numOfZeros >= ranking.length / 2) return false;
+  if (numOfZeros > ranking.length / 3) return false;
 
   const sortedRanking = [...ranking].sort();
 
@@ -74,6 +74,7 @@ export const getRankingForSetOfDampingFactors = (input: number[][]) => {
       ranking = calculateCollectionRanking(input, dampingFactors[i]);
       isUseful = isRankingUseful(ranking);
     } catch (e) {
+      console.error(e);
     } finally {
       i += 1;
     }
@@ -121,7 +122,7 @@ export const calculateCollectionRanking = (
   input: number[][],
   dampingFactor = 1,
 ) => {
-  let votesMatrix = cloneArray(input);
+  let votesMatrix: any = cloneArray(input);
 
   validateVotesMatrix(votesMatrix);
 
@@ -152,38 +153,32 @@ export const calculateCollectionRanking = (
     }
   }
 
+  votesMatrix = new Matrix(votesMatrix);
+
   // add a damping factor
-  const dampingMatrix = matrix(
+  const dampingMatrix = new Matrix(
     Array(length).fill(Array(length).fill((1 - dampingFactor) / length)),
   );
 
-  votesMatrix = add(
-    multiply(dampingFactor, votesMatrix),
-    dampingMatrix,
-  ).valueOf() as number[][];
+  votesMatrix = dampingMatrix.add(votesMatrix.mul(dampingFactor));
 
-  // compute the eigenvalue
-  const { values, vectors } = eigs(votesMatrix, 0.01);
+  const e = new EigenvalueDecomposition(votesMatrix);
+  const values = e.realEigenvalues;
+  // const imaginary = e.imaginaryEigenvalues;
+  const vectors = e.eigenvectorMatrix;
 
-  const index = findEigenvalueOfOne(values as any);
+  const index = findEigenvalueOfOne(values);
 
-  const eigenvectors = vectors
-    .map((_, i, self) => column(self, index))
-    .map((vector) => re(vector))
-    .map((vector) => vector.flat(1));
-
-  // Find the one with constant sign (all positives or all negatives)
-
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  const filtered = eigenvectors[index].flat(1);
+  const filtered = vectors.getColumn(index);
 
   // Divide by the smallest component
   return divideBySum(divideBySmallest(filtered));
 };
 
 const findEigenvalueOfOne = (eigenvalues: number[]) =>
-  eigenvalues.findIndex((item) => 1 - toFixedNumber(item, 2) < 0.01);
+  eigenvalues.findIndex(
+    (item) => Math.abs(toFixedNumber(1 - toFixedNumber(item, 3), 3)) <= 0.001,
+  );
 
 const divideBySmallest = (numbers: number[]): number[] => {
   let min = Math.abs(numbers[0]);

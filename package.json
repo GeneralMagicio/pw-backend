@@ -36,6 +36,7 @@
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "mathjs": "^11.9.1",
+    "ml-matrix": "^6.10.5",
     "prisma": "^5.0.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
