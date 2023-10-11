@@ -23,6 +23,8 @@ async function bootstrap() {
       origin: [
         'https://localhost:3001',
         'https://staging.pairwise.generalmagic.io',
+        'https://staging.pairwise.vote/',
+        'https://staging.pairwise.vote',
       ],
     }),
   );

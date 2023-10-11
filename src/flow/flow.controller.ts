@@ -263,14 +263,9 @@ export class FlowController {
   @Get('/dangerouslyRemoveData')
   async removeMydata() {
     const userId = 1;
-
-    // await this.prismaService.collectionVote.deleteMany({
+    // await this.prismaService.expertiseVote.deleteMany({
     //   where: { user_id: userId },
     // });
-
-    await this.prismaService.expertiseVote.deleteMany({
-      where: { user_id: userId },
-    });
 
     await this.prismaService.vote.deleteMany({
       where: { user_id: userId },
@@ -280,17 +275,9 @@ export class FlowController {
       where: { user_id: userId },
     });
 
-    // await this.prismaService.userCompositeProjectFinish.deleteMany({
-    //   where: { user_id: userId },
-    // });
-
-    // await this.prismaService.subProjectVote.deleteMany({
-    //   where: { user_id: userId },
-    // });
-
-    // await this.prismaService.editedRanking.deleteMany({
-    //   where: { user_id: userId },
-    // });
+    await this.prismaService.share.deleteMany({
+      where: { user_id: userId },
+    });
   }
 
   // @UseGuards(AuthGuard)
