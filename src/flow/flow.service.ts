@@ -82,7 +82,7 @@ export class FlowService {
     return (
       expertiseVotes.length >
       Math.floor(
-        this.calculateThreshold(topLevelCollections.length, true) *
+        this.calculateThreshold(topLevelCollections.length, null) *
           combinations(topLevelCollections.length, 2),
       )
     );
@@ -105,7 +105,7 @@ export class FlowService {
     return (
       topLevelVotes.length >
       Math.floor(
-        this.calculateThreshold(topLevelCollections.length, true) *
+        this.calculateThreshold(topLevelCollections.length, null) *
           combinations(topLevelCollections.length, 2),
       )
     );
@@ -280,6 +280,7 @@ export class FlowService {
         id,
         share,
         type: type as 'project',
+        hasRanking: false as const,
       }));
       return result;
     }
@@ -289,6 +290,7 @@ export class FlowService {
         type: type as 'collection' | 'composite project',
         id,
         name,
+        hasRanking: true as const,
         share: ranking.find((c) => c.id === id)!.share,
         ranking: [
           ...(await this.getOverallRanking(
@@ -303,6 +305,7 @@ export class FlowService {
         .map(({ name, id, type, share }) => ({
           name,
           id,
+          hasRanking: false as const,
           share: share,
           type: type as 'project',
         })),
@@ -569,6 +572,7 @@ export class FlowService {
 
       return rawRanking.map((el) => ({
         ...el,
+        hasRanking: false,
         share: el.share * votingPower,
       }));
     }
@@ -579,6 +583,7 @@ export class FlowService {
         name: item.project.name,
         share: item.share,
         type: item.project.type,
+        hasRanking: false,
       }))
       .sort((a, b) => b.share - a.share);
   };
@@ -671,7 +676,7 @@ export class FlowService {
           id: parentCollection || -1,
           type: { in: [ProjectType.collection, ProjectType.composite_project] },
         },
-        select: { name: true },
+        select: { name: true, id: true },
       }),
       this.prismaService.vote.findMany({
         where: {
@@ -714,7 +719,10 @@ export class FlowService {
         totalPairs: combinations.length,
         votedPairs: allVotes.length,
         name: collection?.name || 'Root',
-        threshold: this.calculateThreshold(allIds.length, true),
+        threshold: this.calculateThreshold(
+          allIds.length,
+          collection?.id || null,
+        ),
       };
 
     const sortedCombinations = sortCombinations(combinations, idRanking);
@@ -771,7 +779,7 @@ export class FlowService {
       totalPairs: combinations.length,
       votedPairs: allVotes.length,
       name: collection?.name || 'Root',
-      threshold: this.calculateThreshold(allIds.length, true),
+      threshold: this.calculateThreshold(allIds.length, collection?.id || null),
     };
   };
 
@@ -821,7 +829,7 @@ export class FlowService {
         votedPairs: allVotes.length,
         name: 'Expertise',
         type: 'expertise',
-        threshold: this.calculateThreshold(allIds.length, true),
+        threshold: this.calculateThreshold(allIds.length, null),
       };
 
     const sortedCombinations = sortCombinations(combinations, idRanking);
@@ -879,7 +887,7 @@ export class FlowService {
       votedPairs: allVotes.length,
       name: 'Expertise',
       type: 'expertise',
-      threshold: this.calculateThreshold(allIds.length, true),
+      threshold: this.calculateThreshold(allIds.length, null),
     };
   };
 
@@ -903,10 +911,7 @@ export class FlowService {
 
     const count = children.length;
 
-    const threshold = this.calculateThreshold(
-      count,
-      children[0].type === ProjectType.collection,
-    );
+    const threshold = this.calculateThreshold(count, collection.id);
 
     let numOfVotes = 0;
 
@@ -944,7 +949,7 @@ export class FlowService {
 
     for (let i = 0; i < input.ranking.length; i++) {
       const row = input.ranking[i];
-      if (row.type !== 'project') {
+      if (row.type !== 'project' && row.hasRanking) {
         // if lists.push(...this.breakOverallRankingDown(row));
         if (row.ranking.some((p) => p.type !== 'project')) {
           lists.push(...this.breakOverallRankingDown(row));
@@ -994,8 +999,8 @@ export class FlowService {
   //   return compositeProjects > 0;
   // };
 
-  private calculateThreshold = (count: number, forceAll = false) => {
-    if (forceAll) return 0.4;
+  private calculateThreshold = (count: number, collectionId: number | null) => {
+    if (collectionId === null || count < 7) return 0.4;
     const threshold = 0.25;
     return threshold;
   };

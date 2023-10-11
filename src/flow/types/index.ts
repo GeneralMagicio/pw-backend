@@ -2,6 +2,7 @@ import { GetResult } from '@prisma/client/runtime/library';
 
 export interface CollectionRanking {
   type: 'collection' | 'composite project';
+  hasRanking: true;
   id: number;
   name: string;
   share: number;
@@ -9,7 +10,8 @@ export interface CollectionRanking {
 }
 
 export interface ProjectRanking {
-  type: 'project';
+  type: 'project' | 'collection' | 'composite project';
+  hasRanking: false;
   id: number;
   share: number;
   name: string;
