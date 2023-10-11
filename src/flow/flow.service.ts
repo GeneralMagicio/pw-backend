@@ -510,7 +510,23 @@ export class FlowService {
       }),
     ]);
 
-    const mappingObject: Record<number, number> = allChildren.reduce(
+    const winningProjects = allChildren.filter(
+      (project) =>
+        allVotes.some((vote) => vote.picked_id === project.id) === true,
+    );
+
+    const winningProjectsIds = winningProjects.map((el) => el.id);
+    const nonWinningProjectsIds = allChildren
+      .filter((project) => !winningProjectsIds.includes(project.id))
+      .map((el) => el.id);
+
+    const votesForWinningProjects = allVotes.filter(
+      (vote) =>
+        winningProjectsIds.includes(vote.project1_id) &&
+        winningProjectsIds.includes(vote.project2_id),
+    );
+
+    const mappingObject: Record<number, number> = winningProjects.reduce(
       (acc, project, index) => ({ ...acc, [index]: project.id }),
       {},
     );
@@ -518,22 +534,24 @@ export class FlowService {
     const zeroBasedMappingFunction = (index: number) => mappingObject[index];
 
     const matrix = this.buildVotesMatrix(
-      allVotes.map(({ project1_id, project2_id, picked_id }) => ({
-        id1: project1_id,
-        id2: project2_id,
-        picked_id: picked_id,
-      })),
-      allChildren.map(({ id }) => ({ id })),
+      votesForWinningProjects.map(
+        ({ project1_id, project2_id, picked_id }) => ({
+          id1: project1_id,
+          id2: project2_id,
+          picked_id: picked_id,
+        }),
+      ),
+      winningProjects.map(({ id }) => ({ id })),
       zeroBasedMappingFunction,
     );
 
     const result = getRankingForSetOfDampingFactors(matrix);
 
-    const ranking = await Promise.all(
-      result.map(async (item, index) => {
-        const project = await this.prismaService.project.findUnique({
-          where: { id: zeroBasedMappingFunction(index) },
-        });
+    const ranking = [
+      ...result.map((item, index) => {
+        const project = winningProjects.find(
+          (el) => el.id === zeroBasedMappingFunction(index),
+        );
         return {
           id: project!.id,
           share: item,
@@ -541,7 +559,16 @@ export class FlowService {
           type: project!.type,
         };
       }),
-    );
+      ...nonWinningProjectsIds.map((id) => {
+        const project = allChildren.find((el) => el.id === id);
+        return {
+          id: project!.id,
+          share: 0,
+          name: project!.name,
+          type: project!.type,
+        };
+      }),
+    ];
 
     return ranking.sort((a, b) => b.share - a.share);
   };
@@ -589,7 +616,7 @@ export class FlowService {
   };
 
   getExpertiseRanking = async (userId: number) => {
-    const [allVotes, allCollections] = await Promise.all([
+    const [allVotes, allChildren] = await Promise.all([
       this.prismaService.expertiseVote.findMany({
         where: {
           user_id: userId,
@@ -605,7 +632,23 @@ export class FlowService {
       }),
     ]);
 
-    const mappingObject: Record<number, number> = allCollections.reduce(
+    const winningProjects = allChildren.filter(
+      (project) =>
+        allVotes.some((vote) => vote.picked_id === project.id) === true,
+    );
+
+    const winningProjectsIds = winningProjects.map((el) => el.id);
+    const nonWinningProjectsIds = allChildren
+      .filter((project) => !winningProjectsIds.includes(project.id))
+      .map((el) => el.id);
+
+    const votesForWinningProjects = allVotes.filter(
+      (vote) =>
+        winningProjectsIds.includes(vote.collection1_id) &&
+        winningProjectsIds.includes(vote.collection2_id),
+    );
+
+    const mappingObject: Record<number, number> = winningProjects.reduce(
       (acc, project, index) => ({ ...acc, [index]: project.id }),
       {},
     );
@@ -613,25 +656,37 @@ export class FlowService {
     const zeroBasedMappingFunction = (index: number) => mappingObject[index];
 
     const matrix = this.buildVotesMatrix(
-      allVotes.map(({ collection1_id, collection2_id, picked_id }) => ({
-        id1: collection1_id,
-        id2: collection2_id,
-        picked_id: picked_id,
-      })),
-      allCollections.map(({ id }) => ({ id })),
+      votesForWinningProjects.map(
+        ({ collection1_id, collection2_id, picked_id }) => ({
+          id1: collection1_id,
+          id2: collection2_id,
+          picked_id: picked_id,
+        }),
+      ),
+      winningProjects.map(({ id }) => ({ id })),
       zeroBasedMappingFunction,
     );
 
     const result = getRankingForSetOfDampingFactors(matrix);
 
-    const ranking = await Promise.all(
-      result.map(async (item, index) => ({
-        share: item,
-        project: await this.prismaService.project.findUnique({
-          where: { id: zeroBasedMappingFunction(index) },
-        }),
-      })),
-    );
+    const ranking = [
+      ...result.map((item, index) => {
+        const project = winningProjects.find(
+          (el) => el.id === zeroBasedMappingFunction(index),
+        );
+        return {
+          project: project!,
+          share: item,
+        };
+      }),
+      ...nonWinningProjectsIds.map((id) => {
+        const project = allChildren.find((el) => el.id === id);
+        return {
+          project: project!,
+          share: 0,
+        };
+      }),
+    ];
 
     return {
       name: 'Root',
@@ -1034,6 +1089,39 @@ export class FlowService {
   };
 
   private buildVotesMatrix = (
+    votes: {
+      id1: number;
+      id2: number;
+      picked_id: number | null;
+    }[],
+    allProjects: { id: number }[],
+    zeroBasedMappingFunction: (i: number) => number,
+  ) => {
+    const n = allProjects.length;
+    // an n*n zero matrix
+    const matrix = generateZeroMatrix(n);
+
+    const getVote = (i: number, j: number) =>
+      votes.find(
+        (vote) =>
+          (vote.id1 === zeroBasedMappingFunction(i) &&
+            vote.id2 === zeroBasedMappingFunction(j)) ||
+          (vote.id1 === zeroBasedMappingFunction(j) &&
+            vote.id2 === zeroBasedMappingFunction(i)),
+      )?.picked_id === zeroBasedMappingFunction(i)
+        ? 1
+        : 0;
+
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        matrix[i][j] = getVote(i, j);
+      }
+    }
+
+    return matrix;
+  };
+
+  private buildWinningProjectsVotesMatrix = (
     votes: {
       id1: number;
       id2: number;

@@ -43,7 +43,7 @@ const isRankingUseful = (ranking: number[]) => {
     (score) => toFixedNumber(score, 3) <= 0.001,
   ).length;
 
-  if (numOfZeros > ranking.length / 3) return false;
+  if (numOfZeros > 0) return false;
 
   const sortedRanking = [...ranking].sort();
 
