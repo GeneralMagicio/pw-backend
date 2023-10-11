@@ -259,7 +259,7 @@ export class FlowService {
     cid: number | null = null,
   ): Promise<(CollectionRanking | ProjectRanking)[]> => {
     let result = [];
-    const [collection, collections] = await Promise.all([
+    const [collection, collections, areFinished] = await Promise.all([
       this.prismaService.project.findUnique({
         where: { id: cid || -1 },
       }),
@@ -268,6 +268,14 @@ export class FlowService {
         where: {
           parentId: cid,
           type: { in: [ProjectType.composite_project, ProjectType.collection] },
+        },
+      }),
+      this.prismaService.userCollectionFinish.findMany({
+        select: { collection_id: true },
+        where: {
+          collection: {
+            parentId: cid,
+          },
         },
       }),
     ]);
@@ -291,6 +299,7 @@ export class FlowService {
         id,
         name,
         hasRanking: true as const,
+        isFinished: !!areFinished.find((el) => el.collection_id === id),
         share: ranking.find((c) => c.id === id)!.share,
         ranking: [
           ...(await this.getOverallRanking(
