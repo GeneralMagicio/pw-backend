@@ -273,6 +273,7 @@ export class FlowService {
       this.prismaService.userCollectionFinish.findMany({
         select: { collection_id: true },
         where: {
+          user_id: userId,
           collection: {
             parentId: cid,
           },
@@ -594,7 +595,7 @@ export class FlowService {
   ) => {
     const [savedResults] = await Promise.all([
       this.prismaService.share.findMany({
-        where: { project: { parentId: collectionId } },
+        where: { project: { parentId: collectionId }, user_id: userId },
         include: { project: true },
       }),
       // this.prismaService.project.findMany
@@ -1072,7 +1073,7 @@ export class FlowService {
   private getChildProjects = async (collectionId: number) => {
     const result: unknown[] = [];
     const children = await this.prismaService.project.findMany({
-      select: { id: true, type: true },
+      select: { id: true, type: true, image: true, name: true },
       where: { parentId: collectionId },
     });
     for (const child of children) {

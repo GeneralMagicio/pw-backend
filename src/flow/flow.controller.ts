@@ -263,9 +263,9 @@ export class FlowController {
   @Get('/dangerouslyRemoveData')
   async removeMydata() {
     const userId = 1;
-    // await this.prismaService.expertiseVote.deleteMany({
-    //   where: { user_id: userId },
-    // });
+    await this.prismaService.expertiseVote.deleteMany({
+      where: { user_id: userId },
+    });
 
     await this.prismaService.vote.deleteMany({
       where: { user_id: userId },
