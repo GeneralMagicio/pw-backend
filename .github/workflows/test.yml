@@ -22,6 +22,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - name: Wait for PostgreSQL db
+        uses: MaximeGoyette/wait-for-it-action@master
+        with:
+          host: postgres
+          port: 5432
       - name: Set up Node.js 18
         uses: actions/setup-node@v3
         with:
