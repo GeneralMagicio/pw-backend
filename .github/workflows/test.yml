@@ -34,3 +34,7 @@ jobs:
         run: npm run build
       - name: Migrations
         run: npx prisma migrate dev
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@postgres:5432/my_db
+          NODE_ENV: staging
+          PORT: 7070
