@@ -13,7 +13,7 @@ export class CollectionService {
 
   getCollection = async (id: number, userId: number) => {
     const collection = await this.prismaService.project.findUnique({
-      where: { id, type: ProjectType.project },
+      where: { id, type: { not: ProjectType.project } },
     });
 
     if (!collection) throw new BadRequestException('Invalid id');
