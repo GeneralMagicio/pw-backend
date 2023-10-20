@@ -169,12 +169,13 @@ export class FlowController {
       if (!hasThresholdVotes)
         throw new ForbiddenException('Threshold votes missing');
     }
-    const [ranking, votingPower, collection] = await Promise.all([
+    const [ranking, votingPower, collection, isFinished] = await Promise.all([
       this.flowService.getRanking(userId, collectionId || null),
       this.flowService.getCollectionVotingPower(collectionId || null, userId),
       this.prismaService.project.findFirst({
         where: { id: collectionId || -1 },
       }),
+      true,
     ]);
 
     if (collectionId) {
@@ -192,6 +193,8 @@ export class FlowController {
 
     return {
       ranking,
+      hasRanking: true,
+      isFinished,
       type: collection?.type || 'collection',
       name: collection?.name || 'root',
       share: votingPower,
@@ -262,22 +265,32 @@ export class FlowController {
   @ApiResponse({ status: 200, description: 'All your voting data is removed' })
   @Get('/dangerouslyRemoveData')
   async removeMydata() {
+    // for (let i = 2; i < 9; i++) {
+    // const user = await this.prismaService.user.findFirst({
+    //   select: { id: true },
+    //   where: { address: '0xD7542DC0F58095064BFEf6117fac82E4c5504d28' },
+    // });
+
+    // console.log(user?.id);
+
+    // const userId = user?.id || 1;
     const userId = 1;
-    await this.prismaService.expertiseVote.deleteMany({
-      where: { user_id: userId },
-    });
+    // await this.prismaService.expertiseVote.deleteMany({
+    //   where: { user_id: userId },
+    // });
 
-    await this.prismaService.vote.deleteMany({
-      where: { user_id: userId },
-    });
+    // await this.prismaService.vote.deleteMany({
+    //   where: { user_id: userId },
+    // });
 
-    await this.prismaService.userCollectionFinish.deleteMany({
-      where: { user_id: userId },
-    });
+    // await this.prismaService.userCollectionFinish.deleteMany({
+    //   where: { user_id: userId },
+    // });
 
     await this.prismaService.share.deleteMany({
       where: { user_id: userId },
     });
+    // }
   }
 
   // @UseGuards(AuthGuard)
