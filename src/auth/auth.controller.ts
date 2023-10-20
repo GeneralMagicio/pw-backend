@@ -88,15 +88,17 @@ export class AuthController {
       },
     });
 
-    res.cookie('auth', nonce, {
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
-      domain: process.env.NODE_ENV === 'development' ? undefined : STAGING_API,
-      secure: true,
-      expires: new Date(Date.now() + this.authService.TokenExpirationDuration),
-    });
+    // res.cookie('auth', nonce, {
+    //   httpOnly: true,
+    //   sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
+    //   domain: process.env.NODE_ENV === 'development' ? undefined : STAGING_API,
+    //   secure: true,
+    //   expires: new Date(Date.now() + this.authService.TokenExpirationDuration),
+    // });
 
-    res.status(200).send('Success');
+    // return nonce;
+
+    res.status(200).send(nonce);
   }
 
   @ApiResponse({

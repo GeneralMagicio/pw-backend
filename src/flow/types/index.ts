@@ -1,46 +1,30 @@
 import { GetResult } from '@prisma/client/runtime/library';
 
 export interface CollectionRanking {
-  collectionTitle: string | undefined;
-  ranking: {
-    share: number;
-    project: {
-      id: number;
-      name: string;
-      url: string;
-      description: string;
-      collection_id: number;
-      image: string | null;
-      created_at: Date;
-    } | null;
-  }[];
+  type: 'collection' | 'composite project';
+  hasRanking: true;
+  id: number;
+  name: string;
+  share: number;
+  ranking: (CollectionRanking | ProjectRanking)[];
 }
 
-// type A =
-//   | (GetResult<
-//       {
-//         id: number;
-//         name: string;
-//         poll_id: number;
-//         parent_collection_id: number | null;
-//         image: string | null;
-//         created_at: Date;
-//       },
-//       unknown
-//     > & {})
-//   | null;
+export interface ProjectRanking {
+  type: 'project' | 'collection' | 'composite project';
+  hasRanking: false;
+  id: number;
+  share: number;
+  name: string;
+}
 
-// // Promise<{
-//   collectionTitle: string | undefined;
-//   ranking: {
-//       share: number;
-//       project: (GetResult<{
-//           id: number;
-//           name: string;
-//           url: string;
-//           description: string;
-//           collection_id: number;
-//           image: string | null;
-//           created_at: Date;
-//       }, unknown> & {}) | null;
-//   }[];}>
+export interface EditingCollectionRanking extends CollectionRanking {
+  locked: boolean;
+  error: boolean;
+  expanded: boolean;
+  ranking: (EditingCollectionRanking | EditingProjectRanking)[];
+}
+
+export interface EditingProjectRanking extends ProjectRanking {
+  locked: boolean;
+  error: boolean;
+}

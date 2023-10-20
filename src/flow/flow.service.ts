@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -11,107 +10,54 @@ import {
   generateZeroMatrix,
   getRankingForSetOfDampingFactors,
   makeIt100,
-  toFixedNumber,
 } from 'src/utils/mathematical-logic';
 import { combinations } from 'mathjs';
-import { CollectionService } from 'src/collection/collection.service';
-import { CollectionRanking } from './types';
+import { CollectionRanking, ProjectRanking } from './types';
+import { ProjectType } from '@prisma/client';
 
 @Injectable()
 export class FlowService {
   private readonly logger = new Logger(FlowService.name);
-  constructor(
-    private readonly prismaService: PrismaService,
-    private readonly collectionService: CollectionService,
-  ) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
   // This would determine the latest collection a user has voted in
   // So they can pick up where they've left off
   determineResumeVoting = async (userId: number) => {
-    const [latestProjectVote, latestCollectionVote, latestExpertiseVote] =
-      await Promise.all([
-        this.prismaService.projectVote.findFirst({
-          where: { user_id: userId },
-          orderBy: { updated_at: 'desc' },
-          include: { project1: true },
-        }),
-        this.prismaService.collectionVote.findFirst({
-          where: { user_id: userId },
-          orderBy: { updated_at: 'desc' },
-          include: { collection1: true },
-        }),
-        this.prismaService.expertiseVote.findFirst({
-          where: { user_id: userId },
-          orderBy: { updated_at: 'desc' },
-          include: { collection1: true },
-        }),
-      ]);
+    const [latestProjectVote, latestExpertiseVote] = await Promise.all([
+      this.prismaService.vote.findFirst({
+        where: { user_id: userId },
+        orderBy: { updated_at: 'desc' },
+        include: { project1: true },
+      }),
+      this.prismaService.expertiseVote.findFirst({
+        where: { user_id: userId },
+        orderBy: { updated_at: 'desc' },
+        include: { collection1: true },
+      }),
+    ]);
 
     // No votes whatsoever
-    if (!latestProjectVote && !latestCollectionVote && !latestExpertiseVote)
-      return -1;
+    if (!latestProjectVote && !latestExpertiseVote) return -1;
 
     if (
       latestProjectVote &&
-      latestProjectVote.updated_at > (latestCollectionVote?.updated_at || 0) &&
       latestProjectVote.updated_at > (latestExpertiseVote?.updated_at || 0)
     )
       return {
         type: 'project',
-        collectionId: latestProjectVote.project1.collection_id,
-      };
-
-    if (
-      latestCollectionVote &&
-      latestCollectionVote.updated_at > (latestProjectVote?.updated_at || 0) &&
-      latestCollectionVote.updated_at > (latestExpertiseVote?.updated_at || 0)
-    )
-      return {
-        type: 'collection',
-        collectionId: latestCollectionVote.collection1.parent_collection_id,
+        collectionId: latestProjectVote.project1.parentId,
       };
 
     if (
       latestExpertiseVote &&
-      latestExpertiseVote.updated_at >
-        (latestCollectionVote?.updated_at || 0) &&
       latestExpertiseVote.updated_at > (latestProjectVote?.updated_at || 0)
     )
       return {
         type: 'expertise',
-        collectionId: latestExpertiseVote.collection1.parent_collection_id,
+        collectionId: latestExpertiseVote.collection1.parentId,
       };
 
     return -1;
-  };
-
-  getLastActivityTimestamp = async (userId: number) => {
-    const [latestProjectVote, latestCollectionVote, latestExpertiseVote] =
-      await Promise.all([
-        this.prismaService.projectVote.findFirst({
-          where: { user_id: userId },
-          orderBy: { updated_at: 'desc' },
-          include: { project1: true },
-        }),
-        this.prismaService.collectionVote.findFirst({
-          where: { user_id: userId },
-          orderBy: { updated_at: 'desc' },
-          include: { collection1: true },
-        }),
-        this.prismaService.expertiseVote.findFirst({
-          where: { user_id: userId },
-          orderBy: { updated_at: 'desc' },
-          include: { collection1: true },
-        }),
-      ]);
-
-    return [
-      latestProjectVote?.updated_at,
-      latestCollectionVote?.updated_at,
-      latestExpertiseVote?.updated_at,
-    ]
-      .sort()[2]
-      ?.getTime();
   };
 
   hasAnsweredMainQuestions = async (userId: number) => {
@@ -128,50 +74,50 @@ export class FlowService {
       this.prismaService.expertiseVote.findMany({
         where: { user_id: userId },
       }),
-      this.prismaService.collection.findMany({
-        where: { parent_collection_id: null },
+      this.prismaService.project.findMany({
+        where: { type: ProjectType.collection, parentId: null },
       }),
     ]);
 
     return (
-      expertiseVotes.length === combinations(topLevelCollections.length, 2)
+      expertiseVotes.length >
+      Math.floor(
+        this.calculateThreshold(topLevelCollections.length, null) *
+          combinations(topLevelCollections.length, 2),
+      )
     );
   };
 
   hasAnsweredImpact = async (userId: number) => {
     const [topLevelVotes, topLevelCollections] = await Promise.all([
-      this.prismaService.collectionVote.findMany({
+      this.prismaService.vote.findMany({
         where: {
           user_id: userId,
-          collection1: { parent_collection_id: null },
-          collection2: { parent_collection_id: null },
+          project1: { parentId: null },
+          project2: { parentId: null },
         },
       }),
-      this.prismaService.collection.findMany({
-        where: { parent_collection_id: null },
+      this.prismaService.project.findMany({
+        where: { parentId: null },
       }),
     ]);
 
-    return topLevelVotes.length === combinations(topLevelCollections.length, 2);
+    return (
+      topLevelVotes.length >
+      Math.floor(
+        this.calculateThreshold(topLevelCollections.length, null) *
+          combinations(topLevelCollections.length, 2),
+      )
+    );
   };
 
   isCollectionStarted = async (userId: number, collectionId: number) => {
-    // for collections with only projects
-    const projecVotes = await this.prismaService.projectVote.findFirst({
+    const votes = await this.prismaService.vote.findFirst({
       select: { id: true },
-      where: { user_id: userId, project1: { collection_id: collectionId } },
+      where: { user_id: userId, project1: { parentId: collectionId } },
     });
 
-    // for collections with subcollections
-    const collectionVote = await this.prismaService.collectionVote.findFirst({
-      select: { id: true },
-      where: {
-        user_id: userId,
-        collection1: { parent_collection_id: collectionId },
-      },
-    });
-
-    return projecVotes !== null || collectionVote !== null;
+    return votes !== null;
   };
 
   isCollectionFinished = async (userId: number, collectionId: number) => {
@@ -195,19 +141,22 @@ export class FlowService {
 
     if (!mainQuestionsAnswered) return true;
 
-    const collection = await this.prismaService.collection.findUnique({
-      where: { id: collectionId },
-      include: { parent_collection: true },
+    const collection = await this.prismaService.project.findUnique({
+      where: {
+        id: collectionId,
+        type: { in: [ProjectType.composite_project, ProjectType.collection] },
+      },
+      include: { parent: true },
     });
 
     if (!collection) throw new Error('Collection id invalid');
 
-    const isTopLevel = collection.parent_collection === null;
+    const isTopLevel = collection.parent === null;
 
     if (!isTopLevel) {
       const [isParentLocked, isParentFinished] = await Promise.all([
-        this.isCollectionLocked(userId, collection.parent_collection_id!),
-        this.isCollectionFinished(userId, collection.parent_collection_id!),
+        this.isCollectionLocked(userId, collection.parentId!),
+        this.isCollectionFinished(userId, collection.parentId!),
       ]);
 
       return !isParentFinished || isParentLocked;
@@ -225,96 +174,41 @@ export class FlowService {
     return true;
   };
 
-  voteForProjects = async (
+  private vote = async (
     userId: number,
     project1Id: number,
     project2Id: number,
     pickedId: number | null,
   ) => {
-    await this.validateProjectVote(project1Id, project2Id, pickedId);
+    // await this.validateProjectVote(project1Id, project2Id, pickedId);
     const payload = {
       user_id: userId,
       project1_id: project1Id,
       project2_id: project2Id,
       picked_id: pickedId,
     };
-    const vote = await this.prismaService.projectVote.findFirst({
+    const vote = await this.prismaService.vote.findFirst({
       where: { ...payload, picked_id: undefined },
     });
     if (vote) {
-      await this.prismaService.projectVote.update({
+      await this.prismaService.vote.update({
         data: payload,
         where: { id: vote.id },
       });
     } else {
-      await this.prismaService.projectVote.create({
+      await this.prismaService.vote.create({
         data: payload,
       });
     }
   };
 
-  getOverallRanking = async (
-    userId: number,
-    cid: number | null = null,
-    coefficient = 1,
-  ): Promise<any> => {
-    const editedRanking = await this.prismaService.editedRanking.findFirst({
-      select: { ranking: true },
-      where: {
-        user_id: userId,
-        collection_id: null,
-      },
-    });
-
-    if (editedRanking) return JSON.parse(editedRanking.ranking);
-
-    let result = [];
-    const collections = await this.prismaService.collection.findMany({
-      select: { id: true, name: true },
-      where: { parent_collection_id: cid },
-    });
-
-    const res = await this.getCollectionRanking(userId, cid);
-
-    const { ranking } = res;
-
-    if (collections.length === 0) {
-      result = ranking.map((item) => ({
-        name: item.project?.name,
-        id: item.project?.id,
-        share: toFixedNumber(item.share * coefficient, 4),
-      }));
-      return result;
-    }
-
-    return Promise.all(
-      collections.map(async (collection) => ({
-        id: collection.id,
-        collectionTitle: collection.name,
-        votingPower:
-          coefficient *
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          ranking.find((c) => c.project.id === collection.id).share,
-        ranking: await this.getOverallRanking(
-          userId,
-          collection.id,
-          coefficient *
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            ranking.find((c) => c.project.id === collection.id).share,
-        ),
-      })),
-    );
-  };
-
-  voteForExpertise = async (
+  private expertiseVote = async (
     userId: number,
     collection1Id: number,
     collection2Id: number,
     pickedId: number | null,
   ) => {
-    await this.validateExpertiseVote(collection1Id, collection2Id, pickedId);
+    // await this.validateProjectVote(project1Id, project2Id, pickedId);
     const payload = {
       user_id: userId,
       collection1_id: collection1Id,
@@ -336,40 +230,154 @@ export class FlowService {
     }
   };
 
+  voteForProjects = async (
+    userId: number,
+    project1Id: number,
+    project2Id: number,
+    pickedId: number | null,
+  ) => {
+    await this.validateVote(project1Id, project2Id, pickedId);
+    await this.vote(userId, project1Id, project2Id, pickedId);
+  };
+
+  // return {
+  //   type:
+  //     collection!.type === 'composite_project'
+  //       ? 'composite project'
+  //       : 'collection',
+  //   id: collection!.id,
+  //   name: collection!.name,
+  //   share: await this.getCollectionVotingPower(
+  //     collection?.id || null,
+  //     userId,
+  //   ),
+  //   ranking: result,
+  // };
+
+  getOverallRanking = async (
+    userId: number,
+    cid: number | null = null,
+  ): Promise<(CollectionRanking | ProjectRanking)[]> => {
+    let result = [];
+    const [collection, collections, areFinished] = await Promise.all([
+      this.prismaService.project.findUnique({
+        where: { id: cid || -1 },
+      }),
+      this.prismaService.project.findMany({
+        select: { id: true, name: true, type: true },
+        where: {
+          parentId: cid,
+          type: { in: [ProjectType.composite_project, ProjectType.collection] },
+        },
+      }),
+      this.prismaService.userCollectionFinish.findMany({
+        select: { collection_id: true },
+        where: {
+          user_id: userId,
+          collection: {
+            parentId: cid,
+          },
+        },
+      }),
+    ]);
+
+    const ranking = await this.getRanking(userId, cid);
+
+    if (collections.length === 0) {
+      result = ranking.map(({ name, id, share, type }) => ({
+        name,
+        id,
+        share,
+        type: type as 'project',
+        hasRanking: false as const,
+      }));
+      return result;
+    }
+
+    return Promise.all([
+      ...collections.map(async ({ type, id, name }) => ({
+        type: type as 'collection' | 'composite project',
+        id,
+        name,
+        hasRanking: true as const,
+        isFinished: !!areFinished.find((el) => el.collection_id === id),
+        share: ranking.find((c) => c.id === id)!.share,
+        ranking: [
+          ...(await this.getOverallRanking(
+            userId,
+            id,
+            // ranking.find((c) => c.id === id)!.share,
+          )),
+        ],
+      })),
+      ...ranking
+        .filter((el) => el.type === 'project')
+        .map(({ name, id, type, share }) => ({
+          name,
+          id,
+          hasRanking: false as const,
+          share: share,
+          type: type as 'project',
+        })),
+    ]);
+  };
+
+  addManyShares = async (
+    shares: { id: number; share: number }[],
+    userId: number,
+  ) => {
+    return Promise.all([
+      shares.map(async ({ id, share }) => {
+        const exists = await this.prismaService.share.findFirst({
+          where: { project_id: id, user_id: userId },
+        });
+
+        if (exists) {
+          return this.prismaService.share.update({
+            where: { id: exists.id },
+            data: { share },
+          });
+        } else
+          return this.prismaService.share.create({
+            data: {
+              share,
+              project_id: id,
+              user_id: userId,
+            },
+          });
+      }),
+    ]);
+  };
+
+  voteForExpertise = async (
+    userId: number,
+    collection1Id: number,
+    collection2Id: number,
+    pickedId: number | null,
+  ) => {
+    await this.validateExpertiseVote(collection1Id, collection2Id, pickedId);
+    await this.expertiseVote(userId, collection1Id, collection2Id, pickedId);
+  };
+
   voteForCollections = async (
     userId: number,
     collection1Id: number,
     collection2Id: number,
     pickedId: number | null,
   ) => {
-    await this.validateCollectionVote(collection1Id, collection2Id, pickedId);
-    const payload = {
-      user_id: userId,
-      collection1_id: collection1Id,
-      collection2_id: collection2Id,
-      picked_id: pickedId,
-    };
-    const vote = await this.prismaService.collectionVote.findFirst({
-      where: { ...payload, picked_id: undefined },
-    });
-    if (vote) {
-      await this.prismaService.collectionVote.update({
-        data: payload,
-        where: { id: vote.id },
-      });
-    } else {
-      await this.prismaService.collectionVote.create({
-        data: payload,
-      });
-    }
+    await this.validateVote(collection1Id, collection2Id, pickedId);
+    await this.vote(userId, collection1Id, collection2Id, pickedId);
   };
 
   getCollections = async (
     userId: number,
     parentCollectionId: number | null,
   ) => {
-    const collections = await this.prismaService.collection.findMany({
-      where: { parent_collection_id: parentCollectionId },
+    const collections = await this.prismaService.project.findMany({
+      where: {
+        parentId: parentCollectionId,
+        type: { in: [ProjectType.composite_project, ProjectType.collection] },
+      },
     });
 
     const withAdditionalFields = await Promise.all(
@@ -395,25 +403,22 @@ export class FlowService {
 
   getNextCollection = async (
     userId: number,
-    parentCollectionId?: number | null,
+    parentId?: number | null,
   ): Promise<number | null> => {
     const lastFinishedCollection = (
       await this.prismaService.userCollectionFinish.findFirst({
         where: {
           user_id: userId,
-          collection:
-            parentCollectionId !== undefined
-              ? { parent_collection_id: parentCollectionId }
-              : undefined,
+          collection: parentId !== undefined ? { parentId } : undefined,
         },
-        include: { collection: { include: { parent_collection: true } } },
+        include: { collection: { include: { parent: true } } },
         orderBy: { updated_at: 'desc' },
       })
     )?.collection;
 
     if (!lastFinishedCollection) return null;
 
-    if (lastFinishedCollection.parent_collection_id === null)
+    if (lastFinishedCollection.parentId === null)
       return (
         (
           await this.getPreviousLowerExpertiseCollection(
@@ -428,22 +433,22 @@ export class FlowService {
         select: { collection_id: true },
         where: {
           collection: {
-            parent_collection_id: lastFinishedCollection.parent_collection_id,
+            parentId: lastFinishedCollection.parentId,
           },
         },
       });
 
-    const unFinishedSiblings = await this.prismaService.collection.findMany({
+    const unFinishedSiblings = await this.prismaService.project.findMany({
       where: {
-        parent_collection_id: lastFinishedCollection.parent_collection_id,
+        type: ProjectType.collection,
+        parentId: lastFinishedCollection.parentId,
         id: { notIn: finishedSiblings.map((item) => item.collection_id) },
       },
     });
 
     if (unFinishedSiblings.length > 0) return unFinishedSiblings[0].id;
 
-    const grandparentId =
-      lastFinishedCollection?.parent_collection?.parent_collection_id;
+    const grandparentId = lastFinishedCollection?.parent?.parentId;
 
     // If not, Go to the sibling of the parent (recursive)
     if (unFinishedSiblings.length === 0 && grandparentId !== undefined) {
@@ -453,60 +458,85 @@ export class FlowService {
     return null;
   };
 
-  getCollectionRanking = async (
-    userId: number,
+  getCollectionVotingPower = async (
     collectionId: number | null,
-  ) => {
-    const type = await this.getCollectionSubunitType(collectionId);
-    if (collectionId && type === 'project') {
-      const ranking = await this.getCollectionRankingWithProjectType(
-        userId,
-        collectionId,
-      );
-      return ranking;
+    userId: number,
+  ): Promise<number> => {
+    if (collectionId === null) return 1;
+
+    const collection = await this.prismaService.project.findUnique({
+      where: {
+        id: collectionId,
+        type: { in: [ProjectType.collection, ProjectType.composite_project] },
+      },
+      select: { parentId: true },
+    });
+
+    if (!collection) throw Error('No such collection or composite project');
+
+    const savedResult = await this.prismaService.share.findFirst({
+      where: { project_id: collectionId, user_id: userId },
+    });
+
+    if (savedResult) return savedResult.share;
+
+    const ranking = await this.getRankingFromVotes(userId, collection.parentId);
+
+    const { share } = ranking.find((item) => item.id === collectionId)!;
+
+    if (collection.parentId === null) {
+      return share;
     } else {
-      const ranking = await this.getCollectionRankingWithCollectionType(
-        userId,
-        collectionId,
+      return (
+        (await this.getCollectionVotingPower(collection.parentId, userId)) *
+        share
       );
-      return ranking;
     }
   };
 
-  getCollectionRankingWithProjectType = async (
+  /**
+   * This method calculates ranking in a collection/composite project based on the votes
+   * @param userId
+   * @param collectionId
+   * @returns
+   */
+  private getRankingFromVotes = async (
     userId: number,
-    collectionId: number,
-  ): Promise<CollectionRanking> => {
-    const editedRanking = await this.prismaService.editedRanking.findFirst({
-      select: { ranking: true },
-      where: {
-        user_id: userId,
-        collection_id: collectionId,
-      },
-    });
-
-    if (editedRanking) return JSON.parse(editedRanking.ranking);
-
-    const [collection, allVotes, allProjects] = await Promise.all([
-      this.prismaService.collection.findUnique({
-        where: { id: collectionId },
-        select: { name: true },
-      }),
-      this.prismaService.projectVote.findMany({
+    // id of the collection or the composite project
+    collectionId: number | null,
+  ) => {
+    const [allVotes, allChildren] = await Promise.all([
+      this.prismaService.vote.findMany({
         where: {
           user_id: userId,
-          project1: { collection_id: collectionId },
-          project2: { collection_id: collectionId },
+          project1: { parentId: collectionId },
+          project2: { parentId: collectionId },
         },
       }),
       this.prismaService.project.findMany({
         where: {
-          collection_id: collectionId,
+          parentId: collectionId,
         },
       }),
     ]);
 
-    const mappingObject: Record<number, number> = allProjects.reduce(
+    const winningProjects = allChildren.filter(
+      (project) =>
+        allVotes.some((vote) => vote.picked_id === project.id) === true,
+    );
+
+    const winningProjectsIds = winningProjects.map((el) => el.id);
+    const nonWinningProjectsIds = allChildren
+      .filter((project) => !winningProjectsIds.includes(project.id))
+      .map((el) => el.id);
+
+    const votesForWinningProjects = allVotes.filter(
+      (vote) =>
+        winningProjectsIds.includes(vote.project1_id) &&
+        winningProjectsIds.includes(vote.project2_id),
+    );
+
+    const mappingObject: Record<number, number> = winningProjects.reduce(
       (acc, project, index) => ({ ...acc, [index]: project.id }),
       {},
     );
@@ -514,49 +544,121 @@ export class FlowService {
     const zeroBasedMappingFunction = (index: number) => mappingObject[index];
 
     const matrix = this.buildVotesMatrix(
-      allVotes.map(({ project1_id, project2_id, picked_id }) => ({
-        id1: project1_id,
-        id2: project2_id,
-        picked_id: picked_id,
-      })),
-      allProjects.map(({ id }) => ({ id })),
+      votesForWinningProjects.map(
+        ({ project1_id, project2_id, picked_id }) => ({
+          id1: project1_id,
+          id2: project2_id,
+          picked_id: picked_id,
+        }),
+      ),
+      winningProjects.map(({ id }) => ({ id })),
       zeroBasedMappingFunction,
     );
 
     const result = getRankingForSetOfDampingFactors(matrix);
 
-    const ranking = await Promise.all(
-      result.map(async (item, index) => ({
-        share: item,
-        project: await this.prismaService.project.findUnique({
-          where: { id: zeroBasedMappingFunction(index) },
-        }),
-      })),
-    );
+    const ranking = [
+      ...result.map((item, index) => {
+        const project = winningProjects.find(
+          (el) => el.id === zeroBasedMappingFunction(index),
+        );
+        return {
+          id: project!.id,
+          share: item,
+          name: project!.name,
+          type: project!.type,
+        };
+      }),
+      ...nonWinningProjectsIds.map((id) => {
+        const project = allChildren.find((el) => el.id === id);
+        return {
+          id: project!.id,
+          share: 0,
+          name: project!.name,
+          type: project!.type,
+        };
+      }),
+    ];
 
-    return {
-      collectionTitle: collection?.name,
-      ranking: makeIt100(ranking.sort((a, b) => b.share - a.share)),
-    };
+    return ranking.sort((a, b) => b.share - a.share);
+  };
+  /**
+   * This method calculates ranking in a collection/composite project based on the votes
+   * @param userId
+   * @param collectionId
+   * @returns
+   */
+  getRanking = async (
+    userId: number,
+    // id of the collection or the composite project
+    collectionId: number | null,
+  ) => {
+    const [savedResults] = await Promise.all([
+      this.prismaService.share.findMany({
+        where: { project: { parentId: collectionId }, user_id: userId },
+        include: { project: true },
+      }),
+      // this.prismaService.project.findMany
+    ]);
+
+    if (savedResults.length === 0) {
+      const [rawRanking, votingPower] = await Promise.all([
+        this.getRankingFromVotes(userId, collectionId),
+        this.getCollectionVotingPower(collectionId, userId),
+      ]);
+
+      return rawRanking.map((el) => ({
+        ...el,
+        hasRanking: false,
+        share: el.share * votingPower,
+      }));
+    }
+
+    return savedResults
+      .map((item) => ({
+        id: item.project_id,
+        name: item.project.name,
+        share: item.share,
+        type: item.project.type,
+        hasRanking: false,
+      }))
+      .sort((a, b) => b.share - a.share);
   };
 
   getExpertiseRanking = async (userId: number) => {
-    const [allVotes, allCollections] = await Promise.all([
+    const [allVotes, allChildren] = await Promise.all([
       this.prismaService.expertiseVote.findMany({
         where: {
           user_id: userId,
-          collection1: { parent_collection_id: null },
-          collection2: { parent_collection_id: null },
+          collection1: { parentId: null },
+          collection2: { parentId: null },
         },
       }),
-      this.prismaService.collection.findMany({
+      this.prismaService.project.findMany({
         where: {
-          parent_collection_id: null,
+          type: ProjectType.collection,
+          parentId: null,
         },
       }),
     ]);
 
-    const mappingObject: Record<number, number> = allCollections.reduce(
+    const winningProjects = allChildren.filter(
+      (project) =>
+        allVotes.some((vote) => vote.picked_id === project.id) === true,
+    );
+
+    const winningProjectsIds = winningProjects.map((el) => el.id);
+    const nonWinningProjectsIds = allChildren
+      .filter((project) => !winningProjectsIds.includes(project.id))
+      .map((el) => el.id);
+
+    const votesForWinningProjects = allVotes.filter(
+      (vote) =>
+        winningProjectsIds.includes(vote.collection1_id) &&
+        winningProjectsIds.includes(vote.collection2_id),
+    );
+
+    const mappingObject: Record<number, number> = winningProjects.reduce(
       (acc, project, index) => ({ ...acc, [index]: project.id }),
       {},
     );
@@ -564,29 +666,41 @@ export class FlowService {
     const zeroBasedMappingFunction = (index: number) => mappingObject[index];
 
     const matrix = this.buildVotesMatrix(
-      allVotes.map(({ collection1_id, collection2_id, picked_id }) => ({
-        id1: collection1_id,
-        id2: collection2_id,
-        picked_id: picked_id,
-      })),
-      allCollections.map(({ id }) => ({ id })),
+      votesForWinningProjects.map(
+        ({ collection1_id, collection2_id, picked_id }) => ({
+          id1: collection1_id,
+          id2: collection2_id,
+          picked_id: picked_id,
+        }),
+      ),
+      winningProjects.map(({ id }) => ({ id })),
       zeroBasedMappingFunction,
     );
 
     const result = getRankingForSetOfDampingFactors(matrix);
 
-    const ranking = await Promise.all(
-      result.map(async (item, index) => ({
-        share: item,
-        project: await this.prismaService.collection.findUnique({
-          where: { id: zeroBasedMappingFunction(index) },
-        }),
-      })),
-    );
+    const ranking = [
+      ...result.map((item, index) => {
+        const project = winningProjects.find(
+          (el) => el.id === zeroBasedMappingFunction(index),
+        );
+        return {
+          project: project!,
+          share: item,
+        };
+      }),
+      ...nonWinningProjectsIds.map((id) => {
+        const project = allChildren.find((el) => el.id === id);
+        return {
+          project: project!,
+          share: 0,
+        };
+      }),
+    ];
 
     return {
-      collectionTitle: 'Root',
-      ranking: ranking.sort((a, b) => b.share - a.share),
+      name: 'Root',
+      ranking: makeIt100(ranking.sort((a, b) => b.share - a.share)),
     };
   };
 
@@ -620,337 +734,47 @@ export class FlowService {
     return ranking[index + 1].project;
   };
 
-  getCollectionRankingWithCollectionType = async (
-    userId: number,
-    collectionId: number | null,
-  ): Promise<CollectionRanking> => {
-    const editedRanking = await this.prismaService.editedRanking.findFirst({
-      select: { ranking: true },
-      where: {
-        user_id: userId,
-        collection_id: collectionId,
-      },
-    });
-
-    if (editedRanking) return JSON.parse(editedRanking.ranking);
-
-    const [collection, allVotes, allCollections] = await Promise.all([
-      this.prismaService.collection.findFirst({
-        select: { name: true },
-        where: { id: collectionId || -1 },
+  getPairs = async (userId: number, parentCollection?: number, count = 1) => {
+    const [collection, allVotes, allChildren] = await Promise.all([
+      this.prismaService.project.findUnique({
+        where: {
+          id: parentCollection || -1,
+          type: { in: [ProjectType.collection, ProjectType.composite_project] },
+        },
+        select: { name: true, id: true },
       }),
-      this.prismaService.collectionVote.findMany({
+      this.prismaService.vote.findMany({
         where: {
           user_id: userId,
-          collection1: { parent_collection_id: collectionId },
-          collection2: { parent_collection_id: collectionId },
-        },
-      }),
-      this.prismaService.collection.findMany({
-        where: {
-          parent_collection_id: collectionId,
-        },
-      }),
-    ]);
-
-    const mappingObject: Record<number, number> = allCollections.reduce(
-      (acc, project, index) => ({ ...acc, [index]: project.id }),
-      {},
-    );
-
-    const zeroBasedMappingFunction = (index: number) => mappingObject[index];
-
-    const matrix = this.buildVotesMatrix(
-      allVotes.map(({ collection1_id, collection2_id, picked_id }) => ({
-        id1: collection1_id,
-        id2: collection2_id,
-        picked_id: picked_id,
-      })),
-      allCollections.map(({ id }) => ({ id })),
-      zeroBasedMappingFunction,
-    );
-
-    const result = getRankingForSetOfDampingFactors(matrix);
-
-    const ranking = await Promise.all(
-      result.map(async (item, index) => ({
-        share: item,
-        project: await this.prismaService.collection.findUnique({
-          where: { id: zeroBasedMappingFunction(index) },
-        }),
-      })),
-    );
-
-    return {
-      collectionTitle: collection?.name || 'Root',
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      // ranking: ranking.sort((a, b) => b.share - a.share),
-      ranking: makeIt100(ranking.sort((a, b) => b.share - a.share)),
-    };
-  };
-
-  getCollectionPairs = async (
-    userId: number,
-    parentCollection?: number,
-    count = 5,
-  ) => {
-    const [collection, allVotes, allCollections] = await Promise.all([
-      this.prismaService.collection.findUnique({
-        where: { id: parentCollection || -1 },
-        select: { name: true },
-      }),
-      this.prismaService.collectionVote.findMany({
-        where: {
-          user_id: userId,
-          collection1: { parent_collection_id: parentCollection },
-          collection2: { parent_collection_id: parentCollection },
-        },
-      }),
-      this.prismaService.collection.findMany({
-        where: {
-          parent_collection_id: parentCollection,
-        },
-      }),
-    ]);
-
-    const votedIds = allVotes.reduce(
-      (acc, vote) => [...acc, vote.collection1_id, vote.collection2_id],
-      [] as number[],
-    );
-
-    const allIds = allCollections.map((collection) => collection.id);
-
-    const votedCollectionsRanking = this.determineIdRanking(votedIds);
-
-    // ascending id rankings (i.e., the last element has been voted the most)
-    let idRanking: number[] = [];
-
-    for (let i = 0; i < allIds.length; i++) {
-      const value = allIds[i];
-      if (!votedCollectionsRanking.includes(value)) idRanking.push(value);
-    }
-
-    idRanking = [...idRanking, ...votedCollectionsRanking];
-
-    const combinations = getPairwiseCombinations(allIds);
-
-    if (allVotes.length === combinations.length)
-      return {
-        pairs: [],
-        totalPairs: combinations.length,
-        votedPairs: allVotes.length,
-        collectionTitle: collection?.name || 'Root',
-        type: 'collection' as const,
-        threshold: this.calculateThreshold(allIds.length, true),
-      };
-
-    const sortedCombinations = sortCombinations(combinations, idRanking);
-
-    const result = [];
-    let i = 0;
-    while (result.length < count) {
-      const combination = sortedCombinations[i];
-      const px = combination[0];
-      const py = combination[1];
-      const index = allVotes.findIndex(
-        (vote) =>
-          (vote.collection1_id === px && vote.collection2_id === py) ||
-          (vote.collection1_id === py && vote.collection2_id === px),
-      );
-
-      if (index === -1) result.push(combination);
-
-      i++;
-    }
-
-    const res = await Promise.all(
-      result.map((pair) =>
-        this.prismaService.collection.findMany({
-          where: {
-            OR: [
-              {
-                id: pair[0],
-              },
-              {
-                id: pair[1],
-              },
-            ],
-          },
-        }),
-      ),
-    );
-
-    const pairs = await Promise.all(
-      res.map(
-        async (pair) =>
-          await Promise.all(
-            pair.map(async (collection) => ({
-              ...collection,
-              numOfChildren: await this.countNumOfProjects(collection.id),
-              childProjects: await this.getChildProjects(collection.id),
-            })),
-          ),
-      ),
-    );
-
-    return {
-      pairs,
-      totalPairs: combinations.length,
-      votedPairs: allVotes.length,
-      type: 'collection' as const,
-      collectionTitle: collection?.name || 'Root',
-      threshold: this.calculateThreshold(allIds.length, true),
-    };
-  };
-
-  getExpertisePairs = async (userId: number, count = 5) => {
-    const parentCollection = null;
-    const [allVotes, allCollections] = await Promise.all([
-      this.prismaService.expertiseVote.findMany({
-        where: {
-          user_id: userId,
-          collection1: { parent_collection_id: parentCollection },
-          collection2: { parent_collection_id: parentCollection },
-        },
-      }),
-      this.prismaService.collection.findMany({
-        where: {
-          parent_collection_id: parentCollection,
-        },
-      }),
-    ]);
-
-    const votedIds = allVotes.reduce(
-      (acc, vote) => [...acc, vote.collection1_id, vote.collection2_id],
-      [] as number[],
-    );
-
-    const allIds = allCollections.map((collection) => collection.id);
-
-    const votedCollectionsRanking = this.determineIdRanking(votedIds);
-
-    // ascending id rankings (i.e., the last element has been voted the most)
-    let idRanking: number[] = [];
-
-    for (let i = 0; i < allIds.length; i++) {
-      const value = allIds[i];
-      if (!votedCollectionsRanking.includes(value)) idRanking.push(value);
-    }
-
-    idRanking = [...idRanking, ...votedCollectionsRanking];
-
-    const combinations = getPairwiseCombinations(allIds);
-
-    if (allVotes.length === combinations.length)
-      return {
-        pairs: [],
-        totalPairs: combinations.length,
-        votedPairs: allVotes.length,
-        collectionTitle: 'Expertise',
-        type: 'expertise',
-        threshold: this.calculateThreshold(allIds.length, true),
-      };
-
-    const sortedCombinations = sortCombinations(combinations, idRanking);
-
-    const result = [];
-    let i = 0;
-    while (result.length < count) {
-      const combination = sortedCombinations[i];
-      const px = combination[0];
-      const py = combination[1];
-      const index = allVotes.findIndex(
-        (vote) =>
-          (vote.collection1_id === px && vote.collection2_id === py) ||
-          (vote.collection1_id === py && vote.collection2_id === px),
-      );
-
-      if (index === -1) result.push(combination);
-
-      i++;
-    }
-
-    const res = await Promise.all(
-      result.map((pair) =>
-        this.prismaService.collection.findMany({
-          where: {
-            OR: [
-              {
-                id: pair[0],
-              },
-              {
-                id: pair[1],
-              },
-            ],
-          },
-        }),
-      ),
-    );
-
-    const pairs = await Promise.all(
-      res.map(
-        async (pair) =>
-          await Promise.all(
-            pair.map(async (collection) => ({
-              ...collection,
-              numOfChildren: await this.countNumOfProjects(collection.id),
-              childProjects: await this.getChildProjects(collection.id),
-            })),
-          ),
-      ),
-    );
-
-    return {
-      pairs,
-      totalPairs: combinations.length,
-      votedPairs: allVotes.length,
-      collectionTitle: 'Expertise',
-      type: 'expertise',
-      threshold: this.calculateThreshold(allIds.length, true),
-    };
-  };
-
-  getProjectPairs = async (userId: number, collectionId: number, count = 5) => {
-    const [collection, allVotes, allProjects] = await Promise.all([
-      this.prismaService.collection.findUnique({
-        where: { id: collectionId },
-        select: { name: true },
-      }),
-      this.prismaService.projectVote.findMany({
-        where: {
-          user_id: userId,
-          project1: { collection_id: collectionId },
-          project2: { collection_id: collectionId },
+          project1: { parentId: parentCollection },
+          project2: { parentId: parentCollection },
         },
       }),
       this.prismaService.project.findMany({
         where: {
-          collection_id: collectionId,
+          parentId: parentCollection,
         },
       }),
     ]);
-
-    if (!collection) throw new BadRequestException('Invalid collection id');
 
     const votedIds = allVotes.reduce(
       (acc, vote) => [...acc, vote.project1_id, vote.project2_id],
       [] as number[],
     );
 
-    const allIds = allProjects.map((project) => project.id);
+    const allIds = allChildren.map((child) => child.id);
 
-    const votedProjectsRanking = this.determineIdRanking(votedIds);
+    const votedCollectionsRanking = this.determineIdRanking(votedIds);
 
     // ascending id rankings (i.e., the last element has been voted the most)
     let idRanking: number[] = [];
 
     for (let i = 0; i < allIds.length; i++) {
       const value = allIds[i];
-      if (!votedProjectsRanking.includes(value)) idRanking.push(value);
+      if (!votedCollectionsRanking.includes(value)) idRanking.push(value);
     }
 
-    idRanking = [...idRanking, ...votedProjectsRanking];
+    idRanking = [...idRanking, ...votedCollectionsRanking];
 
     const combinations = getPairwiseCombinations(allIds);
 
@@ -959,16 +783,17 @@ export class FlowService {
         pairs: [],
         totalPairs: combinations.length,
         votedPairs: allVotes.length,
-        collectionTitle: collection.name,
-        type: 'project' as const,
-        threshold: this.calculateThreshold(allIds.length),
+        name: collection?.name || 'Root',
+        threshold: this.calculateThreshold(
+          allIds.length,
+          collection?.id || null,
+        ),
       };
 
     const sortedCombinations = sortCombinations(combinations, idRanking);
 
     const result = [];
     let i = 0;
-
     while (result.length < count) {
       const combination = sortedCombinations[i];
       const px = combination[0];
@@ -984,7 +809,7 @@ export class FlowService {
       i++;
     }
 
-    const pairs = await Promise.all(
+    const res = await Promise.all(
       result.map((pair) =>
         this.prismaService.project.findMany({
           where: {
@@ -1001,154 +826,312 @@ export class FlowService {
       ),
     );
 
+    const pairs = await Promise.all(
+      res.map(
+        async (pair) =>
+          await Promise.all(
+            pair.map(async (collection) => ({
+              ...collection,
+              numOfChildren: await this.countNumOfProjects(collection.id),
+              childProjects: await this.getChildProjects(collection.id),
+            })),
+          ),
+      ),
+    );
+
     return {
       pairs,
       totalPairs: combinations.length,
       votedPairs: allVotes.length,
-      collectionTitle: collection.name,
-      type: 'project' as const,
-      threshold: this.calculateThreshold(allIds.length),
+      name: collection?.name || 'Root',
+      threshold: this.calculateThreshold(allIds.length, collection?.id || null),
     };
   };
 
-  getCollectionSubunitType = async (
-    collectionId: number | null,
-  ): Promise<'project' | 'collection'> => {
-    const collection = await this.prismaService.collection.findFirst({
-      where: { parent_collection_id: collectionId },
-    });
+  getExpertisePairs = async (userId: number, count = 1) => {
+    const parentCollection = null;
+    const [allVotes, allCollections] = await Promise.all([
+      this.prismaService.expertiseVote.findMany({
+        where: {
+          user_id: userId,
+          collection1: { parentId: parentCollection },
+          collection2: { parentId: parentCollection },
+        },
+      }),
+      this.prismaService.project.findMany({
+        where: {
+          type: ProjectType.collection,
+          parentId: parentCollection,
+        },
+      }),
+    ]);
 
-    const project = collectionId
-      ? await this.prismaService.project.findFirst({
-          where: { collection_id: collectionId },
-        })
-      : null;
+    const votedIds = allVotes.reduce(
+      (acc, vote) => [...acc, vote.collection1_id, vote.collection2_id],
+      [] as number[],
+    );
 
-    if (collection && project)
-      throw new InternalServerErrorException(
-        'A collection can not have both projects and collections as its subunits',
+    const allIds = allCollections.map((collection) => collection.id);
+
+    const votedCollectionsRanking = this.determineIdRanking(votedIds);
+
+    // ascending id rankings (i.e., the last element has been voted the most)
+    let idRanking: number[] = [];
+
+    for (let i = 0; i < allIds.length; i++) {
+      const value = allIds[i];
+      if (!votedCollectionsRanking.includes(value)) idRanking.push(value);
+    }
+
+    idRanking = [...idRanking, ...votedCollectionsRanking];
+
+    const combinations = getPairwiseCombinations(allIds);
+
+    if (allVotes.length === combinations.length)
+      return {
+        pairs: [],
+        totalPairs: combinations.length,
+        votedPairs: allVotes.length,
+        name: 'Expertise',
+        type: 'expertise',
+        threshold: this.calculateThreshold(allIds.length, null),
+      };
+
+    const sortedCombinations = sortCombinations(combinations, idRanking);
+
+    const result = [];
+    let i = 0;
+    while (result.length < count) {
+      const combination = sortedCombinations[i];
+      const px = combination[0];
+      const py = combination[1];
+      const index = allVotes.findIndex(
+        (vote) =>
+          (vote.collection1_id === px && vote.collection2_id === py) ||
+          (vote.collection1_id === py && vote.collection2_id === px),
       );
 
-    if (!collection && !project)
-      throw new BadRequestException('Invalid collection id');
+      if (index === -1) result.push(combination);
 
-    if (collection) return 'collection';
-    return 'project';
+      i++;
+    }
+
+    const res = await Promise.all(
+      result.map((pair) =>
+        this.prismaService.project.findMany({
+          where: {
+            OR: [
+              {
+                id: pair[0],
+              },
+              {
+                id: pair[1],
+              },
+            ],
+          },
+        }),
+      ),
+    );
+
+    const pairs = await Promise.all(
+      res.map(
+        async (pair) =>
+          await Promise.all(
+            pair.map(async (collection) => ({
+              ...collection,
+              numOfChildren: await this.countNumOfProjects(collection.id),
+              childProjects: await this.getChildProjects(collection.id),
+            })),
+          ),
+      ),
+    );
+
+    return {
+      pairs,
+      totalPairs: combinations.length,
+      votedPairs: allVotes.length,
+      name: 'Expertise',
+      type: 'expertise',
+      threshold: this.calculateThreshold(allIds.length, null),
+    };
   };
 
   hasThresholdVotes = async (
     collectionId: number,
     userId: number,
   ): Promise<boolean> => {
-    const type = await this.getCollectionSubunitType(collectionId);
-    const collection = await this.prismaService.collection.findUnique({
-      where: { id: collectionId },
+    // const type = await this.getCollectionSubunitType(collectionId);
+    const collection = await this.prismaService.project.findUnique({
+      where: {
+        id: collectionId,
+        type: { in: [ProjectType.collection, ProjectType.composite_project] },
+      },
       include: {
-        projects: type === 'project',
-        subCollections: type === 'collection',
+        children: true,
       },
     });
     if (!collection) throw new BadRequestException('Collection id invalid');
 
-    const { projects, subCollections } = collection;
+    const { children } = collection;
 
-    const count = type === 'project' ? projects.length : subCollections.length;
+    const count = children.length;
 
-    const threshold = this.calculateThreshold(count, type === 'collection');
+    const threshold = this.calculateThreshold(count, collection.id);
+
     let numOfVotes = 0;
 
-    if (type === 'collection') {
-      numOfVotes = await this.prismaService.collectionVote.count({
-        where: {
-          user_id: userId,
-          collection1: { parent_collection_id: collectionId },
-          collection2: { parent_collection_id: collectionId },
-        },
-      });
-    } else if (type === 'project') {
-      numOfVotes = await this.prismaService.projectVote.count({
-        where: {
-          user_id: userId,
-          project1: { collection_id: collectionId },
-          project2: { collection_id: collectionId },
-        },
-      });
-    }
+    numOfVotes = await this.prismaService.vote.count({
+      where: {
+        user_id: userId,
+        project1: { parentId: collectionId },
+        project2: { parentId: collectionId },
+      },
+    });
 
     return numOfVotes / combinations(count, 2) >= threshold;
   };
 
-  calculateOverallProgress = async (userId: number) => {
-    const [allCollections, finishedCollections] = await Promise.all([
-      this.prismaService.collection.findMany(),
-      this.prismaService.userCollectionFinish.findMany({
-        where: { user_id: userId },
-      }),
-    ]);
-
-    return Math.ceil(
-      (finishedCollections.length / allCollections.length) * 100,
-    );
+  private formatRanking = (ranking: CollectionRanking['ranking']) => {
+    return ranking.map((el) => ({
+      id: el.id,
+      share: el.share,
+      name: el.name,
+    }));
   };
 
-  private hasSubcollections = async (collectionId: number) => {
-    const subCollections = await this.prismaService.collection.findMany({
-      select: { id: true },
-      where: { parent_collection_id: collectionId },
+  breakOverallRankingDown = (input: CollectionRanking) => {
+    // const overallRanking: CollectionRanking = JSON.parse(
+    //   JSON.stringify(input),
+    // );
+    const lists: { id: number; ranking: ProjectRanking[] }[] = [];
+
+    // console.log(input.ranking);
+    // console.log('Going for format ranking:', input);
+    lists.push({
+      id: input.id,
+      ranking: this.formatRanking(input.ranking) as ProjectRanking[],
     });
 
-    return subCollections.length > 0;
+    for (let i = 0; i < input.ranking.length; i++) {
+      const row = input.ranking[i];
+      if (row.type !== 'project' && row.hasRanking) {
+        // if lists.push(...this.breakOverallRankingDown(row));
+        if (row.ranking.some((p) => p.type !== 'project')) {
+          lists.push(...this.breakOverallRankingDown(row));
+        } else
+          lists.push({
+            id: row.id,
+            ranking: this.formatRanking(row.ranking) as ProjectRanking[],
+          });
+      }
+    }
+
+    return lists;
   };
 
-  private calculateThreshold = (count: number, forceAll = false) => {
-    if (forceAll) return 1;
-    const threshold = 0.4;
+  // calculateOverallProgress = async (userId: number) => {
+  //   const [allCollections, finishedCollections] = await Promise.all([
+  //     this.prismaService.collection.findMany(),
+  //     this.prismaService.userCollectionFinish.findMany({
+  //       where: { user_id: userId },
+  //     }),
+  //   ]);
+
+  //   return Math.ceil(
+  //     (finishedCollections.length / allCollections.length) * 100,
+  //   );
+  // };
+
+  private hasSubcollections = async (collectionId: number) => {
+    const subCollections = await this.prismaService.project.count({
+      where: {
+        parentId: collectionId,
+        type: { in: [ProjectType.collection, ProjectType.composite_project] },
+      },
+    });
+
+    return subCollections > 0;
+  };
+
+  // private hasCompositeProjects = async (collectionId: number) => {
+  //   const compositeProjects = await this.prismaService.project.count({
+  //     where: {
+  //       type: ProjectType.composite_project,
+  //       parent: { parentId: collectionId },
+  //     },
+  //   });
+
+  //   return compositeProjects > 0;
+  // };
+
+  private calculateThreshold = (count: number, collectionId: number | null) => {
+    if (collectionId === null || count < 7) return 0.4;
+    const threshold = 0.25;
     return threshold;
   };
 
-  private getChildProjects = async (collecionId: number) => {
-    const type = await this.getCollectionSubunitType(collecionId);
+  private getChildProjects = async (collectionId: number) => {
     const result: unknown[] = [];
-    if (type === 'collection') {
-      const children = await this.prismaService.collection.findMany({
-        select: { id: true },
-        where: { parent_collection_id: collecionId },
-      });
-      for (const child of children) {
-        result.push(await this.getChildProjects(child.id));
-      }
-    } else if (type === 'project') {
-      const projects = await this.prismaService.project.findMany({
-        where: { collection_id: collecionId },
-      });
-      result.push(projects);
+    const children = await this.prismaService.project.findMany({
+      select: { id: true, type: true, image: true, name: true },
+      where: { parentId: collectionId },
+    });
+    for (const child of children) {
+      if (child.type === 'project') result.push(child);
+      else result.push(await this.getChildProjects(child.id));
     }
 
     return result.flat();
   };
 
-  private countNumOfProjects = async (collecionId: number) => {
-    const type = await this.getCollectionSubunitType(collecionId);
+  private countNumOfProjects = async (collectionId: number) => {
     let count = 0;
-    if (type === 'collection') {
-      const children = await this.prismaService.collection.findMany({
-        select: { id: true },
-        where: { parent_collection_id: collecionId },
-      });
-      for (const child of children) {
-        count += await this.countNumOfProjects(child.id);
-      }
-    } else if (type === 'project') {
-      const projects = await this.prismaService.project.count({
-        where: { collection_id: collecionId },
-      });
-      count += projects;
+    const children = await this.prismaService.project.findMany({
+      select: { id: true, type: true },
+      where: { parentId: collectionId },
+    });
+    for (const child of children) {
+      if (child.type === 'project') count += 1;
+      else count += await this.countNumOfProjects(child.id);
     }
 
     return count;
   };
 
   private buildVotesMatrix = (
+    votes: {
+      id1: number;
+      id2: number;
+      picked_id: number | null;
+    }[],
+    allProjects: { id: number }[],
+    zeroBasedMappingFunction: (i: number) => number,
+  ) => {
+    const n = allProjects.length;
+    // an n*n zero matrix
+    const matrix = generateZeroMatrix(n);
+
+    const getVote = (i: number, j: number) =>
+      votes.find(
+        (vote) =>
+          (vote.id1 === zeroBasedMappingFunction(i) &&
+            vote.id2 === zeroBasedMappingFunction(j)) ||
+          (vote.id1 === zeroBasedMappingFunction(j) &&
+            vote.id2 === zeroBasedMappingFunction(i)),
+      )?.picked_id === zeroBasedMappingFunction(i)
+        ? 1
+        : 0;
+
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        matrix[i][j] = getVote(i, j);
+      }
+    }
+
+    return matrix;
+  };
+
+  private buildWinningProjectsVotesMatrix = (
     votes: {
       id1: number;
       id2: number;
@@ -1229,62 +1212,49 @@ export class FlowService {
       throw new BadRequestException('Picked collection invalid id');
 
     const [collection1, collection2] = await Promise.all([
-      this.prismaService.collection.findFirst({ where: { id: collection1Id } }),
-      this.prismaService.collection.findFirst({ where: { id: collection2Id } }),
+      this.prismaService.project.findFirst({
+        where: { id: collection1Id, type: ProjectType.collection },
+      }),
+      this.prismaService.project.findFirst({
+        where: { id: collection2Id, type: ProjectType.collection },
+      }),
     ]);
 
     if (
       !collection1 ||
       !collection2 ||
-      collection1.parent_collection_id !== collection2.parent_collection_id
+      collection1.parentId !== collection2.parentId
     )
       throw new BadRequestException('Invalid pair of collections');
 
-    if (
-      collection1.parent_collection_id !== null ||
-      collection2.parent_collection_id !== null
-    )
+    if (collection1.parentId !== null || collection2.parentId !== null)
       throw new BadRequestException(
         'Expertise vote can be only done between top-level collections',
       );
   };
 
-  private validateCollectionVote = async (
-    collection1Id: number,
-    collection2Id: number,
-    pickedId: number | null,
-  ) => {
-    if (collection1Id === collection2Id)
-      throw new BadRequestException(
-        'Collection 1 and collection 2 ids should be different',
-      );
+  // private formatProjectRankingForOverallRanking = (
+  //   input: CollectionRanking,
+  //   share: number,
+  //   id: number,
+  // ) => {
+  //   const newRanking = input.ranking.map((item) => ({
+  //     id: item.project?.id,
+  //     share: item.share * share,
+  //     name: item.project?.name,
+  //     type: 'project',
+  //   }));
 
-    if (collection1Id > collection2Id)
-      throw new InternalServerErrorException(
-        'Conventionally, collection1Id must be less than collection2Id',
-      );
+  //   return {
+  //     name: input.name,
+  //     ranking: newRanking,
+  //     share,
+  //     id,
+  //     type: 'composite project',
+  //   };
+  // };
 
-    if (
-      pickedId !== null &&
-      pickedId !== collection1Id &&
-      pickedId !== collection2Id
-    )
-      throw new BadRequestException('Picked collection invalid id');
-
-    const [collection1, collection2] = await Promise.all([
-      this.prismaService.collection.findFirst({ where: { id: collection1Id } }),
-      this.prismaService.collection.findFirst({ where: { id: collection2Id } }),
-    ]);
-
-    if (
-      !collection1 ||
-      !collection2 ||
-      collection1.parent_collection_id !== collection2.parent_collection_id
-    )
-      throw new BadRequestException('Invalid pair of collections');
-  };
-
-  private validateProjectVote = async (
+  private validateVote = async (
     project1Id: number,
     project2Id: number,
     pickedId: number | null,
@@ -1303,15 +1273,15 @@ export class FlowService {
       throw new BadRequestException('Picked project invalid id');
 
     const [project1, project2] = await Promise.all([
-      this.prismaService.project.findFirst({ where: { id: project1Id } }),
-      this.prismaService.project.findFirst({ where: { id: project2Id } }),
+      this.prismaService.project.findFirst({
+        where: { id: project1Id },
+      }),
+      this.prismaService.project.findFirst({
+        where: { id: project2Id },
+      }),
     ]);
 
-    if (
-      !project1 ||
-      !project2 ||
-      project1.collection_id !== project2.collection_id
-    )
+    if (!project1 || !project2 || project1.parentId !== project2.parentId)
       throw new BadRequestException('Invalid pair of projects');
   };
 }

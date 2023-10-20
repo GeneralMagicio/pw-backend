@@ -12,13 +12,11 @@ model User {
   address            String
   isBadgeHolder      Int
   created_at         DateTime               @default(now())
-  collectionVotes    CollectionVote[]
-  projectVotes       ProjectVote[]
+  projectVotes       Vote[]
   expertiseVotes     ExpertiseVote[]
-  results            Result[]
   nonce              Nonce?
   finishedCollection UserCollectionFinish[]
-  editedRanking      EditedRanking[]
+  shares             Share[]
 }
 
 model Space {
@@ -35,94 +33,46 @@ enum PollStatus {
 }
 
 model Poll {
-  id          Int          @id @default(autoincrement())
-  title       String
-  space_id    Int
-  status      PollStatus   @default(ACTIVE)
-  ends_at     DateTime
-  created_at  DateTime     @default(now())
-  space       Space        @relation(fields: [space_id], references: [id])
-  collections Collection[]
+  id         Int        @id @default(autoincrement())
+  title      String
+  space_id   Int
+  status     PollStatus @default(ACTIVE)
+  ends_at    DateTime
+  created_at DateTime   @default(now())
+  space      Space      @relation(fields: [space_id], references: [id])
+  projects   Project[]
 }
 
-model Collection {
-  id                   Int                    @id @default(autoincrement())
-  name                 String
-  poll_id              Int
-  parent_collection_id Int?
-  image                String?
-  created_at           DateTime               @default(now())
-  poll                 Poll                   @relation(fields: [poll_id], references: [id])
-  parent_collection    Collection?            @relation("CollectionToCollection", fields: [parent_collection_id], references: [id])
-  subCollections       Collection[]           @relation("CollectionToCollection")
-  projects             Project[]
-  options1             CollectionVote[]       @relation("VoteToCollection1")
-  options2             CollectionVote[]       @relation("VoteToCollection2")
-  expertiseOptions1    ExpertiseVote[]        @relation("ExpertiseVoteToCollection1")
-  expertiseOptions2    ExpertiseVote[]        @relation("ExpertiseVoteToCollection2")
-  voted                CollectionVote[]       @relation("Voted")
-  expertiseVoted       ExpertiseVote[]        @relation("ExpertiseVoted")
-  usersWhoFinished     UserCollectionFinish[]
-  editedRankings       EditedRanking[]
-}
-
-model Result {
-  id         Int     @id @default(autoincrement())
-  user_id    Int
-  project_id Int
-  value      Float
-  user       User    @relation(fields: [user_id], references: [id])
-  project    Project @relation(fields: [project_id], references: [id])
+enum ProjectType {
+  collection
+  composite_project
+  project
 }
 
 model Project {
-  id            Int           @id @default(autoincrement())
-  name          String
-  url           String
-  description   String
-  collection_id Int
-  image         String?
-  created_at    DateTime      @default(now())
-  collection    Collection    @relation(fields: [collection_id], references: [id])
-  results       Result[]
-  options1      ProjectVote[] @relation("VoteToProject1")
-  options2      ProjectVote[] @relation("VoteToProject2")
-  voted         ProjectVote[] @relation("Voted")
+  id                   Int                    @id @default(autoincrement())
+  name                 String
+  poll_id              Int
+  url                  String
+  description          String
+  parentId             Int?
+  image                String?
+  created_at           DateTime               @default(now())
+  parent               Project?               @relation("ParentRelation", fields: [parentId], references: [id])
+  children             Project[]              @relation("ParentRelation")
+  type                 ProjectType
+  poll                 Poll                   @relation(fields: [poll_id], references: [id])
+  options1             Vote[]                 @relation("VoteToProject1")
+  options2             Vote[]                 @relation("VoteToProject2")
+  voted                Vote[]                 @relation("Voted")
+  shares               Share[]
+  expertiseColleciton1 ExpertiseVote[]        @relation("ExpertiseVote1")
+  expertiseColleciton2 ExpertiseVote[]        @relation("ExpertiseVote2")
+  expertiseVoted       ExpertiseVote[]        @relation("Voted")
+  finishedCollections  UserCollectionFinish[]
 }
 
-model ExpertiseVote {
-  id             Int         @id @default(autoincrement())
-  user_id        Int
-  collection1_id Int
-  collection2_id Int
-  picked_id      Int?
-  created_at     DateTime    @default(now())
-  updated_at     DateTime    @default(now())
-  user           User        @relation(fields: [user_id], references: [id])
-  collection1    Collection  @relation("ExpertiseVoteToCollection1", fields: [collection1_id], references: [id])
-  collection2    Collection  @relation("ExpertiseVoteToCollection2", fields: [collection2_id], references: [id])
-  picked         Collection? @relation("ExpertiseVoted", fields: [picked_id], references: [id])
-
-  @@unique([collection1_id, collection2_id, user_id])
-}
-
-model CollectionVote {
-  id             Int         @id @default(autoincrement())
-  user_id        Int
-  collection1_id Int
-  collection2_id Int
-  picked_id      Int?
-  created_at     DateTime    @default(now())
-  updated_at     DateTime    @default(now())
-  user           User        @relation(fields: [user_id], references: [id])
-  collection1    Collection  @relation("VoteToCollection1", fields: [collection1_id], references: [id])
-  collection2    Collection  @relation("VoteToCollection2", fields: [collection2_id], references: [id])
-  picked         Collection? @relation("Voted", fields: [picked_id], references: [id])
-
-  @@unique([collection1_id, collection2_id, user_id])
-}
-
-model ProjectVote {
+model Vote {
   id          Int      @id @default(autoincrement())
   user_id     Int
   project1_id Int
@@ -138,6 +88,22 @@ model ProjectVote {
   @@unique([project1_id, project2_id, user_id])
 }
 
+model ExpertiseVote {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  collection1_id Int
+  collection2_id Int
+  picked_id      Int?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @default(now())
+  user           User     @relation(fields: [user_id], references: [id])
+  collection1    Project  @relation("ExpertiseVote1", fields: [collection1_id], references: [id])
+  collection2    Project  @relation("ExpertiseVote2", fields: [collection2_id], references: [id])
+  picked         Project? @relation("Voted", fields: [picked_id], references: [id])
+
+  @@unique([collection1_id, collection2_id, user_id])
+}
+
 model Nonce {
   id         Int      @id @default(autoincrement())
   user_id    Int?     @unique()
@@ -147,26 +113,26 @@ model Nonce {
   user       User?    @relation(fields: [user_id], references: [id])
 }
 
-model EditedRanking {
-  id            Int         @id @default(autoincrement())
-  user_id       Int
-  collection_id Int?
-  ranking       String
-  created_at    DateTime    @default(now())
-  updated_at    DateTime    @default(now())
-  user          User        @relation(fields: [user_id], references: [id])
-  collection    Collection? @relation(fields: [collection_id], references: [id])
+model Share {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  project_id Int
+  share      Float
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id])
+  project    Project  @relation(fields: [project_id], references: [id])
 
-  @@unique([user_id, collection_id])
+  @@unique([user_id, project_id])
 }
 
 model UserCollectionFinish {
   user_id       Int
   collection_id Int
-  created_at    DateTime   @default(now())
-  updated_at    DateTime   @default(now())
-  collection    Collection @relation(fields: [collection_id], references: [id])
-  user          User       @relation(fields: [user_id], references: [id])
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now())
+  user          User     @relation(fields: [user_id], references: [id])
+  collection    Project  @relation(fields: [collection_id], references: [id])
 
   @@id([user_id, collection_id])
 }
