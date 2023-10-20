@@ -47,7 +47,11 @@ const isRankingUseful = (ranking: number[]) => {
 
   const sortedRanking = [...ranking].sort();
 
-  const median = sortedRanking[Math.floor(sortedRanking.length / 2)];
+  let median = sortedRanking[Math.floor(sortedRanking.length / 2)];
+  if (sortedRanking.length % 2 === 0) {
+    median =
+      (median + sortedRanking[Math.floor(sortedRanking.length / 2) - 1]) / 2;
+  }
   const max = sortedRanking[sortedRanking.length - 1];
 
   if (max / median > 5) return false;
