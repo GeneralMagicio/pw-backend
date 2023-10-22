@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   ForbiddenException,
@@ -19,6 +20,8 @@ import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { ExpertisePairs, PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
+import { CollectionRanking } from './types';
+import { validateRanking } from 'src/utils/edit-logic';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -228,25 +231,26 @@ export class FlowController {
   @UseGuards(AuthGuard)
   // @ApiResponse({ status: 200, description: 'Overall ranking' })
   @Post('/ranking')
-  async submitEditedRanking(@Req() { userId }: AuthedReq, @Body() input: any) {
-    // validate that sigma of items is equal to parent
-    // no negative number
-    // all siblings are present
+  async submitEditedRanking(
+    @Req() { userId }: AuthedReq,
+    @Body() input: { shares: CollectionRanking },
+  ) {
+    if (!validateRanking(input.shares))
+      throw new BadRequestException('Invalid ranking list');
 
-    // console.log(input);
-
-    // console.log(this.flowService.breakOverallRankingDown(input.shares as any));
+    const lists = this.flowService.breakOverallRankingDown(input.shares);
+    if (!(await this.flowService.allSiblingsExist(lists))) {
+      throw new BadRequestException('All siblings should exist');
+    }
 
     await this.flowService.addManyShares(
-      this.flowService
-        .breakOverallRankingDown(input.shares as any)
-        .reduce(
-          (acc, curr) => [
-            ...acc,
-            ...curr.ranking.map((el) => ({ id: el.id, share: el.share })),
-          ],
-          [] as { id: number; share: number }[],
-        ),
+      lists.reduce(
+        (acc, curr) => [
+          ...acc,
+          ...curr.ranking.map((el) => ({ id: el.id, share: el.share })),
+        ],
+        [] as { id: number; share: number }[],
+      ),
       userId,
     );
 
