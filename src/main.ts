@@ -21,6 +21,7 @@ async function bootstrap() {
   app.use(
     cors({
       credentials: true,
+      allowedHeaders: ['Auth'],
       origin: [
         'https://localhost:3001',
         'https://staging.pairwise.generalmagic.io',
@@ -37,6 +38,28 @@ async function bootstrap() {
       ],
     }),
   );
+
+  app.use(function (req: any, res: any, next: any) {
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'X-Requested-With,content-type,auth',
+    );
+    next();
+  });
+
+  // app.use(function (req: any, res: any, next: any) {
+  //   res.setHeader('Access-Control-Allow-Origin', '*');
+  //   res.setHeader(
+  //     'Access-Control-Allow-Methods',
+  //     'GET, POST, OPTIONS, PUT, PATCH, DELETE',
+  //   );
+  //   res.setHeader(
+  //     'Access-Control-Allow-Headers',
+  //     'X-Requested-With,content-type',
+  //   );
+  //   res.setHeader('Access-Control-Allow-Credentials', true);
+  //   next();
+  // });
 
   // app.all('*', function (req, res) {
   //   res.header('Access-Control-Allow-Origin', '*');
