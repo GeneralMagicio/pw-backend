@@ -20,14 +20,7 @@ async function bootstrap() {
   app.use(
     cors({
       credentials: true,
-      origin: [
-        'https://localhost:3001',
-        'https://staging.pairwise.generalmagic.io',
-        'https://staging.pairwise.vote/',
-        'https://staging.pairwise.vote',
-        // 'https://www.pairwise.vote',
-        'https://pairwise.vote',
-      ],
+      origin: '*',
     }),
   );
   app.use(cookieParser());
