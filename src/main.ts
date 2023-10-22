@@ -15,6 +15,7 @@ async function bootstrap() {
     };
   }
   const app = await NestFactory.create(AppModule, { httpsOptions });
+  // app.enableCors();
   // app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.use(
@@ -29,9 +30,24 @@ async function bootstrap() {
         'https://pairwise.vote',
         'https://pairwise.vote/',
         'https://www.pairwise.vote/',
+        'http://www.pairwise.vote',
+        'http://pairwise.vote',
+        'http://pairwise.vote/',
+        'http://www.pairwise.vote/',
       ],
     }),
   );
+
+  // app.all('*', function (req, res) {
+  //   res.header('Access-Control-Allow-Origin', '*');
+  //   res.header(
+  //     'Access-Control-Allow-Headers',
+  //     'Content-Type,Content-Length, Authorization, Accept,X-Requested-With',
+  //   );
+  //   res.header('Access-Control-Allow-Methods', 'PUT,POST,GET,DELETE,OPTIONS');
+  //   //...
+  // });
+
   app.use(cookieParser());
 
   const config = new DocumentBuilder()
