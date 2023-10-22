@@ -580,10 +580,10 @@ export class FlowService {
       }),
     ];
 
-    return ranking.sort((a, b) => b.share - a.share);
+    return makeIt100(ranking.sort((a, b) => b.share - a.share));
   };
   /**
-   * This method calculates ranking in a collection/composite project based on the votes
+   * This method calculates ranking in a collection/composite project either by votes or saved results
    * @param userId
    * @param collectionId
    * @returns
@@ -1027,6 +1027,44 @@ export class FlowService {
     }
 
     return lists;
+  };
+
+  allSiblingsExist = async (
+    data: {
+      id: number;
+      ranking: ProjectRanking[];
+    }[],
+  ) => {
+    const valid = await Promise.all(
+      data.map(async (list) => {
+        const numOfChildren = await this.prismaService.project.count({
+          where: { parentId: list.id },
+        });
+
+        if (
+          numOfChildren !== new Set(list.ranking.map((item) => item.id)).size
+        ) {
+          throw new BadRequestException(
+            'All sibling projects should co-exist in the list',
+          );
+        }
+
+        const areValidIds = await Promise.all(
+          list.ranking.map(async (el) => {
+            const res = await this.prismaService.project.findUnique({
+              select: { parentId: true },
+              where: { id: el.id },
+            });
+
+            return res?.parentId === list.id;
+          }),
+        );
+
+        return !areValidIds.some((val) => val === false);
+      }),
+    );
+
+    return !valid.some((val) => val === false);
   };
 
   // calculateOverallProgress = async (userId: number) => {
