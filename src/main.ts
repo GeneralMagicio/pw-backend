@@ -25,7 +25,7 @@ async function bootstrap() {
         'https://staging.pairwise.generalmagic.io',
         'https://staging.pairwise.vote/',
         'https://staging.pairwise.vote',
-        'https://www.pairwise.vote',
+        // 'https://www.pairwise.vote',
         'https://pairwise.vote',
       ],
     }),
