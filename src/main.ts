@@ -15,14 +15,9 @@ async function bootstrap() {
     };
   }
   const app = await NestFactory.create(AppModule, { httpsOptions });
+  app.use(cors());
   // app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.use(
-    cors({
-      credentials: true,
-      origin: '*',
-    }),
-  );
   app.use(cookieParser());
 
   const config = new DocumentBuilder()
