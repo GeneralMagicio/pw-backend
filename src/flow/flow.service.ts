@@ -1037,8 +1037,9 @@ export class FlowService {
   ) => {
     const valid = await Promise.all(
       data.map(async (list) => {
+        const listId = list.id === -1 ? null : list.id;
         const numOfChildren = await this.prismaService.project.count({
-          where: { parentId: list.id },
+          where: { parentId: listId },
         });
 
         if (
@@ -1056,7 +1057,7 @@ export class FlowService {
               where: { id: el.id },
             });
 
-            return res?.parentId === list.id;
+            return res?.parentId === listId;
           }),
         );
 
