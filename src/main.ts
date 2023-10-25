@@ -18,29 +18,35 @@ async function bootstrap() {
   // app.enableCors();
   // app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.use(cors());
-  // app.use(
-  //   cors({
-  //     credentials: true,
-  //     allowedHeaders: ['content-type', 'auth'],
-  //     // allowedHeaders: ['Auth'],
-  //     origin: [
-  //       'https://localhost:3001',
-  //       'https://staging.pairwise.generalmagic.io',
-  //       'https://staging.pairwise.vote/',
-  //       'https://staging.pairwise.vote',
-  //       'https://www.pairwise.vote',
-  //       'https://pairwise.vote',
-  //       'https://pairwise.vote/',
-  //       'https://www.pairwise.vote/',
-  //       'http://www.pairwise.vote',
-  //       'http://pairwise.vote',
-  //       'http://pairwise.vote/',
-  //       'http://www.pairwise.vote/',
-  //       'https://pairwise-frontend-git-test-numerous-planets-general-magic.vercel.app',
-  //     ],
-  //   }),
-  // );
+  // app.use(cors());
+
+  // app.use((req: any, res: any) => {
+  //   res.header('Access-Control-Allow-Origin', '*');
+  //   res.header(
+  //     'Access-Control-Allow-Headers',
+  //     'Content-Type,Content-Length, Authorization, Accept,X-Requested-With, Auth',
+  //   );
+  //   res.header('Access-Control-Allow-Methods', 'PUT,POST,GET,DELETE,OPTIONS');
+  //   //...
+  // });
+
+  // const corsOptions = {
+  //   origin(origin: any, callback: any) {
+  //     return callback(null, true);
+  //   },
+  // };
+
+  app.use(
+    cors({
+      credentials: true,
+      origin: [
+        'http://staging.pairwise.vote',
+        'https://staging.pairwise.vote',
+        'http://www.staging.pairwise.vote',
+        'https://www.staging.pairwise.vote',
+      ],
+    }),
+  );
 
   // app.use(function (req: any, res: any, next: any) {
   //   res.setHeader(
