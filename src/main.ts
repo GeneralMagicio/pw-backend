@@ -21,7 +21,8 @@ async function bootstrap() {
   app.use(
     cors({
       credentials: true,
-      allowedHeaders: ['Auth'],
+      allowedHeaders: ['content-type', 'auth'],
+      // allowedHeaders: ['Auth'],
       origin: [
         'https://localhost:3001',
         'https://staging.pairwise.generalmagic.io',
@@ -35,17 +36,18 @@ async function bootstrap() {
         'http://pairwise.vote',
         'http://pairwise.vote/',
         'http://www.pairwise.vote/',
+        'https://pairwise-frontend-git-test-numerous-planets-general-magic.vercel.app',
       ],
     }),
   );
 
-  app.use(function (req: any, res: any, next: any) {
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'X-Requested-With,content-type,auth',
-    );
-    next();
-  });
+  // app.use(function (req: any, res: any, next: any) {
+  //   res.setHeader(
+  //     'Access-Control-Allow-Headers',
+  //     'X-Requested-With,content-type,auth',
+  //   );
+  //   next();
+  // });
 
   // app.use(function (req: any, res: any, next: any) {
   //   res.setHeader('Access-Control-Allow-Origin', '*');
