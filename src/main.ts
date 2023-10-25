@@ -39,11 +39,20 @@ async function bootstrap() {
   app.use(
     cors({
       credentials: true,
+      allowedHeaders: ['content-type', 'auth'],
+      // allowedHeaders: ['Auth'],
       origin: [
         'http://staging.pairwise.vote',
         'https://staging.pairwise.vote',
-        'http://www.staging.pairwise.vote',
-        'https://www.staging.pairwise.vote',
+        'https://www.pairwise.vote',
+        'https://pairwise.vote',
+        'https://pairwise.vote/',
+        'https://www.pairwise.vote/',
+        'http://www.pairwise.vote',
+        'http://pairwise.vote',
+        'http://pairwise.vote/',
+        'http://www.pairwise.vote/',
+        'https://pairwise-frontend-git-test-numerous-planets-general-magic.vercel.app',
       ],
     }),
   );
