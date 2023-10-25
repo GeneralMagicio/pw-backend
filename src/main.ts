@@ -18,34 +18,37 @@ async function bootstrap() {
   // app.enableCors();
   // app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.use(
-    cors({
-      credentials: true,
-      allowedHeaders: ['Auth'],
-      origin: [
-        'https://localhost:3001',
-        'https://staging.pairwise.generalmagic.io',
-        'https://staging.pairwise.vote/',
-        'https://staging.pairwise.vote',
-        'https://www.pairwise.vote',
-        'https://pairwise.vote',
-        'https://pairwise.vote/',
-        'https://www.pairwise.vote/',
-        'http://www.pairwise.vote',
-        'http://pairwise.vote',
-        'http://pairwise.vote/',
-        'http://www.pairwise.vote/',
-      ],
-    }),
-  );
+  app.use(cors());
+  // app.use(
+  //   cors({
+  //     credentials: true,
+  //     allowedHeaders: ['content-type', 'auth'],
+  //     // allowedHeaders: ['Auth'],
+  //     origin: [
+  //       'https://localhost:3001',
+  //       'https://staging.pairwise.generalmagic.io',
+  //       'https://staging.pairwise.vote/',
+  //       'https://staging.pairwise.vote',
+  //       'https://www.pairwise.vote',
+  //       'https://pairwise.vote',
+  //       'https://pairwise.vote/',
+  //       'https://www.pairwise.vote/',
+  //       'http://www.pairwise.vote',
+  //       'http://pairwise.vote',
+  //       'http://pairwise.vote/',
+  //       'http://www.pairwise.vote/',
+  //       'https://pairwise-frontend-git-test-numerous-planets-general-magic.vercel.app',
+  //     ],
+  //   }),
+  // );
 
-  app.use(function (req: any, res: any, next: any) {
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'X-Requested-With,content-type,auth',
-    );
-    next();
-  });
+  // app.use(function (req: any, res: any, next: any) {
+  //   res.setHeader(
+  //     'Access-Control-Allow-Headers',
+  //     'X-Requested-With,content-type,auth',
+  //   );
+  //   next();
+  // });
 
   // app.use(function (req: any, res: any, next: any) {
   //   res.setHeader('Access-Control-Allow-Origin', '*');
