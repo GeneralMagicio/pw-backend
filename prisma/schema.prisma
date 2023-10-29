@@ -115,7 +115,6 @@ model Nonce {
 }
 
 model Share {
-  id         Int      @id @default(autoincrement())
   user_id    Int
   project_id Int
   share      Float
@@ -124,7 +123,7 @@ model Share {
   user       User     @relation(fields: [user_id], references: [id])
   project    Project  @relation(fields: [project_id], references: [id])
 
-  @@unique([user_id, project_id])
+  @@id([user_id, project_id])
 }
 
 model UserCollectionFinish {
