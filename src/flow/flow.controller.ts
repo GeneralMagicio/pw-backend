@@ -192,19 +192,10 @@ export class FlowController {
       if (!hasThresholdVotes)
         throw new ForbiddenException('Threshold votes missing');
     }
-    const [ranking, votingPower, collection, isFinished] = await Promise.all([
-      this.flowService.getRanking(userId, collectionId || null),
-      this.flowService.getCollectionVotingPower(collectionId || null, userId),
-      this.prismaService.project.findFirst({
-        where: { id: collectionId || -1 },
-      }),
-      true,
-    ]);
 
+    let isSaved = true;
     if (collectionId) {
-      await this.prismaService.userCollectionFinish.upsert({
-        create: { user_id: userId, collection_id: collectionId },
-        update: { user_id: userId, collection_id: collectionId },
+      const item = await this.prismaService.userCollectionFinish.findUnique({
         where: {
           user_id_collection_id: {
             user_id: userId,
@@ -212,12 +203,58 @@ export class FlowController {
           },
         },
       });
+
+      if (!item) isSaved = false;
     }
+
+    if (!isSaved) {
+      await Promise.all([
+        this.flowService.saveResultsFromVotes(userId, collectionId || null),
+        this.prismaService.userCollectionFinish.create({
+          data: { user_id: userId, collection_id: collectionId! },
+        }),
+      ]);
+    }
+
+    console.log('check:', collectionId);
+    if (!collectionId && collectionId !== 0) {
+      const alreadySaved = await this.prismaService.share.findFirst({
+        where: {
+          project: {
+            parentId: null,
+          },
+        },
+      });
+      console.log('ss:', alreadySaved);
+      if (alreadySaved === null)
+        await this.flowService.saveResultsFromVotes(userId, null);
+    }
+
+    const [ranking, votingPower, collection] = await Promise.all([
+      this.flowService.getRanking(userId, collectionId || null),
+      this.flowService.getCollectionVotingPower(collectionId || null, userId),
+      this.prismaService.project.findFirst({
+        where: { id: collectionId || -1 },
+      }),
+    ]);
+
+    // if (collectionId) {
+    //   await this.prismaService.userCollectionFinish.upsert({
+    //     create: { user_id: userId, collection_id: collectionId },
+    //     update: { user_id: userId, collection_id: collectionId },
+    //     where: {
+    //       user_id_collection_id: {
+    //         user_id: userId,
+    //         collection_id: collectionId,
+    //       },
+    //     },
+    //   });
+    // }
 
     return {
       ranking,
       hasRanking: true,
-      isFinished,
+      isFinished: true,
       type: collection?.type || 'collection',
       name: collection?.name || 'root',
       share: votingPower,
@@ -303,9 +340,9 @@ export class FlowController {
       where: { user_id: userId },
     });
 
-    // await this.prismaService.vote.deleteMany({
-    //   where: { user_id: userId },
-    // });
+    await this.prismaService.vote.deleteMany({
+      where: { user_id: userId },
+    });
 
     await this.prismaService.userCollectionFinish.deleteMany({
       where: { user_id: userId },

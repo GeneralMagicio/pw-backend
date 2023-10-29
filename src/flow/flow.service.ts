@@ -10,6 +10,7 @@ import {
   generateZeroMatrix,
   getRankingForSetOfDampingFactors,
   makeIt100,
+  toFixedNumber,
 } from 'src/utils/mathematical-logic';
 import { combinations } from 'mathjs';
 import { CollectionRanking, ProjectRanking } from './types';
@@ -330,25 +331,19 @@ export class FlowService {
     shares: { id: number; share: number }[],
     userId: number,
   ) => {
+    // TODO: Is the array in .all method redundant?
     return Promise.all([
       shares.map(async ({ id, share }) => {
-        const exists = await this.prismaService.share.findFirst({
-          where: { project_id: id, user_id: userId },
-        });
-
-        if (exists) {
-          return this.prismaService.share.update({
-            where: { id: exists.id },
-            data: { share },
-          });
-        } else
-          return this.prismaService.share.create({
-            data: {
-              share,
-              project_id: id,
+        return this.prismaService.share.upsert({
+          update: { share: share },
+          create: { user_id: userId, project_id: id, share: share },
+          where: {
+            user_id_project_id: {
               user_id: userId,
+              project_id: id,
             },
-          });
+          },
+        });
       }),
     ]);
   };
@@ -482,21 +477,72 @@ export class FlowService {
       where: { project_id: collectionId, user_id: userId },
     });
 
-    if (savedResult) return savedResult.share;
+    return savedResult?.share || 0;
 
-    const ranking = await this.getRankingFromVotes(userId, collection.parentId);
+    // const ranking = await this.getRankingFromVotes(userId, collection.parentId);
 
-    const { share } = ranking.find((item) => item.id === collectionId)!;
+    // const { share } = ranking.find((item) => item.id === collectionId)!;
 
-    if (collection.parentId === null) {
-      return share;
-    } else {
-      return (
-        (await this.getCollectionVotingPower(collection.parentId, userId)) *
-        share
-      );
-    }
+    // if (collection.parentId === null) {
+    //   return share;
+    // } else {
+    //   return (
+    //     (await this.getCollectionVotingPower(collection.parentId, userId)) *
+    //     share
+    //   );
+    // }
   };
+
+  saveResultsFromVotes = async (
+    userId: number,
+    collectionId: number | null,
+  ) => {
+    const ranking = await this.getRankingFromVotes(userId, collectionId);
+
+    await Promise.all(
+      ranking.map((rank) => {
+        return this.prismaService.share.upsert({
+          update: { share: rank.share },
+          create: { user_id: userId, project_id: rank.id, share: rank.share },
+          where: {
+            user_id_project_id: {
+              user_id: userId,
+              project_id: rank.id,
+            },
+          },
+        });
+      }),
+    );
+    // await this.prismaService.share.createMany({
+    //   data: ranking.map((rank) => ({
+    //     user_id: userId,
+    //     project_id: rank.id,
+    //     share: rank.share,
+    //   })),
+    //   // update: { share: rank.share },
+    //   // data: { user_id: userId, project_id: rank.id, share: rank.share },
+    //   // where: {
+    //   //   user_id_project_id: {
+    //   //     user_id: userId,
+    //   //     project_id: rank.id,
+    //   //   },
+    //   // },
+    // });
+
+    // if (!(await this.checkRankingIntegrityInDb(userId)))
+    //   throw new BadRequestException('Ranking lacks integrity');
+  };
+
+  // private checkRankingIntegrityInDb = async (userId: number) => {
+  //   const ranks = await this.prismaService.share.findMany({
+  //     where: { user_id: userId },
+  //   });
+
+  //   const acc = ranks.reduce((acc, curr) => (acc += curr.share), 0);
+
+  //   if (1 !== toFixedNumber(acc, 5)) return false;
+  //   else return true;
+  // };
 
   /**
    * This method calculates ranking in a collection/composite project based on the votes
@@ -588,6 +634,28 @@ export class FlowService {
 
     return makeIt100(ranking.sort((a, b) => b.share - a.share));
   };
+
+  /**
+   * @param collectionId
+   * @returns
+   */
+  private getAverageRanking = async (
+    // id of the collection or the composite project
+    collectionId: number | null,
+  ) => {
+    const allChildren = await this.prismaService.project.findMany({
+      where: {
+        parentId: collectionId,
+      },
+    });
+
+    return allChildren.map((project, i, self) => ({
+      id: project.id,
+      share: 1 / self.length,
+      name: project.name,
+      type: project.type,
+    }));
+  };
   /**
    * This method calculates ranking in a collection/composite project either by votes or saved results
    * @param userId
@@ -599,21 +667,19 @@ export class FlowService {
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
-    const [savedResults] = await Promise.all([
+    const [savedResults, votingPower] = await Promise.all([
       this.prismaService.share.findMany({
         where: { project: { parentId: collectionId }, user_id: userId },
         include: { project: true },
       }),
+      this.getCollectionVotingPower(collectionId, userId),
       // this.prismaService.project.findMany
     ]);
 
     if (savedResults.length === 0) {
-      const [rawRanking, votingPower] = await Promise.all([
-        this.getRankingFromVotes(userId, collectionId),
-        this.getCollectionVotingPower(collectionId, userId),
-      ]);
+      const averageRanking = await this.getAverageRanking(collectionId);
 
-      return rawRanking.map((el) => ({
+      return averageRanking.map((el) => ({
         ...el,
         hasRanking: false,
         share: el.share * votingPower,
@@ -624,7 +690,7 @@ export class FlowService {
       .map((item) => ({
         id: item.project_id,
         name: item.project.name,
-        share: item.share,
+        share: item.share * votingPower,
         type: item.project.type,
         RPGF3Id: item.project.RPGF3Id,
         hasRanking: false,
@@ -1035,6 +1101,25 @@ export class FlowService {
 
     return lists;
   };
+
+  // private buildRankingFromRanks = async (
+  //   input: {
+  //     userId: number;
+  //     projectId: number;
+  //     parentId: number;
+  //     share: number;
+  //     type: ProjectType;
+  //   }[],
+  // ) => {
+  //   // const ranking: CollectionRanking = await this.getOverallRanking(1);
+
+  //   // // top-level categories
+  //   // for (const rank of input) {
+  //   //   if (rank.parentId === null) {
+  //   //     ranking.ranking = { ...ranking.ranking };
+  //   //   }
+  //   // }
+  // };
 
   allSiblingsExist = async (
     data: {
