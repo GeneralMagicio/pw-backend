@@ -14,6 +14,7 @@ import {
 import { combinations } from 'mathjs';
 import { CollectionRanking, ProjectRanking } from './types';
 import { ProjectType } from '@prisma/client';
+import axios from 'axios';
 
 @Injectable()
 export class FlowService {
@@ -264,7 +265,7 @@ export class FlowService {
         where: { id: cid || -1 },
       }),
       this.prismaService.project.findMany({
-        select: { id: true, name: true, type: true },
+        select: { id: true, name: true, type: true, RPGF3Id: true },
         where: {
           parentId: cid,
           type: { in: [ProjectType.composite_project, ProjectType.collection] },
@@ -284,10 +285,11 @@ export class FlowService {
     const ranking = await this.getRanking(userId, cid);
 
     if (collections.length === 0) {
-      result = ranking.map(({ name, id, share, type }) => ({
+      result = ranking.map(({ name, id, share, type, RPGF3Id }) => ({
         name,
         id,
         share,
+        RPGF3Id: RPGF3Id || '',
         type: type as 'project',
         hasRanking: false as const,
       }));
@@ -295,10 +297,11 @@ export class FlowService {
     }
 
     return Promise.all([
-      ...collections.map(async ({ type, id, name }) => ({
+      ...collections.map(async ({ type, id, name, RPGF3Id }) => ({
         type: type as 'collection' | 'composite project',
         id,
         name,
+        RPGF3Id: RPGF3Id || '',
         hasRanking: true as const,
         isFinished: !!areFinished.find((el) => el.collection_id === id),
         share: ranking.find((c) => c.id === id)!.share,
@@ -312,9 +315,10 @@ export class FlowService {
       })),
       ...ranking
         .filter((el) => el.type === 'project')
-        .map(({ name, id, type, share }) => ({
+        .map(({ name, id, type, share, RPGF3Id }) => ({
           name,
           id,
+          RPGF3Id: RPGF3Id || '',
           hasRanking: false as const,
           share: share,
           type: type as 'project',
@@ -567,6 +571,7 @@ export class FlowService {
           share: item,
           name: project!.name,
           type: project!.type,
+          RPGF3Id: project!.RPGF3Id,
         };
       }),
       ...nonWinningProjectsIds.map((id) => {
@@ -576,6 +581,7 @@ export class FlowService {
           share: 0,
           name: project!.name,
           type: project!.type,
+          RPGF3Id: project!.RPGF3Id,
         };
       }),
     ];
@@ -620,6 +626,7 @@ export class FlowService {
         name: item.project.name,
         share: item.share,
         type: item.project.type,
+        RPGF3Id: item.project.RPGF3Id,
         hasRanking: false,
       }))
       .sort((a, b) => b.share - a.share);
@@ -1168,6 +1175,26 @@ export class FlowService {
     }
 
     return matrix;
+  };
+
+  pinJSONToIPFS = async (list: string) => {
+    try {
+      const res = await axios.post(
+        'https://api.pinata.cloud/pinning/pinJSONToIPFS',
+        {
+          pinataContent: list,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: process.env.PINATA,
+          },
+        },
+      );
+      return res.data.IpfsHash;
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   private buildWinningProjectsVotesMatrix = (

@@ -31,6 +31,14 @@ export class FlowController {
     private readonly prismaService: PrismaService,
   ) {}
 
+  @UseGuards(AuthGuard)
+  @Post('/pinJSONToIPFS')
+  async pinJSONToIPFS(@Body('json') json: string) {
+    const hash = await this.flowService.pinJSONToIPFS(json);
+
+    return hash;
+  }
+
   @Get('/isMoon')
   async isMoon(@Query('cid') collectionId?: number) {
     const isMoon = await this.prismaService.project.findFirst({
