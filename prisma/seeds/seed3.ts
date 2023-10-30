@@ -112,6 +112,48 @@ async function insertProjects() {
   }
 }
 
+// async function insertUUID() {
+//   // const workbook = XLSX.readFile('./fdp-min.xlsx');
+//   // const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+//   // const jsonData: Row[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+
+//   for (let i = 0; i < data.length; i++) {
+//     const row = data[i];
+//     // console.log(row);
+//     // if (i > 30) return;
+//     if (
+//       !row.pwCategory ||
+//       row.pwIsFlagged ||
+//       row.applicantType === 'INDIVIDUAL' ||
+//       row.displayName === 'RadicalxChange Foundation'
+//     )
+//       continue;
+
+//     const collection = await prisma.project.findFirst({
+//       where: {
+//         name: row.pwCategory,
+//         type: 'collection',
+//       },
+//     });
+
+//     if (!collection) {
+//       // continue;
+//       throw new Error(`Collection with id ${row.pwCategory} not found`);
+//     }
+
+//     await prisma.project.updateMany({
+//       where: {
+//         name: row.displayName,
+//         url: row.websiteUrl,
+//         type: ProjectType.project,
+//       },
+//       data: {
+//         RPGF3Id: row.RPGF3_Application_UID,
+//       },
+//     });
+//   }
+// }
+
 async function insertTopCollections() {
   const workbook = XLSX.readFile('./pwcat.xlsx');
   const worksheet = workbook.Sheets[workbook.SheetNames[1]];
@@ -205,7 +247,9 @@ const main = async () => {
 
   // await insertMoonCollections();
 
-  await insertProjects();
+  // await insertProjects();
+
+  // await insertUUID();
 
   // // add collections
   // const collections = getCollections();

@@ -55,6 +55,7 @@ model Project {
   poll_id              Int
   url                  String
   description          String
+  RPGF3Id              String?
   parentId             Int?
   image                String?
   created_at           DateTime               @default(now())
