@@ -31,6 +31,18 @@ export class FlowController {
     private readonly prismaService: PrismaService,
   ) {}
 
+  @Get('/isMoon')
+  async isMoon(@Query('cid') collectionId?: number) {
+    const isMoon = await this.prismaService.project.findFirst({
+      where: {
+        parentId: collectionId,
+        type: 'collection',
+      },
+    });
+
+    return isMoon === null ? true : false;
+  }
+
   @UseGuards(AuthGuard)
   @ApiQuery({
     name: 'cid',

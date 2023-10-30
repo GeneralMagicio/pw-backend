@@ -37,6 +37,7 @@ async function bootstrap() {
         'http://pairwise.vote/',
         'http://www.pairwise.vote/',
         'https://pairwise-frontend-git-test-numerous-planets-general-magic.vercel.app',
+        'https://pwrd.cupofjoy.store',
       ],
     }),
   );

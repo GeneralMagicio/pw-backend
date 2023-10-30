@@ -80,7 +80,7 @@ export class FlowService {
     ]);
 
     return (
-      expertiseVotes.length >
+      expertiseVotes.length >=
       Math.floor(
         this.calculateThreshold(topLevelCollections.length, null) *
           combinations(topLevelCollections.length, 2),
@@ -103,7 +103,7 @@ export class FlowService {
     ]);
 
     return (
-      topLevelVotes.length >
+      topLevelVotes.length >=
       Math.floor(
         this.calculateThreshold(topLevelCollections.length, null) *
           combinations(topLevelCollections.length, 2),
@@ -1105,7 +1105,7 @@ export class FlowService {
 
   private calculateThreshold = (count: number, collectionId: number | null) => {
     if (collectionId === null || count < 7) return 0.4;
-    const threshold = 0.25;
+    const threshold = 1 / (count - 1);
     return threshold;
   };
 
