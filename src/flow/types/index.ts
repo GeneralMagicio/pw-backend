@@ -3,7 +3,7 @@ import { GetResult } from '@prisma/client/runtime/library';
 export interface CollectionRanking {
   type: 'collection' | 'composite project';
   hasRanking: true;
-  isFinished: boolean;
+  // isFinished: boolean;
   id: number;
   RPGF3Id: string;
   name: string;
@@ -31,3 +31,5 @@ export interface EditingProjectRanking extends ProjectRanking {
   locked: boolean;
   error: boolean;
 }
+
+export type CollectionProgressStatus = 'Finished' | 'WIP' | 'Pending';
