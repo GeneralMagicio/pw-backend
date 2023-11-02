@@ -12,7 +12,11 @@ import {
   makeIt100,
 } from 'src/utils/mathematical-logic';
 import { combinations } from 'mathjs';
-import { CollectionRanking, ProjectRanking } from './types';
+import {
+  CollectionProgressStatus,
+  CollectionRanking,
+  ProjectRanking,
+} from './types';
 import { ProjectType } from '@prisma/client';
 import axios from 'axios';
 
@@ -30,17 +34,63 @@ export class FlowService {
     return votes !== null;
   };
 
-  isCollectionFinished = async (userId: number, collectionId: number) => {
-    const status = await this.prismaService.userCollectionFinish.findUnique({
-      where: {
-        user_id_collection_id: {
-          collection_id: collectionId,
-          user_id: userId,
-        },
-      },
-    });
+  getCollectionProgressStatus = async (
+    userId: number,
+    collectionId: number,
+  ): Promise<CollectionProgressStatus> => {
+    const isMoon = await this.isMoon(collectionId);
 
-    return status !== null;
+    if (isMoon) {
+      const [isFinished, hasVotes] = await Promise.all([
+        this.prismaService.userCollectionFinish.findUnique({
+          where: {
+            user_id_collection_id: {
+              collection_id: collectionId,
+              user_id: userId,
+            },
+          },
+        }),
+        this.prismaService.vote.findFirst({
+          where: {
+            user_id: userId,
+            OR: [
+              {
+                project1: {
+                  parentId: collectionId,
+                },
+              },
+              {
+                project2: {
+                  parentId: collectionId,
+                },
+              },
+            ],
+          },
+        }),
+      ]);
+
+      return isFinished !== null ? 'Finished' : hasVotes ? 'WIP' : 'Pending';
+    } else {
+      const children = await this.prismaService.project.findMany({
+        select: { id: true },
+        where: {
+          type: 'collection',
+          parentId: collectionId,
+        },
+      });
+
+      const childrenFinishStatus = await Promise.all(
+        children.map(async (child) =>
+          this.getCollectionProgressStatus(userId, child.id),
+        ),
+      );
+
+      if (childrenFinishStatus.every((child) => child === 'Finished'))
+        return 'Finished';
+      if (childrenFinishStatus.some((child) => child === 'Finished'))
+        return 'WIP';
+      return 'Pending';
+    }
   };
 
   private vote = async (
@@ -86,7 +136,7 @@ export class FlowService {
     cid: number | null = null,
   ): Promise<(CollectionRanking | ProjectRanking)[]> => {
     let result = [];
-    const [collection, collections, areFinished] = await Promise.all([
+    const [collection, collections] = await Promise.all([
       this.prismaService.project.findUnique({
         where: { id: cid || -1 },
       }),
@@ -97,15 +147,15 @@ export class FlowService {
           type: { in: [ProjectType.composite_project, ProjectType.collection] },
         },
       }),
-      this.prismaService.userCollectionFinish.findMany({
-        select: { collection_id: true },
-        where: {
-          user_id: userId,
-          collection: {
-            parentId: cid,
-          },
-        },
-      }),
+      // this.prismaService.userCollectionFinish.findMany({
+      //   select: { collection_id: true },
+      //   where: {
+      //     user_id: userId,
+      //     collection: {
+      //       parentId: cid,
+      //     },
+      //   },
+      // }),
     ]);
 
     const ranking = await this.getRanking(userId, cid);
@@ -122,14 +172,14 @@ export class FlowService {
       return result;
     }
 
-    return Promise.all([
+    const res = await Promise.all([
       ...collections.map(async ({ type, id, name, RPGF3Id }) => ({
         type: type as 'collection' | 'composite project',
         id,
         name,
         RPGF3Id: RPGF3Id || '',
         hasRanking: true as const,
-        isFinished: !!areFinished.find((el) => el.collection_id === id),
+        // isFinished: !!areFinished.find((el) => el.collection_id === id),
         share: ranking.find((c) => c.id === id)!.share,
         ranking: [
           ...(await this.getOverallRanking(
@@ -150,6 +200,8 @@ export class FlowService {
           type: type as 'project',
         })),
     ]);
+
+    return res.sort((a, b) => b.share - a.share);
   };
 
   addManyShares = async (
@@ -196,16 +248,16 @@ export class FlowService {
 
     const withAdditionalFields = await Promise.all(
       collections.map(async (collection) => {
-        const [hasSubcollections, finished, started] = await Promise.all([
+        const [hasSubcollections, progress] = await Promise.all([
           this.hasSubcollections(collection.id),
-          this.isCollectionFinished(userId, collection.id),
-          this.isCollectionStarted(userId, collection.id),
+          this.getCollectionProgressStatus(userId, collection.id),
+          // this.isCollectionStarted(userId, collection.id),
         ]);
         return {
           ...collection,
           hasSubcollections,
-          finished,
-          started,
+          progress,
+          // started,
         };
       }),
     );
@@ -232,7 +284,9 @@ export class FlowService {
       where: { project_id: collectionId, user_id: userId },
     });
 
-    return savedResult?.share || 0;
+    if (!savedResult) throw Error('No corresponding value for the collection');
+
+    return savedResult.share;
 
     // const ranking = await this.getRankingFromVotes(userId, collection.parentId);
 
@@ -247,18 +301,36 @@ export class FlowService {
     //   );
     // }
   };
+  isMoon = async (collectionId: number | null) => {
+    const isMoon = await this.prismaService.project.findFirst({
+      where: {
+        parentId: collectionId,
+        type: 'collection',
+      },
+    });
+
+    return isMoon === null ? true : false;
+  };
 
   saveResultsFromVotes = async (
     userId: number,
     collectionId: number | null,
   ) => {
-    const ranking = await this.getRankingFromVotes(userId, collectionId);
+    const [ranking, votingPower] = await Promise.all([
+      this.getRankingFromVotes(userId, collectionId),
+      this.getCollectionVotingPower(collectionId, userId),
+    ]);
 
     await Promise.all(
       ranking.map((rank) => {
+        const share = rank.share * votingPower;
         return this.prismaService.share.upsert({
-          update: { share: rank.share },
-          create: { user_id: userId, project_id: rank.id, share: rank.share },
+          update: { share },
+          create: {
+            user_id: userId,
+            project_id: rank.id,
+            share,
+          },
           where: {
             user_id_project_id: {
               user_id: userId,
@@ -380,28 +452,6 @@ export class FlowService {
   };
 
   /**
-   * @param collectionId
-   * @returns
-   */
-  private getAverageRanking = async (
-    // id of the collection or the composite project
-    collectionId: number | null,
-  ) => {
-    const allChildren = await this.prismaService.project.findMany({
-      where: {
-        parentId: collectionId,
-      },
-    });
-
-    return allChildren.map((project, i, self) => ({
-      id: project.id,
-      share: 1 / self.length,
-      name: project.name,
-      type: project.type,
-      RPGF3Id: project.RPGF3Id,
-    }));
-  };
-  /**
    * This method calculates ranking in a collection/composite project either by votes or saved results
    * @param userId
    * @param collectionId
@@ -412,30 +462,16 @@ export class FlowService {
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
-    const [savedResults, votingPower] = await Promise.all([
-      this.prismaService.share.findMany({
-        where: { project: { parentId: collectionId }, user_id: userId },
-        include: { project: true },
-      }),
-      this.getCollectionVotingPower(collectionId, userId),
-      // this.prismaService.project.findMany
-    ]);
-
-    if (savedResults.length === 0) {
-      const averageRanking = await this.getAverageRanking(collectionId);
-
-      return averageRanking.map((el) => ({
-        ...el,
-        hasRanking: false,
-        share: el.share * votingPower,
-      }));
-    }
+    const savedResults = await this.prismaService.share.findMany({
+      where: { project: { parentId: collectionId }, user_id: userId },
+      include: { project: true },
+    });
 
     return savedResults
       .map((item) => ({
         id: item.project_id,
         name: item.project.name,
-        share: item.share * votingPower,
+        share: item.share,
         type: item.project.type,
         RPGF3Id: item.project.RPGF3Id,
         hasRanking: false,
@@ -631,30 +667,42 @@ export class FlowService {
   };
 
   populateInitialRanking = async (userId: number) => {
-    const entities = await this.prismaService.project.findMany({
-      select: { id: true, type: true },
+    const [entities, projectsCount] = await Promise.all([
+      this.prismaService.project.findMany({
+        select: { id: true, type: true, name: true },
+      }),
+      this.prismaService.project.count({
+        where: { type: 'project' },
+      }),
+    ]);
+
+    const total = projectsCount;
+
+    console.log('Total is', total);
+
+    const projects = entities.filter((el) => el.type === 'project');
+
+    const collections = entities.filter((el) => el.type !== 'project');
+
+    await this.prismaService.share.createMany({
+      data: projects.map((item) => ({
+        share: 1 / total,
+        user_id: userId,
+        project_id: item.id,
+      })),
     });
 
-    const total = entities.length;
-
-    await Promise.all(
-      entities.map(async (item) => {
-        if (item.type === 'project') {
-          await this.prismaService.share.create({
-            data: { share: 1 / total, user_id: userId, project_id: item.id },
-          });
-        } else {
-          const childrenCount = await this.countNumOfProjects(item.id);
-          await this.prismaService.share.create({
-            data: {
-              share: childrenCount / total,
-              user_id: userId,
-              project_id: item.id,
-            },
-          });
-        }
-      }),
-    );
+    for (const item of collections) {
+      const childrenCount = await this.countNumOfProjects(item.id);
+      console.log('Children count of', item.name, 'is', childrenCount);
+      await this.prismaService.share.create({
+        data: {
+          share: childrenCount / total,
+          user_id: userId,
+          project_id: item.id,
+        },
+      });
+    }
   };
 
   allSiblingsExist = async (

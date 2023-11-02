@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as cors from 'cors';
 import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
   let httpsOptions = undefined;
@@ -15,6 +16,8 @@ async function bootstrap() {
     };
   }
   const app = await NestFactory.create(AppModule, { httpsOptions });
+  app.use(json({ limit: '5mb' }));
+  app.use(urlencoded({ extended: true, limit: '5mb' }));
   // app.enableCors();
   // app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalPipes(new ValidationPipe({ transform: true }));

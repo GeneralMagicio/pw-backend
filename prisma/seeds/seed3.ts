@@ -235,24 +235,24 @@ const main = async () => {
 
   await prisma.$connect();
 
-  // const space = getSpace();
-  // await prisma.space.create({
-  //   data: space,
-  // });
+  const space = getSpace();
+  await prisma.space.create({
+    data: space,
+  });
 
-  // // add poll
-  // const poll = getPoll();
-  // await prisma.poll.create({
-  //   data: poll,
-  // });
+  // add poll
+  const poll = getPoll();
+  await prisma.poll.create({
+    data: poll,
+  });
 
-  // await insertTopCollections();
+  await insertTopCollections();
 
-  // await insertMoonCollections();
+  await insertMoonCollections();
 
-  // await insertProjects();
+  await insertProjects();
 
-  printCategories();
+  // printCategories();
 
   await prisma.$disconnect();
 };

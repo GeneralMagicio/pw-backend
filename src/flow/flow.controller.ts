@@ -41,14 +41,7 @@ export class FlowController {
 
   @Get('/isMoon')
   async isMoon(@Query('cid') collectionId?: number) {
-    const isMoon = await this.prismaService.project.findFirst({
-      where: {
-        parentId: collectionId,
-        type: 'collection',
-      },
-    });
-
-    return isMoon === null ? true : false;
+    return this.flowService.isMoon(collectionId || null);
   }
 
   @UseGuards(AuthGuard)
@@ -128,17 +121,19 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Query('cid') collectionId?: number,
   ) {
+    const isMoon = await this.flowService.isMoon(collectionId || null);
     if (collectionId) {
       const hasThresholdVotes = await this.flowService.hasThresholdVotes(
         collectionId,
         userId,
       );
-      if (!hasThresholdVotes)
+
+      if (!hasThresholdVotes && isMoon)
         throw new ForbiddenException('Threshold votes missing');
     }
 
     let isSaved = true;
-    if (collectionId) {
+    if (collectionId && isMoon) {
       const item = await this.prismaService.userCollectionFinish.findUnique({
         where: {
           user_id_collection_id: {
@@ -160,7 +155,6 @@ export class FlowController {
       ]);
     }
 
-    console.log('check:', collectionId);
     if (!collectionId && collectionId !== 0) {
       const alreadySaved = await this.prismaService.share.findFirst({
         where: {
@@ -169,7 +163,6 @@ export class FlowController {
           },
         },
       });
-      console.log('ss:', alreadySaved);
       if (alreadySaved === null)
         await this.flowService.saveResultsFromVotes(userId, null);
     }
@@ -228,6 +221,16 @@ export class FlowController {
     if (!(await this.flowService.allSiblingsExist(lists))) {
       throw new BadRequestException('All siblings should exist');
     }
+
+    // console.log(
+    //   lists.reduce(
+    //     (acc, curr) => [
+    //       ...acc,
+    //       ...curr.ranking.map((el) => ({ id: el.id, share: el.share })),
+    //     ],
+    //     [] as { id: number; share: number }[],
+    //   ),
+    // );
 
     await this.flowService.addManyShares(
       lists.reduce(

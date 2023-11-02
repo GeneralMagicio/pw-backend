@@ -29,14 +29,16 @@ export class AnalyticsController {
       select: { id: true },
     });
 
-    const lists = await Promise.all(
-      users.map(({ id }) => this.flowService.hasAnsweredExpertise(id)),
-    );
+    // const lists = await Promise.all(
+    //   users.map(({ id }) => this.flowService.hasAnsweredExpertise(id)),
+    // );
 
-    const numOfTrues = lists.filter((el) => el === true).length;
+    // const numOfTrues = lists.filter((el) => el === true).length;
 
     return res.send(
-      `Number of created lists as of ${new Date().toUTCString()}: ${numOfTrues}`,
+      `Number of created lists as of ${new Date().toUTCString()}: ${
+        users.length
+      }`,
     );
   }
 

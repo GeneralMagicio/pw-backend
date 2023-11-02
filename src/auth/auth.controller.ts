@@ -20,6 +20,7 @@ import { LoginDTO } from './dto/login.dto';
 import { ApiResponse } from '@nestjs/swagger';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { STAGING_API } from 'src/utils';
+import { FlowService } from 'src/flow/flow.service';
 
 @Controller({ path: 'auth' })
 export class AuthController {
@@ -28,6 +29,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly prismaService: PrismaService,
     private readonly usersService: UsersService,
+    private readonly flowService: FlowService,
   ) {}
 
   @UseGuards(AuthGuard)
@@ -88,6 +90,12 @@ export class AuthController {
       },
     });
 
+    const isFirstLogin = await this.prismaService.share.findFirst({
+      where: { user_id: user.id },
+    });
+
+    if (isFirstLogin === null)
+      await this.flowService.populateInitialRanking(user.id);
     // res.cookie('auth', nonce, {
     //   httpOnly: true,
     //   sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
