@@ -32,7 +32,8 @@ const getPoll = (): Prisma.PollUncheckedCreateInput => ({
 const printCategories = () => {
   let categories: { category: string; count: number }[] = [];
   for (const application of data) {
-    if (application.pwIsFlagged) continue;
+    if (application.pwIsFlagged || application.applicantType === 'INDIVIDUAL')
+      continue;
 
     if (!application.pwCategory) {
       // throw new Error(`Not flagged but no category either for ${application.displayName}`);
@@ -42,7 +43,7 @@ const printCategories = () => {
       continue;
     }
 
-    if (application.applicantType === 'INDIVIDUAL') continue;
+    // if () continue;
 
     const index = categories.findIndex(
       (item) => item.category === application.pwCategory,
@@ -102,7 +103,9 @@ async function insertProjects() {
       data: {
         name: row.displayName,
         image: row.profileImageUrl,
-        description: row.impactDescription,
+        impactDescription: row.impactDescription,
+        contributionDescription: row.contributionDescription,
+        RPGF3Id: row.RPGF3_Application_UID,
         url: row.websiteUrl,
         parentId: collection.id,
         poll_id: 1,
@@ -179,7 +182,7 @@ async function insertTopCollections() {
       data: {
         name: row.CATEGORY,
         image: row.LOGO || '',
-        description: row.DESCRIPTION,
+        impactDescription: row.DESCRIPTION,
         url: 'Some url',
         parentId: null,
         poll_id: 1,
@@ -211,7 +214,7 @@ async function insertMoonCollections() {
       data: {
         name: row.CATEGORY,
         image: row.LOGO || '',
-        description: row.DESCRIPTION,
+        impactDescription: row.DESCRIPTION,
         url: 'Some url',
         parentId: Number(row.pid),
         poll_id: 1,
@@ -243,42 +246,13 @@ const main = async () => {
   //   data: poll,
   // });
 
-  // await insertTopCollections()
+  // await insertTopCollections();
 
   // await insertMoonCollections();
 
   // await insertProjects();
 
-  // await insertUUID();
-
-  // // add collections
-  // const collections = getCollections();
-  // for (const collection of collections) {
-  //   await prisma.project.create({
-  //     data: {
-  //       name: collection.categoryName,
-  //       // image: row.Image,
-  //       description: 'Description',
-  //       url: 'Some url',
-  //       parentId: collection.parent_collection_id,
-  //       poll_id: collection.poll_id,
-  //       type: ProjectType.collection,
-  //     },
-  //   });
-  // }
-  // collections.forEach(async (collection) => {
-  // });
-  // await prisma.collection.createMany({
-  //   data: collections,
-  // });
-
-  // add projects
-  // await insertDataFromExcel();
-
-  // await addDescriptions();
-
-  // printCategories();
-  // await addSubProjects();
+  printCategories();
 
   await prisma.$disconnect();
 };

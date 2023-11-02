@@ -290,26 +290,26 @@ export class FlowController {
   @Get('/dangerouslyRemoveData')
   async removeMydata() {
     // for (let i = 2; i < 9; i++) {
-    // const user = await this.prismaService.user.findFirst({
-    //   select: { id: true },
-    //   where: { address: '0xD7542DC0F58095064BFEf6117fac82E4c5504d28' },
-    // });
+    const user = await this.prismaService.user.findFirst({
+      select: { id: true },
+      where: { address: '0x8ED91f4e13Ad1D74205a05E2eFeB1DB5175845a3' },
+    });
 
     // console.log(user?.id);
 
-    // const userId = user?.id || 1;
-    const userId = 1;
-    // await this.prismaService.expertiseVote.deleteMany({
-    //   where: { user_id: userId },
-    // });
+    const userId = user?.id || 1;
+    // const userId = 3;
+    await this.prismaService.expertiseVote.deleteMany({
+      where: { user_id: userId },
+    });
 
     // await this.prismaService.vote.deleteMany({
     //   where: { user_id: userId },
     // });
 
-    // await this.prismaService.userCollectionFinish.deleteMany({
-    //   where: { user_id: userId },
-    // });
+    await this.prismaService.userCollectionFinish.deleteMany({
+      where: { user_id: userId },
+    });
 
     await this.prismaService.share.deleteMany({
       where: { user_id: userId },

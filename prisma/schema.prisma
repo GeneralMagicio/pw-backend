@@ -50,27 +50,28 @@ enum ProjectType {
 }
 
 model Project {
-  id                   Int                    @id @default(autoincrement())
-  name                 String
-  poll_id              Int
-  url                  String
-  description          String
-  RPGF3Id              String?
-  parentId             Int?
-  image                String?
-  created_at           DateTime               @default(now())
-  parent               Project?               @relation("ParentRelation", fields: [parentId], references: [id])
-  children             Project[]              @relation("ParentRelation")
-  type                 ProjectType
-  poll                 Poll                   @relation(fields: [poll_id], references: [id])
-  options1             Vote[]                 @relation("VoteToProject1")
-  options2             Vote[]                 @relation("VoteToProject2")
-  voted                Vote[]                 @relation("Voted")
-  shares               Share[]
-  expertiseColleciton1 ExpertiseVote[]        @relation("ExpertiseVote1")
-  expertiseColleciton2 ExpertiseVote[]        @relation("ExpertiseVote2")
-  expertiseVoted       ExpertiseVote[]        @relation("Voted")
-  finishedCollections  UserCollectionFinish[]
+  id                      Int                    @id @default(autoincrement())
+  name                    String
+  poll_id                 Int
+  url                     String
+  impactDescription       String
+  contributionDescription String?
+  RPGF3Id                 String?
+  parentId                Int?
+  image                   String?
+  created_at              DateTime               @default(now())
+  parent                  Project?               @relation("ParentRelation", fields: [parentId], references: [id])
+  children                Project[]              @relation("ParentRelation")
+  type                    ProjectType
+  poll                    Poll                   @relation(fields: [poll_id], references: [id])
+  options1                Vote[]                 @relation("VoteToProject1")
+  options2                Vote[]                 @relation("VoteToProject2")
+  voted                   Vote[]                 @relation("Voted")
+  shares                  Share[]
+  expertiseColleciton1    ExpertiseVote[]        @relation("ExpertiseVote1")
+  expertiseColleciton2    ExpertiseVote[]        @relation("ExpertiseVote2")
+  expertiseVoted          ExpertiseVote[]        @relation("Voted")
+  finishedCollections     UserCollectionFinish[]
 }
 
 model Vote {
