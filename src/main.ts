@@ -7,6 +7,23 @@ import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
 
+const CorsWhitelist = [
+  'https://localhost:3001',
+  'https://staging.pairwise.generalmagic.io',
+  'https://staging.pairwise.vote/',
+  'https://staging.pairwise.vote',
+  'https://www.pairwise.vote',
+  'https://pairwise.vote',
+  'https://pairwise.vote/',
+  'https://www.pairwise.vote/',
+  'http://www.pairwise.vote',
+  'http://pairwise.vote',
+  'http://pairwise.vote/',
+  'http://www.pairwise.vote/',
+  'https://pairwise-frontend-git-test-numerous-planets-general-magic.vercel.app',
+  'https://pwrd.cupofjoy.store',
+];
+
 async function bootstrap() {
   let httpsOptions = undefined;
   if (process.env.NODE_ENV === 'development') {
@@ -44,20 +61,15 @@ async function bootstrap() {
       credentials: true,
       allowedHeaders: ['content-type', 'auth'],
       // allowedHeaders: ['Auth'],
-      origin: [
-        'http://staging.pairwise.vote',
-        'https://staging.pairwise.vote',
-        'https://www.pairwise.vote',
-        'https://pairwise.vote',
-        'https://pairwise.vote/',
-        'https://www.pairwise.vote/',
-        'http://www.pairwise.vote',
-        'http://pairwise.vote',
-        'http://pairwise.vote/',
-        'http://www.pairwise.vote/',
-        'https://pairwise-frontend-git-test-numerous-planets-general-magic.vercel.app',
-        'https://pwrd.cupofjoy.store',
-      ],
+      origin: (origin, callback) => {
+        if (
+          !origin ||
+          CorsWhitelist.includes(origin) ||
+          (origin.includes('vercel.app') && origin.includes('pairwise'))
+        )
+          return callback(null, true);
+        return callback(new Error('Not allowed by CORS'));
+      },
     }),
   );
 

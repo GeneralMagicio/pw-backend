@@ -678,8 +678,6 @@ export class FlowService {
 
     const total = projectsCount;
 
-    console.log('Total is', total);
-
     const projects = entities.filter((el) => el.type === 'project');
 
     const collections = entities.filter((el) => el.type !== 'project');
@@ -694,7 +692,6 @@ export class FlowService {
 
     for (const item of collections) {
       const childrenCount = await this.countNumOfProjects(item.id);
-      console.log('Children count of', item.name, 'is', childrenCount);
       await this.prismaService.share.create({
         data: {
           share: childrenCount / total,
@@ -822,24 +819,20 @@ export class FlowService {
     return matrix;
   };
 
-  pinJSONToIPFS = async (list: string) => {
-    try {
-      const res = await axios.post(
-        'https://api.pinata.cloud/pinning/pinJSONToIPFS',
-        {
-          pinataContent: list,
+  pinJSONToIPFS = async (list: object) => {
+    const res = await axios.post(
+      'https://api.pinata.cloud/pinning/pinJSONToIPFS',
+      {
+        pinataContent: list,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: process.env.PINATA,
         },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: process.env.PINATA,
-          },
-        },
-      );
-      return res.data.IpfsHash;
-    } catch (error) {
-      console.log(error);
-    }
+      },
+    );
+    return res.data.IpfsHash;
   };
 
   private determineIdRanking = (

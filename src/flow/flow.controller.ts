@@ -33,7 +33,7 @@ export class FlowController {
 
   @UseGuards(AuthGuard)
   @Post('/pinJSONToIPFS')
-  async pinJSONToIPFS(@Body('json') json: string) {
+  async pinJSONToIPFS(@Body('json') json: object) {
     const hash = await this.flowService.pinJSONToIPFS(json);
 
     return hash;
