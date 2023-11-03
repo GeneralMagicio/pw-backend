@@ -8,6 +8,7 @@ import { MocksModule } from './mock/mock.module';
 import { FlowModule } from './flow/flow.module';
 import { CollectionModule } from './collection/colleciton.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { ProjectModule } from './project/project.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     FlowModule,
     CollectionModule,
     AnalyticsModule,
+    ProjectModule,
   ],
   controllers: [AppController],
   providers: [AppService],
