@@ -54,12 +54,13 @@ model Project {
   id                      Int                    @id @default(autoincrement())
   name                    String
   poll_id                 Int
-  url                     String
+  url                     String?
   impactDescription       String
   contributionDescription String?
   RPGF3Id                 String?
   parentId                Int?
   image                   String?
+  metadataUrl             String?
   created_at              DateTime               @default(now())
   parent                  Project?               @relation("ParentRelation", fields: [parentId], references: [id])
   children                Project[]              @relation("ParentRelation")
