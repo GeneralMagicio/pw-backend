@@ -17,6 +17,7 @@ model User {
   nonce              Nonce?
   finishedCollection UserCollectionFinish[]
   shares             Share[]
+  attestations       UserAttestation[]
 }
 
 model Space {
@@ -72,6 +73,7 @@ model Project {
   expertiseColleciton2    ExpertiseVote[]        @relation("ExpertiseVote2")
   expertiseVoted          ExpertiseVote[]        @relation("Voted")
   finishedCollections     UserCollectionFinish[]
+  attestations       UserAttestation[]
 }
 
 model Vote {
@@ -128,6 +130,17 @@ model Share {
 }
 
 model UserCollectionFinish {
+  user_id       Int
+  collection_id Int
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now())
+  user          User     @relation(fields: [user_id], references: [id])
+  collection    Project  @relation(fields: [collection_id], references: [id])
+
+  @@id([user_id, collection_id])
+}
+
+model UserAttestation {
   user_id       Int
   collection_id Int
   created_at    DateTime @default(now())

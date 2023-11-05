@@ -167,12 +167,13 @@ export class FlowController {
         await this.flowService.saveResultsFromVotes(userId, null);
     }
 
-    const [ranking, votingPower, collection] = await Promise.all([
+    const [ranking, votingPower, collection, progress] = await Promise.all([
       this.flowService.getRanking(userId, collectionId || null),
       this.flowService.getCollectionVotingPower(collectionId || null, userId),
       this.prismaService.project.findFirst({
         where: { id: collectionId || -1 },
       }),
+      this.flowService.getCollectionProgressStatus(userId, collectionId || 1),
     ]);
 
     // if (collectionId) {
@@ -192,6 +193,7 @@ export class FlowController {
       ranking,
       hasRanking: true,
       isFinished: true,
+      progress,
       type: collection?.type || 'collection',
       name: collection?.name || 'root',
       share: votingPower,
@@ -244,6 +246,39 @@ export class FlowController {
     );
 
     return 'created';
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('/reportAttest')
+  async reportAttestations(
+    @Req() { userId }: AuthedReq,
+    @Body('cid') cid: number,
+  ) {
+    const isFinished = await this.flowService.isCollectionFinished(userId, cid);
+
+    if (!isFinished)
+      throw new ForbiddenException(
+        'You can not attest a collection which is yet to be finished',
+      );
+
+    await this.prismaService.userAttestation.upsert({
+      where: {
+        user_id_collection_id: {
+          user_id: userId,
+          collection_id: cid,
+        },
+      },
+      create: {
+        user_id: userId,
+        collection_id: cid,
+      },
+      update: {
+        user_id: userId,
+        collection_id: cid,
+      },
+    });
+
+    return 'Success';
   }
 
   // @UseGuards(AuthGuard)

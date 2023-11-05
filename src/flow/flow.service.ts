@@ -34,6 +34,31 @@ export class FlowService {
     return votes !== null;
   };
 
+  isCollectionFinished = async (userId: number, collectionId: number) => {
+    const res = await this.prismaService.userCollectionFinish.findUnique({
+      where: {
+        user_id_collection_id: {
+          collection_id: collectionId,
+          user_id: userId,
+        },
+      },
+    });
+    return res !== null;
+  };
+
+  isCollectionAttested = async (userId: number, collectionId: number) => {
+    const res = await this.prismaService.userAttestation.findUnique({
+      where: {
+        user_id_collection_id: {
+          collection_id: collectionId,
+          user_id: userId,
+        },
+      },
+    });
+
+    return res !== null;
+  };
+
   getCollectionProgressStatus = async (
     userId: number,
     collectionId: number,
@@ -41,15 +66,9 @@ export class FlowService {
     const isMoon = await this.isMoon(collectionId);
 
     if (isMoon) {
-      const [isFinished, hasVotes] = await Promise.all([
-        this.prismaService.userCollectionFinish.findUnique({
-          where: {
-            user_id_collection_id: {
-              collection_id: collectionId,
-              user_id: userId,
-            },
-          },
-        }),
+      const [isAttested, isFinished, hasVotes] = await Promise.all([
+        this.isCollectionAttested(userId, collectionId),
+        this.isCollectionFinished(userId, collectionId),
         this.prismaService.vote.findFirst({
           where: {
             user_id: userId,
@@ -69,7 +88,13 @@ export class FlowService {
         }),
       ]);
 
-      return isFinished !== null ? 'Finished' : hasVotes ? 'WIP' : 'Pending';
+      return isAttested
+        ? 'Attested'
+        : isFinished
+        ? 'Finished'
+        : hasVotes
+        ? 'WIP'
+        : 'Pending';
     } else {
       const children = await this.prismaService.project.findMany({
         select: { id: true },
@@ -131,6 +156,19 @@ export class FlowService {
     await this.vote(userId, project1Id, project2Id, pickedId);
   };
 
+  isCollectionTopLevel = async (collectionId: number) => {
+    const res = await this.prismaService.project.findFirst({
+      select: { id: true },
+      where: {
+        parentId: null,
+        id: collectionId,
+        type: ProjectType.collection,
+      },
+    });
+
+    return res !== null;
+  };
+
   getOverallRanking = async (
     userId: number,
     cid: number | null = null,
@@ -179,6 +217,8 @@ export class FlowService {
         name,
         RPGF3Id: RPGF3Id || '',
         hasRanking: true as const,
+        isTopLevel: await this.isCollectionTopLevel(id),
+        progress: await this.getCollectionProgressStatus(userId, id),
         // isFinished: !!areFinished.find((el) => el.collection_id === id),
         share: ranking.find((c) => c.id === id)!.share,
         ranking: [

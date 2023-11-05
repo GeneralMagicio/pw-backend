@@ -59,7 +59,6 @@ async function bootstrap() {
   app.use(
     cors({
       credentials: true,
-      allowedHeaders: ['content-type', 'auth'],
       // allowedHeaders: ['Auth'],
       origin: (origin, callback) => {
         if (
