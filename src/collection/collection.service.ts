@@ -20,9 +20,8 @@ export class CollectionService {
 
     return {
       collection,
-      finished: await this.flowService.isCollectionFinished(userId, id),
-      locked: await this.flowService.isCollectionLocked(userId, id),
-      started: await this.flowService.isCollectionStarted(userId, id),
+      progress: await this.flowService.getCollectionProgressStatus(userId, id),
+      // started: await this.flowService.isCollectionStarted(userId, id),
     };
   };
 }

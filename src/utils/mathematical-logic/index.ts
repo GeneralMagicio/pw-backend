@@ -99,7 +99,7 @@ const validate = (input: { share: number }[]) => {
   return false;
 };
 
-export function makeIt100<T>(input: T & { share: number }[]) {
+export function makeIt100<T extends { share: number }>(input: T[]) {
   let result = [...input];
 
   let breakLimit = 0;

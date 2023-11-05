@@ -18,7 +18,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { VoteProjectsDTO } from './dto/voteProjects.dto';
 import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
-import { ExpertisePairs, PairsResult } from './dto/pairsResult';
+import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
 import { CollectionRanking } from './types';
 import { validateRanking } from 'src/utils/edit-logic';
@@ -30,6 +30,19 @@ export class FlowController {
     private readonly flowService: FlowService,
     private readonly prismaService: PrismaService,
   ) {}
+
+  @UseGuards(AuthGuard)
+  @Post('/pinJSONToIPFS')
+  async pinJSONToIPFS(@Body('json') json: object) {
+    const hash = await this.flowService.pinJSONToIPFS(json);
+
+    return hash;
+  }
+
+  @Get('/isMoon')
+  async isMoon(@Query('cid') collectionId?: number) {
+    return this.flowService.isMoon(collectionId || null);
+  }
 
   @UseGuards(AuthGuard)
   @ApiQuery({
@@ -51,39 +64,8 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
-  @Get('/status')
-  async getStatus(@Req() { userId }: AuthedReq) {
-    const [checkpoint, impact, expertise] = await Promise.all([
-      this.flowService.determineResumeVoting(userId),
-      this.flowService.hasAnsweredImpact(userId),
-      this.flowService.hasAnsweredExpertise(userId),
-    ]);
-    return { checkpoint, impact, expertise };
-  }
-
-  @UseGuards(AuthGuard)
-  @Post('/expertise/vote')
-  async voteExpertise(
-    @Req() { userId }: AuthedReq,
-    @Body() { collection1Id, collection2Id, pickedId }: VoteCollectionsDTO,
-  ) {
-    const [id1, id2] = sortProjectId(collection1Id, collection2Id);
-    return await this.flowService.voteForExpertise(userId, id1, id2, pickedId);
-  }
-
-  @UseGuards(AuthGuard)
   @Post('/projects/vote')
   async voteProjects(
-    @Req() { userId }: AuthedReq,
-    @Body() { project1Id, project2Id, pickedId }: VoteProjectsDTO,
-  ) {
-    const [id1, id2] = sortProjectId(project1Id, project2Id);
-    return await this.flowService.voteForProjects(userId, id1, id2, pickedId);
-  }
-
-  @UseGuards(AuthGuard)
-  @Post('/subprojects/vote')
-  async voteSubProjects(
     @Req() { userId }: AuthedReq,
     @Body() { project1Id, project2Id, pickedId }: VoteProjectsDTO,
   ) {
@@ -106,22 +88,6 @@ export class FlowController {
     );
   }
 
-  @ApiResponse({
-    type: PairsResult,
-    status: 200,
-    description: 'Returns a pair + progress data',
-  })
-  @UseGuards(AuthGuard)
-  @Get('/expertise/pairs')
-  async getExpertisePairs(@Req() { userId }: AuthedReq) {
-    const pairs: ExpertisePairs = await this.flowService.getExpertisePairs(
-      userId,
-      1,
-    );
-
-    return pairs;
-  }
-
   @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
   @ApiResponse({
     type: PairsResult,
@@ -142,15 +108,6 @@ export class FlowController {
     return pairs;
   }
 
-  @UseGuards(AuthGuard)
-  @ApiResponse({ status: 200, description: 'Expertise ranking' })
-  @Get('/expertise/ranking')
-  async getExpertiseRanking(@Req() { userId }: AuthedReq) {
-    const ranking = await this.flowService.getExpertiseRanking(userId);
-
-    return ranking;
-  }
-
   @ApiQuery({
     name: 'cid',
     description:
@@ -164,27 +121,20 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Query('cid') collectionId?: number,
   ) {
+    const isMoon = await this.flowService.isMoon(collectionId || null);
     if (collectionId) {
       const hasThresholdVotes = await this.flowService.hasThresholdVotes(
         collectionId,
         userId,
       );
-      if (!hasThresholdVotes)
+
+      if (!hasThresholdVotes && isMoon)
         throw new ForbiddenException('Threshold votes missing');
     }
-    const [ranking, votingPower, collection, isFinished] = await Promise.all([
-      this.flowService.getRanking(userId, collectionId || null),
-      this.flowService.getCollectionVotingPower(collectionId || null, userId),
-      this.prismaService.project.findFirst({
-        where: { id: collectionId || -1 },
-      }),
-      true,
-    ]);
 
-    if (collectionId) {
-      await this.prismaService.userCollectionFinish.upsert({
-        create: { user_id: userId, collection_id: collectionId },
-        update: { user_id: userId, collection_id: collectionId },
+    let isSaved = true;
+    if (collectionId && isMoon) {
+      const item = await this.prismaService.userCollectionFinish.findUnique({
         where: {
           user_id_collection_id: {
             user_id: userId,
@@ -192,12 +142,58 @@ export class FlowController {
           },
         },
       });
+
+      if (!item) isSaved = false;
     }
+
+    if (!isSaved) {
+      await Promise.all([
+        this.flowService.saveResultsFromVotes(userId, collectionId || null),
+        this.prismaService.userCollectionFinish.create({
+          data: { user_id: userId, collection_id: collectionId! },
+        }),
+      ]);
+    }
+
+    if (!collectionId && collectionId !== 0) {
+      const alreadySaved = await this.prismaService.share.findFirst({
+        where: {
+          project: {
+            parentId: null,
+          },
+        },
+      });
+      if (alreadySaved === null)
+        await this.flowService.saveResultsFromVotes(userId, null);
+    }
+
+    const [ranking, votingPower, collection, progress] = await Promise.all([
+      this.flowService.getRanking(userId, collectionId || null),
+      this.flowService.getCollectionVotingPower(collectionId || null, userId),
+      this.prismaService.project.findFirst({
+        where: { id: collectionId || -1 },
+      }),
+      this.flowService.getCollectionProgressStatus(userId, collectionId || 1),
+    ]);
+
+    // if (collectionId) {
+    //   await this.prismaService.userCollectionFinish.upsert({
+    //     create: { user_id: userId, collection_id: collectionId },
+    //     update: { user_id: userId, collection_id: collectionId },
+    //     where: {
+    //       user_id_collection_id: {
+    //         user_id: userId,
+    //         collection_id: collectionId,
+    //       },
+    //     },
+    //   });
+    // }
 
     return {
       ranking,
       hasRanking: true,
-      isFinished,
+      isFinished: true,
+      progress,
       type: collection?.type || 'collection',
       name: collection?.name || 'root',
       share: votingPower,
@@ -212,21 +208,6 @@ export class FlowController {
     const result = await this.flowService.getOverallRanking(userId);
     return result;
   }
-
-  // @UseGuards(AuthGuard)
-  // @ApiResponse({ status: 200, description: 'Overall ranking' })
-  // @Post('/break')
-  // async break(@Body() { ranking: stringifedRanking }: { ranking: string }) {
-  //   // console.log(stringifedRanking);
-  //   const result = this.flowService.breakOverallRankingDown({
-  //     type: 'collection',
-  //     name: 'root',
-  //     id: -1,
-  //     share: 1,
-  //     ranking: stringifedRanking as any,
-  //   });
-  //   return result;
-  // }
 
   @UseGuards(AuthGuard)
   // @ApiResponse({ status: 200, description: 'Overall ranking' })
@@ -243,6 +224,16 @@ export class FlowController {
       throw new BadRequestException('All siblings should exist');
     }
 
+    // console.log(
+    //   lists.reduce(
+    //     (acc, curr) => [
+    //       ...acc,
+    //       ...curr.ranking.map((el) => ({ id: el.id, share: el.share })),
+    //     ],
+    //     [] as { id: number; share: number }[],
+    //   ),
+    // );
+
     await this.flowService.addManyShares(
       lists.reduce(
         (acc, curr) => [
@@ -257,99 +248,68 @@ export class FlowController {
     return 'created';
   }
 
-  // @UseGuards(AuthGuard)
-  // // @ApiResponse({ status: 200, description: 'Overall ranking' })
-  // @Get('/ts')
-  // async getLastActivity(@Req() { userId }: AuthedReq) {
-  //   const timestamp = await this.flowService.getLastActivityTimestamp(userId);
-  //   return timestamp;
-  // }
+  @UseGuards(AuthGuard)
+  @Post('/reportAttest')
+  async reportAttestations(
+    @Req() { userId }: AuthedReq,
+    @Body('cid') cid: number,
+  ) {
+    const isFinished = await this.flowService.isCollectionFinished(userId, cid);
+
+    if (!isFinished)
+      throw new ForbiddenException(
+        'You can not attest a collection which is yet to be finished',
+      );
+
+    await this.prismaService.userAttestation.upsert({
+      where: {
+        user_id_collection_id: {
+          user_id: userId,
+          collection_id: cid,
+        },
+      },
+      create: {
+        user_id: userId,
+        collection_id: cid,
+      },
+      update: {
+        user_id: userId,
+        collection_id: cid,
+      },
+    });
+
+    return 'Success';
+  }
 
   // @UseGuards(AuthGuard)
   @ApiResponse({ status: 200, description: 'All your voting data is removed' })
   @Get('/dangerouslyRemoveData')
   async removeMydata() {
     // for (let i = 2; i < 9; i++) {
-    // const user = await this.prismaService.user.findFirst({
-    //   select: { id: true },
-    //   where: { address: '0xD7542DC0F58095064BFEf6117fac82E4c5504d28' },
-    // });
+    const user = await this.prismaService.user.findFirst({
+      select: { id: true },
+      where: { address: '0x8ED91f4e13Ad1D74205a05E2eFeB1DB5175845a3' },
+    });
 
     // console.log(user?.id);
 
-    // const userId = user?.id || 1;
-    const userId = 1;
-    // await this.prismaService.expertiseVote.deleteMany({
-    //   where: { user_id: userId },
-    // });
+    const userId = user?.id || 1;
+    // const userId = 3;
+    await this.prismaService.expertiseVote.deleteMany({
+      where: { user_id: userId },
+    });
 
-    // await this.prismaService.vote.deleteMany({
-    //   where: { user_id: userId },
-    // });
+    await this.prismaService.vote.deleteMany({
+      where: { user_id: userId },
+    });
 
-    // await this.prismaService.userCollectionFinish.deleteMany({
-    //   where: { user_id: userId },
-    // });
+    await this.prismaService.userCollectionFinish.deleteMany({
+      where: { user_id: userId },
+    });
 
     await this.prismaService.share.deleteMany({
       where: { user_id: userId },
     });
     // }
   }
-
-  // @UseGuards(AuthGuard)
-  // @ApiResponse({ status: 200, description: 'All your voting data is removed' })
-  // @Get('/insertImage')
-  // async insertImages(@Req() { userId }: AuthedReq) {
-  //   const collections = await this.prismaService.collection.findMany({
-  //     select: { id: true, name: true },
-  //   });
-
-  //   await Promise.all(
-  //     collections.map(async (collection) => {
-  //       await this.prismaService.collection.update({
-  //         where: { id: collection.id },
-  //         data: {
-  //           image: `https://wsrv.nl/?url=pairwise.cupofjoy.store/rpgf2/${collection.name}.png`,
-  //         },
-  //       });
-  //     }),
-  //   );
-  // }
-
-  // @Get('/correctInvalid')
-  // async checkForInvalid() {
-  //   const allInvalidVotes = await this.prismaService.vote.findMany({
-  //     select: { id: true, project1_id: true, project2_id: true },
-  //     where: {
-  //       project1_id: { lt: this.prismaService.vote.fields.project2_id },
-  //     },
-  //   });
-
-  //   console.log('number of votes:', allInvalidVotes.length);
-
-  // for (let i = 0; i < allInvalidVotes.length; i++) {
-  //   const item = allInvalidVotes[i];
-  //   console.log('this id was invalid:', item.id);
-  //   await this.prismaService.vote.update({
-  //     where: { id: item.id },
-  //     data: { project1_id: item.project2_id, project2_id: item.project1_id },
-  //   });
-  // }
-
-  // allVotes.forEach((vote, i, votes) => {
-  //   const index = votes.findIndex(
-  //     (vote2) =>
-  //       (vote.id !== vote2.id &&
-  //         vote.user_id === vote2.user_id &&
-  //         vote.project1_id === vote2.project1_id &&
-  //         vote.project2_id === vote2.project2_id) ||
-  //       (vote.id !== vote2.id &&
-  //         vote.user_id === vote2.user_id &&
-  //         vote.project1_id === vote2.project2_id &&
-  //         vote.project2_id === vote2.project1_id),
-  //   );
-  //   if (index !== -1) console.log(vote, votes[index]);
-  // });
-  // }
 }

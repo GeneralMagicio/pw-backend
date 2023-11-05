@@ -5,6 +5,24 @@ import * as fs from 'fs';
 import * as cors from 'cors';
 import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
+import { json, urlencoded } from 'express';
+
+const CorsWhitelist = [
+  'https://localhost:3001',
+  'https://staging.pairwise.generalmagic.io',
+  'https://staging.pairwise.vote/',
+  'https://staging.pairwise.vote',
+  'https://www.pairwise.vote',
+  'https://pairwise.vote',
+  'https://pairwise.vote/',
+  'https://www.pairwise.vote/',
+  'http://www.pairwise.vote',
+  'http://pairwise.vote',
+  'http://pairwise.vote/',
+  'http://www.pairwise.vote/',
+  'https://pairwise-frontend-git-test-numerous-planets-general-magic.vercel.app',
+  'https://pwrd.cupofjoy.store',
+];
 
 async function bootstrap() {
   let httpsOptions = undefined;
@@ -15,6 +33,8 @@ async function bootstrap() {
     };
   }
   const app = await NestFactory.create(AppModule, { httpsOptions });
+  app.use(json({ limit: '5mb' }));
+  app.use(urlencoded({ extended: true, limit: '5mb' }));
   // app.enableCors();
   // app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
@@ -39,12 +59,16 @@ async function bootstrap() {
   app.use(
     cors({
       credentials: true,
-      origin: [
-        'http://staging.pairwise.vote',
-        'https://staging.pairwise.vote',
-        'http://www.staging.pairwise.vote',
-        'https://www.staging.pairwise.vote',
-      ],
+      // allowedHeaders: ['Auth'],
+      origin: (origin, callback) => {
+        if (
+          !origin ||
+          CorsWhitelist.includes(origin) ||
+          (origin.includes('vercel.app') && origin.includes('pairwise'))
+        )
+          return callback(null, true);
+        return callback(new Error('Not allowed by CORS'));
+      },
     }),
   );
 
