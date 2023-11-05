@@ -25,15 +25,14 @@ const getSpace = (): Prisma.SpaceUncheckedCreateInput => ({
 
 const getPoll = (): Prisma.PollUncheckedCreateInput => ({
   title: 'RetroPGF 3',
-  ends_at: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // in 15 days
+  ends_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // in 60 days
   space_id: 1,
 });
 
 const printCategories = () => {
   let categories: { category: string; count: number }[] = [];
   for (const application of data) {
-    if (application.pwIsFlagged || application.applicantType === 'INDIVIDUAL')
-      continue;
+    if (application.pwIsFlagged) continue;
 
     if (!application.pwCategory) {
       // throw new Error(`Not flagged but no category either for ${application.displayName}`);
@@ -79,13 +78,7 @@ async function insertProjects() {
     const row = data[i];
     // console.log(row);
     // if (i > 30) return;
-    if (
-      !row.pwCategory ||
-      row.pwIsFlagged ||
-      row.applicantType === 'INDIVIDUAL' ||
-      row.displayName === 'RadicalxChange Foundation'
-    )
-      continue;
+    if (!row.pwCategory || row.pwIsFlagged) continue;
 
     const collection = await prisma.project.findFirst({
       where: {
@@ -106,6 +99,7 @@ async function insertProjects() {
         impactDescription: row.impactDescription,
         contributionDescription: row.contributionDescription,
         RPGF3Id: row.RPGF3_Application_UID,
+        metadataUrl: row.applicationMetadataPtr,
         url: row.websiteUrl,
         parentId: collection.id,
         poll_id: 1,
@@ -115,48 +109,6 @@ async function insertProjects() {
   }
 }
 
-// async function insertUUID() {
-//   // const workbook = XLSX.readFile('./fdp-min.xlsx');
-//   // const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-//   // const jsonData: Row[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
-
-//   for (let i = 0; i < data.length; i++) {
-//     const row = data[i];
-//     // console.log(row);
-//     // if (i > 30) return;
-//     if (
-//       !row.pwCategory ||
-//       row.pwIsFlagged ||
-//       row.applicantType === 'INDIVIDUAL' ||
-//       row.displayName === 'RadicalxChange Foundation'
-//     )
-//       continue;
-
-//     const collection = await prisma.project.findFirst({
-//       where: {
-//         name: row.pwCategory,
-//         type: 'collection',
-//       },
-//     });
-
-//     if (!collection) {
-//       // continue;
-//       throw new Error(`Collection with id ${row.pwCategory} not found`);
-//     }
-
-//     await prisma.project.updateMany({
-//       where: {
-//         name: row.displayName,
-//         url: row.websiteUrl,
-//         type: ProjectType.project,
-//       },
-//       data: {
-//         RPGF3Id: row.RPGF3_Application_UID,
-//       },
-//     });
-//   }
-// }
-
 async function insertTopCollections() {
   const workbook = XLSX.readFile('./pwcat.xlsx');
   const worksheet = workbook.Sheets[workbook.SheetNames[1]];
@@ -164,19 +116,6 @@ async function insertTopCollections() {
 
   for (let i = 0; i < jsonData.length; i++) {
     const row = jsonData[i];
-    // console.log(row);
-    // if (i > 30) return;
-    // const collection = await prisma.project.findFirst({
-    //   where: {
-    //     name: row.Category.split('')
-    //       .filter((c) => c !== ':')
-    //       .join(''),
-    //   },
-    // });
-
-    // if (!collection) {
-    //   throw new Error(`Collection with id ${row.Category} not found`);
-    // }
 
     await prisma.project.create({
       data: {
@@ -199,23 +138,12 @@ async function insertMoonCollections() {
 
   for (let i = 0; i < jsonData.length; i++) {
     const row = jsonData[i];
-    // const collection = await prisma.project.findFirst({
-    //   where: {
-    //     name: row.CATEGORY,
-    //     type: 'collection',
-    //   },
-    // });
-
-    // if (!collection) {
-    //   throw new Error(`Collection with id ${row.CATEGORY} not found`);
-    // }
 
     await prisma.project.create({
       data: {
         name: row.CATEGORY,
         image: row.LOGO || '',
         impactDescription: row.DESCRIPTION,
-        url: 'Some url',
         parentId: Number(row.pid),
         poll_id: 1,
         type: ProjectType.collection,
