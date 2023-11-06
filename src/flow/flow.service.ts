@@ -110,9 +110,17 @@ export class FlowService {
         ),
       );
 
-      if (childrenFinishStatus.every((child) => child === 'Finished'))
+      if (
+        childrenFinishStatus.every(
+          (child) => child === 'Finished' || child === 'Attested',
+        )
+      )
         return 'Finished';
-      if (childrenFinishStatus.some((child) => child === 'Finished'))
+      if (
+        childrenFinishStatus.some(
+          (child) => child === 'Finished' || child === 'Attested',
+        )
+      )
         return 'WIP';
       return 'Pending';
     }
