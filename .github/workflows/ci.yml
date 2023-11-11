@@ -20,10 +20,10 @@ jobs:
             cd pw-backend
             docker-compose down
             git checkout master
+            docker image prune -a --force
             git pull origin master
             docker-compose build
             docker-compose up -d
-            docker image prune -a --force
 
       - name: SSH and Redeploy Staging
         uses: appleboy/ssh-action@v1.0.0
@@ -35,8 +35,8 @@ jobs:
           script: |
             cd pw-backend
             docker-compose down
+            docker image prune -a --force
             git checkout master
             git pull origin master
             docker-compose build
             docker-compose up -d
-            docker image prune -a --force
