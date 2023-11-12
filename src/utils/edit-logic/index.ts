@@ -13,7 +13,7 @@ export const validateRanking = (data: CollectionRanking) => {
     if (row.type !== 'project' && row.hasRanking && !validateRanking(row))
       return false;
 
-    if (toFixedNumber(acc, 5) > toFixedNumber(max, 5)) {
+    if (acc - max > 0.001) {
       return false;
     }
   }

@@ -134,14 +134,10 @@ export class FlowController {
 
     let isSaved = true;
     if (collectionId && isMoon) {
-      const item = await this.prismaService.userCollectionFinish.findUnique({
-        where: {
-          user_id_collection_id: {
-            user_id: userId,
-            collection_id: collectionId,
-          },
-        },
-      });
+      const item = await this.flowService.isCollectionFinished(
+        userId,
+        collectionId,
+      );
 
       if (!item) isSaved = false;
     }
@@ -149,9 +145,9 @@ export class FlowController {
     if (!isSaved) {
       await Promise.all([
         this.flowService.saveResultsFromVotes(userId, collectionId || null),
-        this.prismaService.userCollectionFinish.create({
-          data: { user_id: userId, collection_id: collectionId! },
-        }),
+        // this.prismaService.userCollectionFinish.create({
+        //   data: { user_id: userId, collection_id: collectionId! },
+        // }),
       ]);
     }
 
@@ -276,6 +272,34 @@ export class FlowController {
         user_id: userId,
         collection_id: cid,
       },
+    });
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('/finish')
+  async finishCollections(
+    @Req() { userId }: AuthedReq,
+    @Body('cid') cid: number,
+  ) {
+    // const userId = 1;
+    const [isFinished, isMoon, hasThresholdVotes] = await Promise.all([
+      this.flowService.isCollectionFinished(userId, cid),
+      this.flowService.isMoon(cid),
+      this.flowService.hasThresholdVotes(cid, userId),
+    ]);
+
+    // if (isFinished) throw new ForbiddenException('Already finished');
+    if (isFinished) return 'Success';
+    if (!isMoon)
+      throw new ForbiddenException('Just moon categories are finish-able');
+    if (!hasThresholdVotes)
+      throw new ForbiddenException(
+        'You need to vote for the minimum threshold times',
+      );
+
+    await this.prismaService.userCollectionFinish.create({
+      data: { user_id: userId, collection_id: cid },
     });
 
     return 'Success';
