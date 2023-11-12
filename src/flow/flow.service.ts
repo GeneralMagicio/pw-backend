@@ -66,32 +66,36 @@ export class FlowService {
     const isMoon = await this.isMoon(collectionId);
 
     if (isMoon) {
-      const [isAttested, isFinished, hasVotes] = await Promise.all([
-        this.isCollectionAttested(userId, collectionId),
-        this.isCollectionFinished(userId, collectionId),
-        this.prismaService.vote.findFirst({
-          where: {
-            user_id: userId,
-            OR: [
-              {
-                project1: {
-                  parentId: collectionId,
+      const [isAttested, isFinished, hasThresholdVotes, hasVotes] =
+        await Promise.all([
+          this.isCollectionAttested(userId, collectionId),
+          this.isCollectionFinished(userId, collectionId),
+          this.hasThresholdVotes(collectionId, userId),
+          this.prismaService.vote.findFirst({
+            where: {
+              user_id: userId,
+              OR: [
+                {
+                  project1: {
+                    parentId: collectionId,
+                  },
                 },
-              },
-              {
-                project2: {
-                  parentId: collectionId,
+                {
+                  project2: {
+                    parentId: collectionId,
+                  },
                 },
-              },
-            ],
-          },
-        }),
-      ]);
+              ],
+            },
+          }),
+        ]);
 
       return isAttested
         ? 'Attested'
         : isFinished
         ? 'Finished'
+        : hasThresholdVotes
+        ? 'WIP - Threshold'
         : hasVotes
         ? 'WIP'
         : 'Pending';

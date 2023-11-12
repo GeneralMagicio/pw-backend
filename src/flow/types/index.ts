@@ -35,5 +35,6 @@ export interface EditingProjectRanking extends ProjectRanking {
 export type CollectionProgressStatus =
   | 'Attested'
   | 'Finished'
+  | 'WIP - Threshold'
   | 'WIP'
   | 'Pending';
