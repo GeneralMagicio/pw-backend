@@ -1,6 +1,7 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
 }
 
 generator client {
@@ -74,7 +75,7 @@ model Project {
   expertiseColleciton2    ExpertiseVote[]        @relation("ExpertiseVote2")
   expertiseVoted          ExpertiseVote[]        @relation("Voted")
   finishedCollections     UserCollectionFinish[]
-  attestations       UserAttestation[]
+  attestations            UserAttestation[]
 }
 
 model Vote {
