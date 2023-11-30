@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-
+import * as XLSX from 'xlsx';
 import { FlowService } from './flow.service';
 import { PrismaService } from 'src/prisma.service';
 import { ApiQuery, ApiResponse } from '@nestjs/swagger';
@@ -22,6 +22,7 @@ import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
 import { CollectionRanking } from './types';
 import { validateRanking } from 'src/utils/edit-logic';
+import * as fs from 'fs';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -206,6 +207,49 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Overall ranking' })
+  @Get('/ranking/overall/excel')
+  async getOverallRankingExcelSheet(@Req() { userId }: AuthedReq) {
+    const temp = await this.flowService.getOverallRanking(userId);
+
+    const payload = this.flowService.flattenForExcel(
+      {
+        ranking: temp,
+      } as CollectionRanking,
+      {
+        ranking: temp,
+      } as CollectionRanking,
+    );
+
+    // Convert data to worksheet
+    const worksheet = XLSX.utils.json_to_sheet(payload);
+
+    // Create a new Workbook
+    const workbook = XLSX.utils.book_new();
+
+    // Append the worksheet to the workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet 1');
+
+    // Write the workbook to an Excel file
+    const fileName = `${Date.now()}-${userId}-output.xlsx`;
+
+    XLSX.writeFile(workbook, fileName);
+
+    const pinataUrl = await this.flowService.uploadFileToPinata(fileName);
+
+    // remove the excel file
+    fs.unlink(fileName, (err) => {
+      if (err) {
+        console.error('An error occurred:', err);
+      } else {
+        console.log('File was deleted successfully');
+      }
+    });
+
+    return pinataUrl;
+  }
+
+  @UseGuards(AuthGuard)
   // @ApiResponse({ status: 200, description: 'Overall ranking' })
   @Post('/ranking')
   async submitEditedRanking(
@@ -305,20 +349,25 @@ export class FlowController {
     return 'Success';
   }
 
-  // @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard)
   @ApiResponse({ status: 200, description: 'All your voting data is removed' })
   @Get('/dangerouslyRemoveData')
-  async removeMydata() {
+  async removeMydata(@Req() { userId }: AuthedReq) {
     // for (let i = 2; i < 9; i++) {
-    const user = await this.prismaService.user.findFirst({
-      select: { id: true },
-      where: { address: '0x8ED91f4e13Ad1D74205a05E2eFeB1DB5175845a3' },
-    });
+    // const user = await this.prismaService.user.findFirst({
+    //   select: { id: true },
+    //   where: { address: '0xD7542DC0F58095064BFEf6117fac82E4c5504d28' },
+    // });
 
     // console.log(user?.id);
 
-    const userId = user?.id || 1;
+    // const userId = userId || 1;
+
     // const userId = 3;
+    await this.prismaService.nonce.deleteMany({
+      where: { user_id: userId },
+    });
+
     await this.prismaService.expertiseVote.deleteMany({
       where: { user_id: userId },
     });
@@ -328,6 +377,10 @@ export class FlowController {
     });
 
     await this.prismaService.userCollectionFinish.deleteMany({
+      where: { user_id: userId },
+    });
+
+    await this.prismaService.userAttestation.deleteMany({
       where: { user_id: userId },
     });
 
