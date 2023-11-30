@@ -19,6 +19,8 @@ import {
 } from './types';
 import { ProjectType } from '@prisma/client';
 import axios from 'axios';
+import * as fs from 'fs';
+import * as FormData from 'form-data';
 
 @Injectable()
 export class FlowService {
@@ -32,6 +34,56 @@ export class FlowService {
     });
 
     return votes !== null;
+  };
+
+  // This is only usable for RPGF3 structure
+  private findMoonAndPlanet = (
+    input: CollectionRanking,
+    projectName: string,
+  ) => {
+    for (let i = 0; i < input.ranking.length; i++) {
+      const planet = input.ranking[i];
+      if (planet.hasRanking) {
+        const moon = planet.ranking.find(
+          (item) =>
+            item.hasRanking === true &&
+            !!item.ranking.find((el) => el.name === projectName),
+        );
+        if (moon) return { moon: moon.name, planet: planet.name };
+      }
+    }
+    return { moon: '', planet: '' };
+  };
+
+  flattenForExcel = (
+    input: CollectionRanking,
+    overallRanking: CollectionRanking,
+  ) => {
+    const result: {
+      Project: string;
+      ['Moon Category']: string;
+      ['Planet Category']: string;
+      ['OP Amount']: number;
+    }[] = [];
+    for (let i = 0; i < input.ranking.length; i++) {
+      const row = input.ranking[i];
+      if (row.type === 'project' || row.type === 'composite project') {
+        const { moon, planet } = this.findMoonAndPlanet(
+          overallRanking,
+          row.name,
+        );
+        result.push({
+          Project: row.name,
+          'OP Amount': Math.round(row.share * 30e6),
+          'Moon Category': moon,
+          'Planet Category': planet,
+        });
+      }
+      if (row.hasRanking)
+        result.push(...this.flattenForExcel(row, overallRanking));
+    }
+
+    return result;
   };
 
   isCollectionFinished = async (userId: number, collectionId: number) => {
@@ -886,6 +938,26 @@ export class FlowService {
       },
     );
     return res.data.IpfsHash;
+  };
+
+  uploadFileToPinata = async (filePath: string) => {
+    const url = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
+
+    const data = new FormData();
+    data.append('file', fs.createReadStream(filePath));
+
+    try {
+      const response = await axios.post(url, data, {
+        headers: {
+          ['Content-Type']: `multipart/form-data`,
+          Authorization: process.env.PINATA,
+        },
+      });
+
+      return response.data.IpfsHash;
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   private determineIdRanking = (
