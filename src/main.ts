@@ -9,6 +9,7 @@ import { json, urlencoded } from 'express';
 
 const CorsWhitelist = [
   'https://localhost:3001',
+  'http://localhost:3000',
   'https://staging.pairwise.generalmagic.io',
   'https://staging.pairwise.vote/',
   'https://staging.pairwise.vote',
