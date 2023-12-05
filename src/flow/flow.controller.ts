@@ -206,6 +206,25 @@ export class FlowController {
     return result;
   }
 
+  // @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Overall ranking' })
+  @Post('/custom/projects')
+  async getProjectsFromUIDs(
+    // @Req() { userId }: AuthedReq,
+    @Body('uids') uids: string[],
+  ) {
+    if (!uids) throw new BadRequestException('You need to supplu a uids array');
+    const projects = await this.prismaService.project.findMany({
+      where: {
+        RPGF3Id: {
+          in: uids,
+        },
+        type: 'project',
+      },
+    });
+    return projects;
+  }
+
   @UseGuards(AuthGuard)
   @ApiResponse({ status: 200, description: 'Overall ranking' })
   @Get('/ranking/overall/excel')
