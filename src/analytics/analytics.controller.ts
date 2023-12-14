@@ -25,9 +25,7 @@ export class AnalyticsController {
 
   @Get('lists')
   async countTotalLists(@Res() res: Response) {
-    const users = await this.prismaService.user.findMany({
-      select: { id: true },
-    });
+    const lists = await this.prismaService.userAttestation.count();
 
     // const lists = await Promise.all(
     //   users.map(({ id }) => this.flowService.hasAnsweredExpertise(id)),
@@ -36,9 +34,7 @@ export class AnalyticsController {
     // const numOfTrues = lists.filter((el) => el === true).length;
 
     return res.send(
-      `Number of created lists as of ${new Date().toUTCString()}: ${
-        users.length
-      }`,
+      `Number of created lists as of ${new Date().toUTCString()}: ${lists}`,
     );
   }
 
