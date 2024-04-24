@@ -76,7 +76,7 @@ export class AuthController {
 
     await this.prismaService.nonce.deleteMany({
       where: {
-        user_id: user.id,
+        userId: user.id,
       },
     });
 
@@ -85,13 +85,13 @@ export class AuthController {
         nonce,
       },
       data: {
-        user_id: user.id,
-        expires_at: `${Date.now() + this.authService.TokenExpirationDuration}`,
+        userId: user.id,
+        expiresAt: `${Date.now() + this.authService.TokenExpirationDuration}`,
       },
     });
 
     const isFirstLogin = await this.prismaService.share.findFirst({
-      where: { user_id: user.id },
+      where: { userId: user.id },
     });
 
     if (isFirstLogin === null)
@@ -120,7 +120,7 @@ export class AuthController {
     await this.prismaService.nonce.create({
       data: {
         nonce,
-        expires_at: `${Date.now() + this.authService.NonceExpirationDuration}`,
+        expiresAt: `${Date.now() + this.authService.NonceExpirationDuration}`,
       },
     });
     return nonce;

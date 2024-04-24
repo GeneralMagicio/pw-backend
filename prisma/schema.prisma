@@ -11,8 +11,8 @@ generator client {
 model User {
   id                 Int                    @id @default(autoincrement())
   address            String
-  isBadgeHolder      Int
-  created_at         DateTime               @default(now())
+  isBadgeHolder      Int                    @map("is_badgeholder")
+  createdAt          DateTime               @default(now()) @map("created_at")
   projectVotes       Vote[]
   expertiseVotes     ExpertiseVote[]
   nonce              Nonce?
@@ -25,7 +25,7 @@ model Space {
   id          Int      @id @default(autoincrement())
   title       String
   description String
-  created_at  DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("created_at")
   polls       Poll[]
 }
 
@@ -35,38 +35,38 @@ enum PollStatus {
 }
 
 model Poll {
-  id         Int        @id @default(autoincrement())
-  title      String
-  space_id   Int
-  status     PollStatus @default(ACTIVE)
-  ends_at    DateTime
-  created_at DateTime   @default(now())
-  space      Space      @relation(fields: [space_id], references: [id])
-  projects   Project[]
+  id        Int        @id @default(autoincrement())
+  title     String
+  spaceId   Int        @map("space_id")
+  status    PollStatus @default(ACTIVE)
+  endsAt    DateTime   @map("ends_at")
+  createdAt DateTime   @default(now()) @map("created_at")
+  space     Space      @relation(fields: [spaceId], references: [id])
+  projects  Project[]
 }
 
 enum ProjectType {
   collection
-  composite_project
+  compositeProject
   project
 }
 
 model Project {
   id                      Int                    @id @default(autoincrement())
   name                    String
-  poll_id                 Int
+  pollId                  Int                    @map("poll_id")
   url                     String?
-  impactDescription       String
-  contributionDescription String?
-  RPGF3Id                 String?
-  parentId                Int?
+  impactDescription       String                 @map("impact_description")
+  contributionDescription String?                @map("contribution_description")
+  RPGF4Id                 String?                @map("rpgf4_id")
+  parentId                Int?                   @map("parent_id")
   image                   String?
-  metadataUrl             String?
-  created_at              DateTime               @default(now())
+  metadataUrl             String?                @map("metadata_url")
+  createdAt               DateTime               @default(now()) @map("created_at")
   parent                  Project?               @relation("ParentRelation", fields: [parentId], references: [id])
   children                Project[]              @relation("ParentRelation")
   type                    ProjectType
-  poll                    Poll                   @relation(fields: [poll_id], references: [id])
+  poll                    Poll                   @relation(fields: [pollId], references: [id])
   options1                Vote[]                 @relation("VoteToProject1")
   options2                Vote[]                 @relation("VoteToProject2")
   voted                   Vote[]                 @relation("Voted")
@@ -79,76 +79,76 @@ model Project {
 }
 
 model Vote {
-  id          Int      @id @default(autoincrement())
-  user_id     Int
-  project1_id Int
-  project2_id Int
-  picked_id   Int?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @default(now())
-  user        User     @relation(fields: [user_id], references: [id])
-  project1    Project  @relation("VoteToProject1", fields: [project1_id], references: [id])
-  project2    Project  @relation("VoteToProject2", fields: [project2_id], references: [id])
-  picked      Project? @relation("Voted", fields: [picked_id], references: [id])
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  project1Id Int      @map("project1_id")
+  project2Id Int      @map("project2_id")
+  pickedId   Int?     @map("picked_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id])
+  project1   Project  @relation("VoteToProject1", fields: [project1Id], references: [id])
+  project2   Project  @relation("VoteToProject2", fields: [project2Id], references: [id])
+  picked     Project? @relation("Voted", fields: [pickedId], references: [id])
 
-  @@unique([project1_id, project2_id, user_id])
+  @@unique([project1Id, project2Id, userId])
 }
 
 model ExpertiseVote {
-  id             Int      @id @default(autoincrement())
-  user_id        Int
-  collection1_id Int
-  collection2_id Int
-  picked_id      Int?
-  created_at     DateTime @default(now())
-  updated_at     DateTime @default(now())
-  user           User     @relation(fields: [user_id], references: [id])
-  collection1    Project  @relation("ExpertiseVote1", fields: [collection1_id], references: [id])
-  collection2    Project  @relation("ExpertiseVote2", fields: [collection2_id], references: [id])
-  picked         Project? @relation("Voted", fields: [picked_id], references: [id])
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  collection1Id Int      @map("collection1_id")
+  collection2Id Int      @map("collection2_id")
+  pickedId      Int?     @map("picked_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @map("updated_at")
+  user          User     @relation(fields: [userId], references: [id])
+  collection1   Project  @relation("ExpertiseVote1", fields: [collection1Id], references: [id])
+  collection2   Project  @relation("ExpertiseVote2", fields: [collection2Id], references: [id])
+  picked        Project? @relation("Voted", fields: [pickedId], references: [id])
 
-  @@unique([collection1_id, collection2_id, user_id])
+  @@unique([collection1Id, collection2Id, userId])
 }
 
 model Nonce {
-  id         Int      @id @default(autoincrement())
-  user_id    Int?     @unique()
-  nonce      String
-  expires_at String
-  created_at DateTime @default(now())
-  user       User?    @relation(fields: [user_id], references: [id])
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @unique() @map("user_id")
+  nonce     String
+  expiresAt String   @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User?    @relation(fields: [userId], references: [id])
 }
 
 model Share {
-  user_id    Int
-  project_id Int
-  share      Float
-  created_at DateTime @default(now())
-  updated_at DateTime @default(now())
-  user       User     @relation(fields: [user_id], references: [id])
-  project    Project  @relation(fields: [project_id], references: [id])
+  userId    Int      @map("user_id")
+  projectId Int      @map("project_id")
+  share     Float
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id])
 
-  @@id([user_id, project_id])
+  @@id([userId, projectId])
 }
 
 model UserCollectionFinish {
-  user_id       Int
-  collection_id Int
-  created_at    DateTime @default(now())
-  updated_at    DateTime @default(now())
-  user          User     @relation(fields: [user_id], references: [id])
-  collection    Project  @relation(fields: [collection_id], references: [id])
+  userId       Int      @map("user_id")
+  collectionId Int      @map("collection_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @map("updated_at")
+  user         User     @relation(fields: [userId], references: [id])
+  collection   Project  @relation(fields: [collectionId], references: [id])
 
-  @@id([user_id, collection_id])
+  @@id([userId, collectionId])
 }
 
 model UserAttestation {
-  user_id       Int
-  collection_id Int
-  created_at    DateTime @default(now())
-  updated_at    DateTime @default(now())
-  user          User     @relation(fields: [user_id], references: [id])
-  collection    Project  @relation(fields: [collection_id], references: [id])
+  userId       Int      @map("user_id")
+  collectionId Int      @map("collection_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @map("updated_at")
+  user         User     @relation(fields: [userId], references: [id])
+  collection   Project  @relation(fields: [collectionId], references: [id])
 
-  @@id([user_id, collection_id])
+  @@id([userId, collectionId])
 }

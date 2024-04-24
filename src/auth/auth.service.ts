@@ -31,7 +31,7 @@ export class AuthService {
   cleanUpExpiredNonces = async () => {
     await this.prismaService.nonce.deleteMany({
       where: {
-        expires_at: {
+        expiresAt: {
           lt: `${Date.now()}`,
         },
       },
@@ -58,7 +58,7 @@ export class AuthService {
     });
 
     if (isValid === null) throw new Error('Unavailable nonce');
-    if (isValid.expires_at < `${Date.now()}`) throw new Error('Expired nonce');
+    if (isValid.expiresAt < `${Date.now()}`) throw new Error('Expired nonce');
 
     return true;
   };
@@ -68,10 +68,10 @@ export class AuthService {
       select: { user: true },
       where: {
         nonce: token,
-        user_id: {
+        userId: {
           not: null,
         },
-        expires_at: {
+        expiresAt: {
           gt: `${Date.now()}`,
         },
       },

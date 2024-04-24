@@ -147,7 +147,7 @@ export class FlowController {
       await Promise.all([
         this.flowService.saveResultsFromVotes(userId, collectionId || null),
         // this.prismaService.userCollectionFinish.create({
-        //   data: { user_id: userId, collection_id: collectionId! },
+        //   data: { userId: userId, collectionId: collectionId! },
         // }),
       ]);
     }
@@ -175,12 +175,12 @@ export class FlowController {
 
     // if (collectionId) {
     //   await this.prismaService.userCollectionFinish.upsert({
-    //     create: { user_id: userId, collection_id: collectionId },
-    //     update: { user_id: userId, collection_id: collectionId },
+    //     create: { userId: userId, collectionId: collectionId },
+    //     update: { userId: userId, collectionId: collectionId },
     //     where: {
-    //       user_id_collection_id: {
-    //         user_id: userId,
-    //         collection_id: collectionId,
+    //       userId_collectionId: {
+    //         userId: userId,
+    //         collectionId: collectionId,
     //       },
     //     },
     //   });
@@ -216,7 +216,7 @@ export class FlowController {
     if (!uids) throw new BadRequestException('You need to supplu a uids array');
     const projects = await this.prismaService.project.findMany({
       where: {
-        RPGF3Id: {
+        RPGF4Id: {
           in: uids,
         },
         type: 'project',
@@ -322,18 +322,18 @@ export class FlowController {
 
     await this.prismaService.userAttestation.upsert({
       where: {
-        user_id_collection_id: {
-          user_id: userId,
-          collection_id: cid,
+        userId_collectionId: {
+          userId: userId,
+          collectionId: cid,
         },
       },
       create: {
-        user_id: userId,
-        collection_id: cid,
+        userId: userId,
+        collectionId: cid,
       },
       update: {
-        user_id: userId,
-        collection_id: cid,
+        userId: userId,
+        collectionId: cid,
       },
     });
     return 'Success';
@@ -362,7 +362,7 @@ export class FlowController {
       );
 
     await this.prismaService.userCollectionFinish.create({
-      data: { user_id: userId, collection_id: cid },
+      data: { userId: userId, collectionId: cid },
     });
 
     return 'Success';
@@ -384,27 +384,27 @@ export class FlowController {
 
     // const userId = 3;
     await this.prismaService.nonce.deleteMany({
-      where: { user_id: userId },
+      where: { userId: userId },
     });
 
     await this.prismaService.expertiseVote.deleteMany({
-      where: { user_id: userId },
+      where: { userId: userId },
     });
 
     await this.prismaService.vote.deleteMany({
-      where: { user_id: userId },
+      where: { userId: userId },
     });
 
     await this.prismaService.userCollectionFinish.deleteMany({
-      where: { user_id: userId },
+      where: { userId: userId },
     });
 
     await this.prismaService.userAttestation.deleteMany({
-      where: { user_id: userId },
+      where: { userId: userId },
     });
 
     await this.prismaService.share.deleteMany({
-      where: { user_id: userId },
+      where: { userId: userId },
     });
     // }
   }

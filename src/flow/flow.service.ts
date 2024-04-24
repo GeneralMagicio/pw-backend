@@ -30,7 +30,7 @@ export class FlowService {
   isCollectionStarted = async (userId: number, collectionId: number) => {
     const votes = await this.prismaService.vote.findFirst({
       select: { id: true },
-      where: { user_id: userId, project1: { parentId: collectionId } },
+      where: { userId: userId, project1: { parentId: collectionId } },
     });
 
     return votes !== null;
@@ -89,9 +89,9 @@ export class FlowService {
   isCollectionFinished = async (userId: number, collectionId: number) => {
     const res = await this.prismaService.userCollectionFinish.findUnique({
       where: {
-        user_id_collection_id: {
-          collection_id: collectionId,
-          user_id: userId,
+        userId_collectionId: {
+          collectionId: collectionId,
+          userId: userId,
         },
       },
     });
@@ -101,9 +101,9 @@ export class FlowService {
   isCollectionAttested = async (userId: number, collectionId: number) => {
     const res = await this.prismaService.userAttestation.findUnique({
       where: {
-        user_id_collection_id: {
-          collection_id: collectionId,
-          user_id: userId,
+        userId_collectionId: {
+          collectionId: collectionId,
+          userId: userId,
         },
       },
     });
@@ -125,7 +125,7 @@ export class FlowService {
           this.hasThresholdVotes(collectionId, userId),
           this.prismaService.vote.findFirst({
             where: {
-              user_id: userId,
+              userId: userId,
               OR: [
                 {
                   project1: {
@@ -190,13 +190,13 @@ export class FlowService {
   ) => {
     // await this.validateProjectVote(project1Id, project2Id, pickedId);
     const payload = {
-      user_id: userId,
-      project1_id: project1Id,
-      project2_id: project2Id,
-      picked_id: pickedId,
+      userId: userId,
+      project1Id: project1Id,
+      project2Id: project2Id,
+      pickedId: pickedId,
     };
     const vote = await this.prismaService.vote.findFirst({
-      where: { ...payload, picked_id: undefined },
+      where: { ...payload, pickedId: undefined },
     });
     if (vote) {
       await this.prismaService.vote.update({
@@ -243,16 +243,16 @@ export class FlowService {
         where: { id: cid || -1 },
       }),
       this.prismaService.project.findMany({
-        select: { id: true, name: true, type: true, RPGF3Id: true },
+        select: { id: true, name: true, type: true, RPGF4Id: true },
         where: {
           parentId: cid,
-          type: { in: [ProjectType.composite_project, ProjectType.collection] },
+          type: { in: [ProjectType.compositeProject, ProjectType.collection] },
         },
       }),
       // this.prismaService.userCollectionFinish.findMany({
-      //   select: { collection_id: true },
+      //   select: { collectionId: true },
       //   where: {
-      //     user_id: userId,
+      //     userId: userId,
       //     collection: {
       //       parentId: cid,
       //     },
@@ -263,11 +263,11 @@ export class FlowService {
     const ranking = await this.getRanking(userId, cid);
 
     if (collections.length === 0) {
-      result = ranking.map(({ name, id, share, type, RPGF3Id }) => ({
+      result = ranking.map(({ name, id, share, type, RPGF4Id }) => ({
         name,
         id,
         share,
-        RPGF3Id: RPGF3Id || '',
+        RPGF4Id: RPGF4Id || '',
         type: type as 'project',
         hasRanking: false as const,
       }));
@@ -275,15 +275,15 @@ export class FlowService {
     }
 
     const res = await Promise.all([
-      ...collections.map(async ({ type, id, name, RPGF3Id }) => ({
+      ...collections.map(async ({ type, id, name, RPGF4Id }) => ({
         type: type as 'collection' | 'composite project',
         id,
         name,
-        RPGF3Id: RPGF3Id || '',
+        RPGF4Id: RPGF4Id || '',
         hasRanking: true as const,
         isTopLevel: await this.isCollectionTopLevel(id),
         progress: await this.getCollectionProgressStatus(userId, id),
-        // isFinished: !!areFinished.find((el) => el.collection_id === id),
+        // isFinished: !!areFinished.find((el) => el.collectionId === id),
         share: ranking.find((c) => c.id === id)!.share,
         ranking: [
           ...(await this.getOverallRanking(
@@ -295,10 +295,10 @@ export class FlowService {
       })),
       ...ranking
         .filter((el) => el.type === 'project')
-        .map(({ name, id, type, share, RPGF3Id }) => ({
+        .map(({ name, id, type, share, RPGF4Id }) => ({
           name,
           id,
-          RPGF3Id: RPGF3Id || '',
+          RPGF4Id: RPGF4Id || '',
           hasRanking: false as const,
           share: share,
           type: type as 'project',
@@ -317,11 +317,11 @@ export class FlowService {
       shares.map(async ({ id, share }) => {
         return this.prismaService.share.upsert({
           update: { share: share },
-          create: { user_id: userId, project_id: id, share: share },
+          create: { userId: userId, projectId: id, share: share },
           where: {
-            user_id_project_id: {
-              user_id: userId,
-              project_id: id,
+            userId_projectId: {
+              userId: userId,
+              projectId: id,
             },
           },
         });
@@ -346,7 +346,7 @@ export class FlowService {
     const collections = await this.prismaService.project.findMany({
       where: {
         parentId: parentCollectionId,
-        type: { in: [ProjectType.composite_project, ProjectType.collection] },
+        type: { in: [ProjectType.compositeProject, ProjectType.collection] },
       },
     });
 
@@ -377,7 +377,7 @@ export class FlowService {
     const collection = await this.prismaService.project.findUnique({
       where: {
         id: collectionId,
-        type: { in: [ProjectType.collection, ProjectType.composite_project] },
+        type: { in: [ProjectType.collection, ProjectType.compositeProject] },
       },
       select: { parentId: true },
     });
@@ -385,7 +385,7 @@ export class FlowService {
     if (!collection) throw Error('No such collection or composite project');
 
     const savedResult = await this.prismaService.share.findFirst({
-      where: { project_id: collectionId, user_id: userId },
+      where: { projectId: collectionId, userId: userId },
     });
 
     if (!savedResult) throw Error('No corresponding value for the collection');
@@ -431,14 +431,14 @@ export class FlowService {
         return this.prismaService.share.upsert({
           update: { share },
           create: {
-            user_id: userId,
-            project_id: rank.id,
+            userId: userId,
+            projectId: rank.id,
             share,
           },
           where: {
-            user_id_project_id: {
-              user_id: userId,
-              project_id: rank.id,
+            userId_projectId: {
+              userId: userId,
+              projectId: rank.id,
             },
           },
         });
@@ -446,16 +446,16 @@ export class FlowService {
     );
     // await this.prismaService.share.createMany({
     //   data: ranking.map((rank) => ({
-    //     user_id: userId,
-    //     project_id: rank.id,
+    //     userId: userId,
+    //     projectId: rank.id,
     //     share: rank.share,
     //   })),
     //   // update: { share: rank.share },
-    //   // data: { user_id: userId, project_id: rank.id, share: rank.share },
+    //   // data: { userId: userId, projectId: rank.id, share: rank.share },
     //   // where: {
-    //   //   user_id_project_id: {
-    //   //     user_id: userId,
-    //   //     project_id: rank.id,
+    //   //   userId_projectId: {
+    //   //     userId: userId,
+    //   //     projectId: rank.id,
     //   //   },
     //   // },
     // });
@@ -478,7 +478,7 @@ export class FlowService {
     const [allVotes, allChildren] = await Promise.all([
       this.prismaService.vote.findMany({
         where: {
-          user_id: userId,
+          userId: userId,
           project1: { parentId: collectionId },
           project2: { parentId: collectionId },
         },
@@ -492,7 +492,7 @@ export class FlowService {
 
     const winningProjects = allChildren.filter(
       (project) =>
-        allVotes.some((vote) => vote.picked_id === project.id) === true,
+        allVotes.some((vote) => vote.pickedId === project.id) === true,
     );
 
     const winningProjectsIds = winningProjects.map((el) => el.id);
@@ -502,8 +502,8 @@ export class FlowService {
 
     const votesForWinningProjects = allVotes.filter(
       (vote) =>
-        winningProjectsIds.includes(vote.project1_id) &&
-        winningProjectsIds.includes(vote.project2_id),
+        winningProjectsIds.includes(vote.project1Id) &&
+        winningProjectsIds.includes(vote.project2Id),
     );
 
     const mappingObject: Record<number, number> = winningProjects.reduce(
@@ -514,13 +514,11 @@ export class FlowService {
     const zeroBasedMappingFunction = (index: number) => mappingObject[index];
 
     const matrix = this.buildVotesMatrix(
-      votesForWinningProjects.map(
-        ({ project1_id, project2_id, picked_id }) => ({
-          id1: project1_id,
-          id2: project2_id,
-          picked_id: picked_id,
-        }),
-      ),
+      votesForWinningProjects.map(({ project1Id, project2Id, pickedId }) => ({
+        id1: project1Id,
+        id2: project2Id,
+        pickedId: pickedId,
+      })),
       winningProjects.map(({ id }) => ({ id })),
       zeroBasedMappingFunction,
     );
@@ -537,7 +535,7 @@ export class FlowService {
           share: item,
           name: project!.name,
           type: project!.type,
-          RPGF3Id: project!.RPGF3Id,
+          RPGF4Id: project!.RPGF4Id,
         };
       }),
       ...nonWinningProjectsIds.map((id) => {
@@ -547,7 +545,7 @@ export class FlowService {
           share: 0,
           name: project!.name,
           type: project!.type,
-          RPGF3Id: project!.RPGF3Id,
+          RPGF4Id: project!.RPGF4Id,
         };
       }),
     ];
@@ -567,17 +565,17 @@ export class FlowService {
     collectionId: number | null,
   ) => {
     const savedResults = await this.prismaService.share.findMany({
-      where: { project: { parentId: collectionId }, user_id: userId },
+      where: { project: { parentId: collectionId }, userId: userId },
       include: { project: true },
     });
 
     return savedResults
       .map((item) => ({
-        id: item.project_id,
+        id: item.projectId,
         name: item.project.name,
         share: item.share,
         type: item.project.type,
-        RPGF3Id: item.project.RPGF3Id,
+        RPGF4Id: item.project.RPGF4Id,
         hasRanking: false,
       }))
       .sort((a, b) => b.share - a.share);
@@ -588,13 +586,13 @@ export class FlowService {
       this.prismaService.project.findUnique({
         where: {
           id: parentCollection || -1,
-          type: { in: [ProjectType.collection, ProjectType.composite_project] },
+          type: { in: [ProjectType.collection, ProjectType.compositeProject] },
         },
         select: { name: true, id: true },
       }),
       this.prismaService.vote.findMany({
         where: {
-          user_id: userId,
+          userId: userId,
           project1: { parentId: parentCollection },
           project2: { parentId: parentCollection },
         },
@@ -607,7 +605,7 @@ export class FlowService {
     ]);
 
     const votedIds = allVotes.reduce(
-      (acc, vote) => [...acc, vote.project1_id, vote.project2_id],
+      (acc, vote) => [...acc, vote.project1Id, vote.project2Id],
       [] as number[],
     );
 
@@ -649,8 +647,8 @@ export class FlowService {
       const py = combination[1];
       const index = allVotes.findIndex(
         (vote) =>
-          (vote.project1_id === px && vote.project2_id === py) ||
-          (vote.project1_id === py && vote.project2_id === px),
+          (vote.project1Id === px && vote.project2Id === py) ||
+          (vote.project1Id === py && vote.project2Id === px),
       );
 
       if (index === -1) result.push(combination);
@@ -705,7 +703,7 @@ export class FlowService {
     const collection = await this.prismaService.project.findUnique({
       where: {
         id: collectionId,
-        type: { in: [ProjectType.collection, ProjectType.composite_project] },
+        type: { in: [ProjectType.collection, ProjectType.compositeProject] },
       },
       include: {
         children: true,
@@ -723,7 +721,7 @@ export class FlowService {
 
     numOfVotes = await this.prismaService.vote.count({
       where: {
-        user_id: userId,
+        userId: userId,
         project1: { parentId: collectionId },
         project2: { parentId: collectionId },
       },
@@ -789,8 +787,8 @@ export class FlowService {
     await this.prismaService.share.createMany({
       data: projects.map((item) => ({
         share: 1 / total,
-        user_id: userId,
-        project_id: item.id,
+        userId: userId,
+        projectId: item.id,
       })),
     });
 
@@ -799,8 +797,8 @@ export class FlowService {
       await this.prismaService.share.create({
         data: {
           share: childrenCount / total,
-          user_id: userId,
-          project_id: item.id,
+          userId: userId,
+          projectId: item.id,
         },
       });
     }
@@ -849,7 +847,7 @@ export class FlowService {
     const subCollections = await this.prismaService.project.count({
       where: {
         parentId: collectionId,
-        type: { in: [ProjectType.collection, ProjectType.composite_project] },
+        type: { in: [ProjectType.collection, ProjectType.compositeProject] },
       },
     });
 
@@ -895,7 +893,7 @@ export class FlowService {
     votes: {
       id1: number;
       id2: number;
-      picked_id: number | null;
+      pickedId: number | null;
     }[],
     allProjects: { id: number }[],
     zeroBasedMappingFunction: (i: number) => number,
@@ -911,7 +909,7 @@ export class FlowService {
             vote.id2 === zeroBasedMappingFunction(j)) ||
           (vote.id1 === zeroBasedMappingFunction(j) &&
             vote.id2 === zeroBasedMappingFunction(i)),
-      )?.picked_id === zeroBasedMappingFunction(i)
+      )?.pickedId === zeroBasedMappingFunction(i)
         ? 1
         : 0;
 
