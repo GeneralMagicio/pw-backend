@@ -13,7 +13,7 @@ import {
 import * as XLSX from 'xlsx';
 import { FlowService } from './flow.service';
 import { PrismaService } from 'src/prisma.service';
-import { ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { VoteProjectsDTO } from './dto/voteProjects.dto';
 import { VoteCollectionsDTO } from './dto/voteCollections.dto';
@@ -33,6 +33,9 @@ export class FlowController {
   ) {}
 
   @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used for pinning an JSON object to IPFS (used in attestations)',
+  })
   @Post('/pinJSONToIPFS')
   async pinJSONToIPFS(@Body('json') json: object) {
     const hash = await this.flowService.pinJSONToIPFS(json);
@@ -40,9 +43,9 @@ export class FlowController {
     return hash;
   }
 
-  @Get('/isMoon')
-  async isMoon(@Query('cid') collectionId?: number) {
-    return this.flowService.isMoon(collectionId || null);
+  @Get('/isLastLayerCollection')
+  async isLastLayerCollection(@Query('cid') collectionId?: number) {
+    return this.flowService.isLastLayerCollection(collectionId || null);
   }
 
   @UseGuards(AuthGuard)
@@ -51,6 +54,10 @@ export class FlowController {
     description:
       'Parent id of the collections (skip if you want the top level collections)',
     required: false,
+  })
+  @ApiOperation({
+    summary:
+      'Returns the children collections of a collection with their progress status',
   })
   @Get('/collections')
   async getCollections(
@@ -65,6 +72,9 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used for a pairwise vote between two projects',
+  })
   @Post('/projects/vote')
   async voteProjects(
     @Req() { userId }: AuthedReq,
@@ -75,6 +85,9 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used for a pairwise vote between two collections',
+  })
   @Post('/collections/vote')
   async voteCollections(
     @Req() { userId }: AuthedReq,
@@ -94,6 +107,9 @@ export class FlowController {
     type: PairsResult,
     status: 200,
     description: 'Returns a pair of comparisons + progress data',
+  })
+  @ApiOperation({
+    summary: 'Returns the next pair for a pairwise vote',
   })
   @UseGuards(AuthGuard)
   @Get('/pairs')
@@ -115,26 +131,40 @@ export class FlowController {
       'Collection id of the ranking (Skip if you look for top level collections)',
     required: false,
   })
+  @ApiOperation({
+    summary:
+      'Returns the ranking within the projects/collections of a parent collection',
+  })
   @UseGuards(AuthGuard)
-  @ApiResponse({ status: 200, description: 'Collection ranking' })
+  @ApiResponse({
+    status: 200,
+    description: `There are 5 progress statuses: \n
+                  1- Pending: No votes has been cast in the collection \n 
+                  2- WIP: some votes has been cast in the collection \n
+                  3- WIP-Threshold: The number of votes cast has exceeded the threshold number \n
+                  4- Finished: The collection has been marked "Finished" by the User \n
+                  5- The collection has been attested to the EAS`,
+  })
   @Get('/ranking')
   async getRanking(
     @Req() { userId }: AuthedReq,
     @Query('cid') collectionId?: number,
   ) {
-    const isMoon = await this.flowService.isMoon(collectionId || null);
+    const isLastLayerCollection = await this.flowService.isLastLayerCollection(
+      collectionId || null,
+    );
     if (collectionId) {
       const hasThresholdVotes = await this.flowService.hasThresholdVotes(
         collectionId,
         userId,
       );
 
-      if (!hasThresholdVotes && isMoon)
+      if (!hasThresholdVotes && isLastLayerCollection)
         throw new ForbiddenException('Threshold votes missing');
     }
 
     let isSaved = true;
-    if (collectionId && isMoon) {
+    if (collectionId && isLastLayerCollection) {
       const item = await this.flowService.isCollectionFinished(
         userId,
         collectionId,
@@ -199,6 +229,9 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Returns the ranking among all the projects',
+  })
   @ApiResponse({ status: 200, description: 'Overall ranking' })
   @Get('/ranking/overall')
   async getOverallRanking(@Req() { userId }: AuthedReq) {
@@ -207,107 +240,110 @@ export class FlowController {
   }
 
   // @UseGuards(AuthGuard)
-  @ApiResponse({ status: 200, description: 'Overall ranking' })
-  @Post('/custom/projects')
-  async getProjectsFromUIDs(
-    // @Req() { userId }: AuthedReq,
-    @Body('uids') uids: string[],
-  ) {
-    if (!uids) throw new BadRequestException('You need to supplu a uids array');
-    const projects = await this.prismaService.project.findMany({
-      where: {
-        RPGF4Id: {
-          in: uids,
-        },
-        type: 'project',
-      },
-    });
-    return projects;
-  }
-
-  @UseGuards(AuthGuard)
-  @ApiResponse({ status: 200, description: 'Overall ranking' })
-  @Get('/ranking/overall/excel')
-  async getOverallRankingExcelSheet(@Req() { userId }: AuthedReq) {
-    const temp = await this.flowService.getOverallRanking(userId);
-
-    const payload = this.flowService.flattenForExcel(
-      {
-        ranking: temp,
-      } as CollectionRanking,
-      {
-        ranking: temp,
-      } as CollectionRanking,
-    );
-
-    // Convert data to worksheet
-    const worksheet = XLSX.utils.json_to_sheet(payload);
-
-    // Create a new Workbook
-    const workbook = XLSX.utils.book_new();
-
-    // Append the worksheet to the workbook
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet 1');
-
-    // Write the workbook to an Excel file
-    const fileName = `${Date.now()}-${userId}-output.xlsx`;
-
-    XLSX.writeFile(workbook, fileName);
-
-    const pinataUrl = await this.flowService.uploadFileToPinata(fileName);
-
-    // remove the excel file
-    fs.unlink(fileName, (err) => {
-      if (err) {
-        console.error('An error occurred:', err);
-      } else {
-        console.log('File was deleted successfully');
-      }
-    });
-
-    return pinataUrl;
-  }
-
-  @UseGuards(AuthGuard)
   // @ApiResponse({ status: 200, description: 'Overall ranking' })
-  @Post('/ranking')
-  async submitEditedRanking(
-    @Req() { userId }: AuthedReq,
-    @Body() input: { shares: CollectionRanking },
-  ) {
-    if (!validateRanking(input.shares))
-      throw new BadRequestException('Invalid ranking list');
+  // @Post('/custom/projects')
+  // async getProjectsFromUIDs(
+  //   // @Req() { userId }: AuthedReq,
+  //   @Body('uids') uids: string[],
+  // ) {
+  //   if (!uids) throw new BadRequestException('You need to supplu a uids array');
+  //   const projects = await this.prismaService.project.findMany({
+  //     where: {
+  //       RPGF4Id: {
+  //         in: uids,
+  //       },
+  //       type: 'project',
+  //     },
+  //   });
+  //   return projects;
+  // }
 
-    const lists = this.flowService.breakOverallRankingDown(input.shares);
-    if (!(await this.flowService.allSiblingsExist(lists))) {
-      throw new BadRequestException('All siblings should exist');
-    }
+  // @UseGuards(AuthGuard)
+  // @ApiResponse({ status: 200, description: 'Overall ranking' })
+  // @Get('/ranking/overall/excel')
+  // async getOverallRankingExcelSheet(@Req() { userId }: AuthedReq) {
+  //   const temp = await this.flowService.getOverallRanking(userId);
 
-    // console.log(
-    //   lists.reduce(
-    //     (acc, curr) => [
-    //       ...acc,
-    //       ...curr.ranking.map((el) => ({ id: el.id, share: el.share })),
-    //     ],
-    //     [] as { id: number; share: number }[],
-    //   ),
-    // );
+  //   const payload = this.flowService.flattenForExcel(
+  //     {
+  //       ranking: temp,
+  //     } as CollectionRanking,
+  //     {
+  //       ranking: temp,
+  //     } as CollectionRanking,
+  //   );
 
-    await this.flowService.addManyShares(
-      lists.reduce(
-        (acc, curr) => [
-          ...acc,
-          ...curr.ranking.map((el) => ({ id: el.id, share: el.share })),
-        ],
-        [] as { id: number; share: number }[],
-      ),
-      userId,
-    );
+  //   // Convert data to worksheet
+  //   const worksheet = XLSX.utils.json_to_sheet(payload);
 
-    return 'created';
-  }
+  //   // Create a new Workbook
+  //   const workbook = XLSX.utils.book_new();
+
+  //   // Append the worksheet to the workbook
+  //   XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet 1');
+
+  //   // Write the workbook to an Excel file
+  //   const fileName = `${Date.now()}-${userId}-output.xlsx`;
+
+  //   XLSX.writeFile(workbook, fileName);
+
+  //   const pinataUrl = await this.flowService.uploadFileToPinata(fileName);
+
+  //   // remove the excel file
+  //   fs.unlink(fileName, (err) => {
+  //     if (err) {
+  //       console.error('An error occurred:', err);
+  //     } else {
+  //       console.log('File was deleted successfully');
+  //     }
+  //   });
+
+  //   return pinataUrl;
+  // }
+
+  // @UseGuards(AuthGuard)
+  // // @ApiResponse({ status: 200, description: 'Overall ranking' })
+  // @Post('/ranking')
+  // async submitEditedRanking(
+  //   @Req() { userId }: AuthedReq,
+  //   @Body() input: { shares: CollectionRanking },
+  // ) {
+  //   if (!validateRanking(input.shares))
+  //     throw new BadRequestException('Invalid ranking list');
+
+  //   const lists = this.flowService.breakOverallRankingDown(input.shares);
+  //   if (!(await this.flowService.allSiblingsExist(lists))) {
+  //     throw new BadRequestException('All siblings should exist');
+  //   }
+
+  //   // console.log(
+  //   //   lists.reduce(
+  //   //     (acc, curr) => [
+  //   //       ...acc,
+  //   //       ...curr.ranking.map((el) => ({ id: el.id, share: el.share })),
+  //   //     ],
+  //   //     [] as { id: number; share: number }[],
+  //   //   ),
+  //   // );
+
+  //   await this.flowService.addManyShares(
+  //     lists.reduce(
+  //       (acc, curr) => [
+  //         ...acc,
+  //         ...curr.ranking.map((el) => ({ id: el.id, share: el.share })),
+  //       ],
+  //       [] as { id: number; share: number }[],
+  //     ),
+  //     userId,
+  //   );
+
+  //   return 'created';
+  // }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Notifies the server that the user has done an attestation',
+  })
   @Post('/reportAttest')
   async reportAttestations(
     @Req() { userId }: AuthedReq,
@@ -340,22 +376,29 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary:
+      'Used to mark a collection status "finished". After a collection is finished, voting is not longer possible in it',
+  })
   @Post('/finish')
   async finishCollections(
     @Req() { userId }: AuthedReq,
     @Body('cid') cid: number,
   ) {
     // const userId = 1;
-    const [isFinished, isMoon, hasThresholdVotes] = await Promise.all([
-      this.flowService.isCollectionFinished(userId, cid),
-      this.flowService.isMoon(cid),
-      this.flowService.hasThresholdVotes(cid, userId),
-    ]);
+    const [isFinished, isLastLayerCollection, hasThresholdVotes] =
+      await Promise.all([
+        this.flowService.isCollectionFinished(userId, cid),
+        this.flowService.isLastLayerCollection(cid),
+        this.flowService.hasThresholdVotes(cid, userId),
+      ]);
 
     // if (isFinished) throw new ForbiddenException('Already finished');
     if (isFinished) return 'Success';
-    if (!isMoon)
-      throw new ForbiddenException('Just moon categories are finish-able');
+    if (!isLastLayerCollection)
+      throw new ForbiddenException(
+        'Just last layer categories are finish-able',
+      );
     if (!hasThresholdVotes)
       throw new ForbiddenException(
         'You need to vote for the minimum threshold times',
@@ -369,6 +412,10 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary:
+      'Use it at your own risk for testing. It will remove all the data associated with your account',
+  })
   @ApiResponse({ status: 200, description: 'All your voting data is removed' })
   @Get('/dangerouslyRemoveData')
   async removeMydata(@Req() { userId }: AuthedReq) {

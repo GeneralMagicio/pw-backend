@@ -37,54 +37,54 @@ export class FlowService {
   };
 
   // This is only usable for RPGF3 structure
-  private findMoonAndPlanet = (
-    input: CollectionRanking,
-    projectName: string,
-  ) => {
-    for (let i = 0; i < input.ranking.length; i++) {
-      const planet = input.ranking[i];
-      if (planet.hasRanking) {
-        const moon = planet.ranking.find(
-          (item) =>
-            item.hasRanking === true &&
-            !!item.ranking.find((el) => el.name === projectName),
-        );
-        if (moon) return { moon: moon.name, planet: planet.name };
-      }
-    }
-    return { moon: '', planet: '' };
-  };
+  // private findMoonAndPlanet = (
+  //   input: CollectionRanking,
+  //   projectName: string,
+  // ) => {
+  //   for (let i = 0; i < input.ranking.length; i++) {
+  //     const planet = input.ranking[i];
+  //     if (planet.hasRanking) {
+  //       const isLastLayer = planet.ranking.find(
+  //         (item) =>
+  //           item.hasRanking === true &&
+  //           !!item.ranking.find((el) => el.name === projectName),
+  //       );
+  //       if (isLastLayer) return { isLastLayer: isLastLayer.name, planet: planet.name };
+  //     }
+  //   }
+  //   return { isLastLayer: '', planet: '' };
+  // };
 
-  flattenForExcel = (
-    input: CollectionRanking,
-    overallRanking: CollectionRanking,
-  ) => {
-    const result: {
-      Project: string;
-      ['Moon Category']: string;
-      ['Planet Category']: string;
-      ['OP Amount']: number;
-    }[] = [];
-    for (let i = 0; i < input.ranking.length; i++) {
-      const row = input.ranking[i];
-      if (row.type === 'project' || row.type === 'composite project') {
-        const { moon, planet } = this.findMoonAndPlanet(
-          overallRanking,
-          row.name,
-        );
-        result.push({
-          Project: row.name,
-          'OP Amount': Math.round(row.share * 30e6),
-          'Moon Category': moon,
-          'Planet Category': planet,
-        });
-      }
-      if (row.hasRanking)
-        result.push(...this.flattenForExcel(row, overallRanking));
-    }
+  // flattenForExcel = (
+  //   input: CollectionRanking,
+  //   overallRanking: CollectionRanking,
+  // ) => {
+  //   const result: {
+  //     Project: string;
+  //     ['Moon Category']: string;
+  //     ['Planet Category']: string;
+  //     ['OP Amount']: number;
+  //   }[] = [];
+  //   for (let i = 0; i < input.ranking.length; i++) {
+  //     const row = input.ranking[i];
+  //     if (row.type === 'project' || row.type === 'composite project') {
+  //       const { isLastLayer, planet } = this.findMoonAndPlanet(
+  //         overallRanking,
+  //         row.name,
+  //       );
+  //       result.push({
+  //         Project: row.name,
+  //         'OP Amount': Math.round(row.share * 30e6),
+  //         'Moon Category': isLastLayer,
+  //         'Planet Category': planet,
+  //       });
+  //     }
+  //     if (row.hasRanking)
+  //       result.push(...this.flattenForExcel(row, overallRanking));
+  //   }
 
-    return result;
-  };
+  //   return result;
+  // };
 
   isCollectionFinished = async (userId: number, collectionId: number) => {
     const res = await this.prismaService.userCollectionFinish.findUnique({
@@ -115,31 +115,17 @@ export class FlowService {
     userId: number,
     collectionId: number,
   ): Promise<CollectionProgressStatus> => {
-    const isMoon = await this.isMoon(collectionId);
+    const isLastLayerCollection = await this.isLastLayerCollection(
+      collectionId,
+    );
 
-    if (isMoon) {
+    if (isLastLayerCollection) {
       const [isAttested, isFinished, hasThresholdVotes, hasVotes] =
         await Promise.all([
           this.isCollectionAttested(userId, collectionId),
           this.isCollectionFinished(userId, collectionId),
           this.hasThresholdVotes(collectionId, userId),
-          this.prismaService.vote.findFirst({
-            where: {
-              userId: userId,
-              OR: [
-                {
-                  project1: {
-                    parentId: collectionId,
-                  },
-                },
-                {
-                  project2: {
-                    parentId: collectionId,
-                  },
-                },
-              ],
-            },
-          }),
+          this.isCollectionStarted(userId, collectionId),
         ]);
 
       return isAttested
@@ -405,15 +391,17 @@ export class FlowService {
     //   );
     // }
   };
-  isMoon = async (collectionId: number | null) => {
-    const isMoon = await this.prismaService.project.findFirst({
+
+  // Checks whether a collection is a last layer collection (i.e., not having any collection children)
+  isLastLayerCollection = async (collectionId: number | null) => {
+    const hasCollectionChildren = await this.prismaService.project.findFirst({
       where: {
         parentId: collectionId,
         type: 'collection',
       },
     });
 
-    return isMoon === null ? true : false;
+    return hasCollectionChildren === null ? true : false;
   };
 
   saveResultsFromVotes = async (
@@ -769,18 +757,17 @@ export class FlowService {
   };
 
   populateInitialRanking = async (userId: number) => {
-    const [entities, projectsCount] = await Promise.all([
+    const [entities] = await Promise.all([
       this.prismaService.project.findMany({
         select: { id: true, type: true, name: true },
       }),
-      this.prismaService.project.count({
-        where: { type: 'project' },
-      }),
+      // this.prismaService.project.count({
+      //   where: { type: 'project' },
+      // }),
     ]);
 
-    const total = projectsCount;
-
     const projects = entities.filter((el) => el.type === 'project');
+    const total = projects.length;
 
     const collections = entities.filter((el) => el.type !== 'project');
 
