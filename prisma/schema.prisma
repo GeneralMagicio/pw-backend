@@ -122,7 +122,7 @@ model Nonce {
 model Share {
   userId    Int      @map("user_id")
   projectId Int      @map("project_id")
-  share     Float
+  share     Float // the percentage of allocation from the 100% available to all projects
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @map("updated_at")
   user      User     @relation(fields: [userId], references: [id])

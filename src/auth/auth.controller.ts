@@ -90,12 +90,13 @@ export class AuthController {
       },
     });
 
-    const isFirstLogin = await this.prismaService.share.findFirst({
+    const hasEarlierShares = await this.prismaService.share.findFirst({
       where: { userId: user.id },
     });
 
-    if (isFirstLogin === null)
-      await this.flowService.populateInitialRanking(user.id);
+    const isFirstLogin = hasEarlierShares === null;
+
+    if (isFirstLogin) await this.flowService.populateInitialRanking(user.id);
     // res.cookie('auth', nonce, {
     //   httpOnly: true,
     //   sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
