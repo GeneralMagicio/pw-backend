@@ -90,7 +90,7 @@ async function insertProjects(prisma: PrismaClient) {
   // const jsonData: Row[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
   let count = 0;
   for (let i = 0; i < data.length; i++) {
-    if (Math.random() > 0.333) continue;
+    if (Math.random() > 0.2) continue;
     const row = data[i];
     // console.log(row);
     // if (i > 30) return;
@@ -129,27 +129,27 @@ async function insertProjects(prisma: PrismaClient) {
   }
 }
 
-async function insertTopCollections(prisma: PrismaClient) {
-  const workbook = XLSX.readFile('./pwcat.xlsx');
-  const worksheet = workbook.Sheets[workbook.SheetNames[1]];
-  const jsonData: Row[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+// async function insertTopCollections(prisma: PrismaClient) {
+//   const workbook = XLSX.readFile('./pwcat.xlsx');
+//   const worksheet = workbook.Sheets[workbook.SheetNames[1]];
+//   const jsonData: Row[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
 
-  for (let i = 0; i < jsonData.length; i++) {
-    const row = jsonData[i];
+//   for (let i = 0; i < jsonData.length; i++) {
+//     const row = jsonData[i];
 
-    await prisma.project.create({
-      data: {
-        name: row.CATEGORY,
-        image: row.LOGO || '',
-        impactDescription: row.DESCRIPTION,
-        url: 'url',
-        parentId: null,
-        pollId: 1,
-        type: ProjectType.collection,
-      },
-    });
-  }
-}
+//     await prisma.project.create({
+//       data: {
+//         name: row.CATEGORY,
+//         image: row.LOGO || '',
+//         impactDescription: row.DESCRIPTION,
+//         url: 'url',
+//         parentId: null,
+//         pollId: 1,
+//         type: ProjectType.collection,
+//       },
+//     });
+//   }
+// }
 
 async function insertMoonCollections(prisma: PrismaClient) {
   const workbook = XLSX.readFile('./pwcat.xlsx');
@@ -165,7 +165,7 @@ async function insertMoonCollections(prisma: PrismaClient) {
         image: row.LOGO || '',
         url: 'url',
         impactDescription: row.DESCRIPTION,
-        parentId: Number(row.pid),
+        parentId: null,
         pollId: 1,
         type: ProjectType.collection,
       },
@@ -195,7 +195,7 @@ const main = async () => {
     data: poll,
   });
 
-  await insertTopCollections(prisma);
+  // await insertTopCollections(prisma);
 
   await insertMoonCollections(prisma);
 
