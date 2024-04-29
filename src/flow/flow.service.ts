@@ -354,6 +354,17 @@ export class FlowService {
     return withAdditionalFields;
   };
 
+  getProjects = async (parentCollectionId: number | null) => {
+    const projects = await this.prismaService.project.findMany({
+      where: {
+        parentId: parentCollectionId,
+        type: { in: [ProjectType.project] },
+      },
+    });
+
+    return projects;
+  };
+
   getCollectionVotingPower = async (
     collectionId: number | null,
     userId: number,

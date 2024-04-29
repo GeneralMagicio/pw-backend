@@ -10,7 +10,6 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import * as XLSX from 'xlsx';
 import { FlowService } from './flow.service';
 import { PrismaService } from 'src/prisma.service';
 import { ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
@@ -20,9 +19,7 @@ import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
-import { CollectionRanking } from './types';
-import { validateRanking } from 'src/utils/edit-logic';
-import * as fs from 'fs';
+import { FinishCollectionBody } from './dto/bodies';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -68,6 +65,22 @@ export class FlowController {
       userId,
       parentId || null,
     );
+    return collections;
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiQuery({
+    name: 'cid',
+    description: 'Parent id of the collections',
+    required: true,
+  })
+  @ApiOperation({
+    summary: 'Returns the projects in a collection',
+  })
+  @Get('/projects')
+  async getProjects(@Query('cid') parentId?: number) {
+    if (!parentId) throw new BadRequestException('Please provide a valid cid');
+    const collections = await this.flowService.getProjects(parentId || null);
     return collections;
   }
 
@@ -128,23 +141,23 @@ export class FlowController {
   @ApiQuery({
     name: 'cid',
     description:
-      'Collection id of the ranking (Skip if you look for top level collections)',
+      'Collection id of the ranking (skip if you look for top level collections)',
     required: false,
   })
   @ApiOperation({
     summary:
       'Returns the ranking within the projects/collections of a parent collection',
   })
-  @UseGuards(AuthGuard)
   @ApiResponse({
     status: 200,
-    description: `There are 5 progress statuses: \n
-                  1- Pending: No votes has been cast in the collection \n 
-                  2- WIP: some votes has been cast in the collection \n
-                  3- WIP-Threshold: The number of votes cast has exceeded the threshold number \n
-                  4- Finished: The collection has been marked "Finished" by the User \n
+    description: `There are 5 progress statuses:\n
+                  1- Pending: No votes has been cast in the collection\n
+                  2- WIP: some votes has been cast in the collection\n
+                  3- WIP-Threshold: The number of votes cast has exceeded the threshold number\n
+                  4- Finished: The collection has been marked "Finished" by the User\n
                   5- The collection has been attested to the EAS`,
   })
+  @UseGuards(AuthGuard)
   @Get('/ranking')
   async getRanking(
     @Req() { userId }: AuthedReq,
@@ -342,12 +355,13 @@ export class FlowController {
 
   @UseGuards(AuthGuard)
   @ApiOperation({
-    summary: 'Notifies the server that the user has done an attestation',
+    summary:
+      'Notifies the server that the user has done an attestation for a collection',
   })
   @Post('/reportAttest')
   async reportAttestations(
     @Req() { userId }: AuthedReq,
-    @Body('cid') cid: number,
+    @Body() { cid }: FinishCollectionBody,
   ) {
     const isFinished = await this.flowService.isCollectionFinished(userId, cid);
 
@@ -383,7 +397,7 @@ export class FlowController {
   @Post('/finish')
   async finishCollections(
     @Req() { userId }: AuthedReq,
-    @Body('cid') cid: number,
+    @Body() { cid }: FinishCollectionBody,
   ) {
     // const userId = 1;
     const [isFinished, isLastLayerCollection, hasThresholdVotes] =
