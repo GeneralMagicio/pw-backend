@@ -18,6 +18,7 @@ model User {
   nonce              Nonce?
   finishedCollection UserCollectionFinish[]
   shares             Share[]
+  excludedProjects   ProjectExclusion[]
   attestations       UserAttestation[]
 }
 
@@ -75,6 +76,7 @@ model Project {
   expertiseColleciton2    ExpertiseVote[]        @relation("ExpertiseVote2")
   expertiseVoted          ExpertiseVote[]        @relation("Voted")
   finishedCollections     UserCollectionFinish[]
+  excludedBy              ProjectExclusion[]
   attestations            UserAttestation[]
 }
 
@@ -123,6 +125,17 @@ model Share {
   userId    Int      @map("user_id")
   projectId Int      @map("project_id")
   share     Float // the percentage of allocation from the 100% available to all projects
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id])
+
+  @@id([userId, projectId])
+}
+
+model ProjectExclusion {
+  userId    Int      @map("user_id")
+  projectId Int      @map("project_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @map("updated_at")
   user      User     @relation(fields: [userId], references: [id])
