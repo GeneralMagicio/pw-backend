@@ -37,4 +37,6 @@ export type CollectionProgressStatus =
   | 'Finished'
   | 'WIP - Threshold'
   | 'WIP'
+  | 'Filtered'
+  | 'Filtering'
   | 'Pending';

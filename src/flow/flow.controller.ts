@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   Get,
   Logger,
+  Param,
   Post,
   Query,
   Req,
@@ -19,7 +20,7 @@ import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
-import { FinishCollectionBody } from './dto/bodies';
+import { ExcludeProjectBody, FinishCollectionBody } from './dto/bodies';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -78,10 +79,16 @@ export class FlowController {
     summary: 'Returns the projects in a collection',
   })
   @Get('/projects')
-  async getProjects(@Query('cid') parentId?: number) {
+  async getProjects(
+    @Req() { userId }: AuthedReq,
+    @Query('cid') parentId?: number,
+  ) {
     if (!parentId) throw new BadRequestException('Please provide a valid cid');
-    const collections = await this.flowService.getProjects(parentId || null);
-    return collections;
+    const projects = await this.flowService.getProjects(
+      parentId || null,
+      userId,
+    );
+    return projects;
   }
 
   @UseGuards(AuthGuard)
@@ -386,6 +393,33 @@ export class FlowController {
         collectionId: cid,
       },
     });
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary:
+      'Notifies the server that the user has completed filtering the projects in a collection',
+  })
+  @Post('/mark-filtered')
+  async markFiltered(
+    @Req() { userId }: AuthedReq,
+    @Body() { cid }: FinishCollectionBody,
+  ) {
+    await this.flowService.markCollectionsFiltered(userId, cid);
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Exclude a project from subsequent pairwise ranking',
+  })
+  @Post('/projects/exclude')
+  async excludeProjects(
+    @Req() { userId }: AuthedReq,
+    @Body() { id }: ExcludeProjectBody,
+  ) {
+    await this.flowService.excludeProject(userId, id);
     return 'Success';
   }
 

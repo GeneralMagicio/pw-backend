@@ -9,14 +9,15 @@ generator client {
 }
 
 model User {
-  id                 Int                    @id @default(autoincrement())
+  id                 Int                      @id @default(autoincrement())
   address            String
-  isBadgeHolder      Int                    @map("is_badgeholder")
-  createdAt          DateTime               @default(now()) @map("created_at")
+  isBadgeHolder      Int                      @map("is_badgeholder")
+  createdAt          DateTime                 @default(now()) @map("created_at")
   projectVotes       Vote[]
   expertiseVotes     ExpertiseVote[]
   nonce              Nonce?
   finishedCollection UserCollectionFinish[]
+  filteredCollection UserCollectionFiltered[]
   shares             Share[]
   excludedProjects   ProjectExclusion[]
   attestations       UserAttestation[]
@@ -53,29 +54,30 @@ enum ProjectType {
 }
 
 model Project {
-  id                      Int                    @id @default(autoincrement())
+  id                      Int                      @id @default(autoincrement())
   name                    String
-  pollId                  Int                    @map("poll_id")
+  pollId                  Int                      @map("poll_id")
   url                     String?
-  impactDescription       String                 @map("impact_description")
-  contributionDescription String?                @map("contribution_description")
-  RPGF4Id                 String?                @map("rpgf4_id")
-  parentId                Int?                   @map("parent_id")
+  impactDescription       String                   @map("impact_description")
+  contributionDescription String?                  @map("contribution_description")
+  RPGF4Id                 String?                  @map("rpgf4_id")
+  parentId                Int?                     @map("parent_id")
   image                   String?
-  metadataUrl             String?                @map("metadata_url")
-  createdAt               DateTime               @default(now()) @map("created_at")
-  parent                  Project?               @relation("ParentRelation", fields: [parentId], references: [id])
-  children                Project[]              @relation("ParentRelation")
+  metadataUrl             String?                  @map("metadata_url")
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  parent                  Project?                 @relation("ParentRelation", fields: [parentId], references: [id])
+  children                Project[]                @relation("ParentRelation")
   type                    ProjectType
-  poll                    Poll                   @relation(fields: [pollId], references: [id])
-  options1                Vote[]                 @relation("VoteToProject1")
-  options2                Vote[]                 @relation("VoteToProject2")
-  voted                   Vote[]                 @relation("Voted")
+  poll                    Poll                     @relation(fields: [pollId], references: [id])
+  options1                Vote[]                   @relation("VoteToProject1")
+  options2                Vote[]                   @relation("VoteToProject2")
+  voted                   Vote[]                   @relation("Voted")
   shares                  Share[]
-  expertiseColleciton1    ExpertiseVote[]        @relation("ExpertiseVote1")
-  expertiseColleciton2    ExpertiseVote[]        @relation("ExpertiseVote2")
-  expertiseVoted          ExpertiseVote[]        @relation("Voted")
+  expertiseColleciton1    ExpertiseVote[]          @relation("ExpertiseVote1")
+  expertiseColleciton2    ExpertiseVote[]          @relation("ExpertiseVote2")
+  expertiseVoted          ExpertiseVote[]          @relation("Voted")
   finishedCollections     UserCollectionFinish[]
+  filteredCollections     UserCollectionFiltered[]
   excludedBy              ProjectExclusion[]
   attestations            UserAttestation[]
 }
@@ -142,6 +144,17 @@ model ProjectExclusion {
   project   Project  @relation(fields: [projectId], references: [id])
 
   @@id([userId, projectId])
+}
+
+model UserCollectionFiltered {
+  userId       Int      @map("user_id")
+  collectionId Int      @map("collection_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @map("updated_at")
+  user         User     @relation(fields: [userId], references: [id])
+  collection   Project  @relation(fields: [collectionId], references: [id])
+
+  @@id([userId, collectionId])
 }
 
 model UserCollectionFinish {

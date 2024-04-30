@@ -121,13 +121,25 @@ export class FlowService {
     );
 
     if (isLastLayerCollection) {
-      const [isAttested, isFinished, hasThresholdVotes, hasVotes] =
-        await Promise.all([
-          this.isCollectionAttested(userId, collectionId),
-          this.isCollectionFinished(userId, collectionId),
-          this.hasThresholdVotes(collectionId, userId),
-          this.isCollectionStarted(userId, collectionId),
-        ]);
+      const [
+        isAttested,
+        isFinished,
+        hasThresholdVotes,
+        hasVotes,
+        isFiltered,
+        exclusions,
+      ] = await Promise.all([
+        this.isCollectionAttested(userId, collectionId),
+        this.isCollectionFinished(userId, collectionId),
+        this.hasThresholdVotes(collectionId, userId),
+        this.isCollectionStarted(userId, collectionId),
+        this.isCollectionFiltered(userId, collectionId),
+        this.prismaService.projectExclusion.findFirst({
+          where: { userId, project: { parentId: collectionId } },
+        }),
+      ]);
+
+      const isFiltering = exclusions !== null;
 
       return isAttested
         ? 'Attested'
@@ -137,6 +149,10 @@ export class FlowService {
         ? 'WIP - Threshold'
         : hasVotes
         ? 'WIP'
+        : isFiltered
+        ? 'Filtered'
+        : isFiltering
+        ? 'Filtering'
         : 'Pending';
     } else {
       const children = await this.prismaService.project.findMany({
@@ -203,7 +219,7 @@ export class FlowService {
     project2Id: number,
     pickedId: number | null,
   ) => {
-    await this.validateVote(project1Id, project2Id, pickedId);
+    await this.validateProjectVotes(userId, project1Id, project2Id, pickedId);
     await this.vote(userId, project1Id, project2Id, pickedId);
   };
 
@@ -218,6 +234,55 @@ export class FlowService {
     });
 
     return res !== null;
+  };
+
+  excludeProject = async (userId: number, projectId: number) => {
+    const excludedProject = await this.prismaService.projectExclusion.create({
+      data: {
+        projectId,
+        userId,
+      },
+      include: {
+        project: true,
+      },
+    });
+
+    if (excludedProject.project.type !== 'project') {
+      await this.prismaService.projectExclusion.delete({
+        where: {
+          userId_projectId: {
+            projectId,
+            userId,
+          },
+        },
+      });
+      throw new BadRequestException('Only projects can be filtered');
+    }
+  };
+
+  markCollectionsFiltered = async (userId: number, collectionId: number) => {
+    const filteredCollection =
+      await this.prismaService.userCollectionFiltered.create({
+        data: {
+          collectionId,
+          userId,
+        },
+        include: {
+          collection: true,
+        },
+      });
+
+    if (filteredCollection.collection.type !== 'collection') {
+      await this.prismaService.userCollectionFiltered.delete({
+        where: {
+          userId_collectionId: {
+            collectionId,
+            userId,
+          },
+        },
+      });
+      throw new BadRequestException('Only collections can be marked filtered');
+    }
   };
 
   getOverallRanking = async (
@@ -355,7 +420,20 @@ export class FlowService {
     return withAdditionalFields;
   };
 
-  getProjects = async (parentCollectionId: number | null) => {
+  isCollectionFiltered = async (userId: number, collectionId: number) => {
+    const res = this.prismaService.userCollectionFiltered.findUnique({
+      where: {
+        userId_collectionId: {
+          collectionId,
+          userId,
+        },
+      },
+    });
+
+    return res !== null;
+  };
+
+  getProjects = async (parentCollectionId: number | null, userId: number) => {
     const projects = await this.prismaService.project.findMany({
       where: {
         parentId: parentCollectionId,
@@ -363,7 +441,18 @@ export class FlowService {
       },
     });
 
-    return projects;
+    const withAdditionalFields = await Promise.all(
+      projects.map(async (project) => {
+        const [isExcluded] = await Promise.all([
+          this.isProjectExcluded(userId, project.id),
+        ]);
+        return {
+          ...project,
+          isExcluded,
+        };
+      }),
+    );
+    return withAdditionalFields;
   };
 
   getCollectionVotingPower = async (
@@ -1016,5 +1105,56 @@ export class FlowService {
 
     if (!project1 || !project2 || project1.parentId !== project2.parentId)
       throw new BadRequestException('Invalid pair of projects');
+  };
+
+  private validateProjectVotes = async (
+    userId: number,
+    project1Id: number,
+    project2Id: number,
+    pickedId: number | null,
+  ) => {
+    if (project1Id === project2Id)
+      throw new BadRequestException(
+        'Project 1 and project 2 ids should be different',
+      );
+
+    if (project1Id > project2Id)
+      throw new InternalServerErrorException(
+        'Conventionally, project1Id must be less than project2Id',
+      );
+
+    if (pickedId !== null && pickedId !== project1Id && pickedId !== project2Id)
+      throw new BadRequestException('Picked project invalid id');
+
+    const [project1, project2, exclusion1, exclusion2] = await Promise.all([
+      this.prismaService.project.findFirst({
+        where: { id: project1Id },
+      }),
+      this.prismaService.project.findFirst({
+        where: { id: project2Id },
+      }),
+      this.prismaService.projectExclusion.findUnique({
+        where: { userId_projectId: { projectId: project1Id, userId } },
+      }),
+      this.prismaService.projectExclusion.findUnique({
+        where: { userId_projectId: { projectId: project2Id, userId } },
+      }),
+    ]);
+
+    if (!project1 || !project2 || project1.parentId !== project2.parentId)
+      throw new BadRequestException('Invalid pair of projects');
+
+    if (exclusion1 !== null || exclusion2 !== null)
+      throw new BadRequestException(
+        'Already excluded projects can not be compared',
+      );
+  };
+
+  private isProjectExcluded = async (userId: number, projectId: number) => {
+    const exclusion = this.prismaService.projectExclusion.findUnique({
+      where: { userId_projectId: { userId, projectId } },
+    });
+
+    return exclusion !== null;
   };
 }
