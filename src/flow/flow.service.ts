@@ -421,7 +421,7 @@ export class FlowService {
   };
 
   isCollectionFiltered = async (userId: number, collectionId: number) => {
-    const res = this.prismaService.userCollectionFiltered.findUnique({
+    const res = await this.prismaService.userCollectionFiltered.findUnique({
       where: {
         userId_collectionId: {
           collectionId,
@@ -1151,7 +1151,7 @@ export class FlowService {
   };
 
   private isProjectExcluded = async (userId: number, projectId: number) => {
-    const exclusion = this.prismaService.projectExclusion.findUnique({
+    const exclusion = await this.prismaService.projectExclusion.findUnique({
       where: { userId_projectId: { userId, projectId } },
     });
 
