@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -725,6 +726,11 @@ export class FlowService {
         project2: { parentId: collectionId },
       },
     });
+
+    if (count < 2)
+      throw new ForbiddenException(
+        "Number of projects in a collection shouldn't be less than 2",
+      );
 
     return numOfVotes / combinations(count, 2) >= threshold;
   };
