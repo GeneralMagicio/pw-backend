@@ -19,7 +19,7 @@ model User {
   finishedCollection UserCollectionFinish[]
   filteredCollection UserCollectionFiltered[]
   shares             Share[]
-  excludedProjects   ProjectExclusion[]
+  projectInclusions  ProjectInclusion[]
   attestations       UserAttestation[]
 }
 
@@ -78,7 +78,7 @@ model Project {
   expertiseVoted          ExpertiseVote[]          @relation("Voted")
   finishedCollections     UserCollectionFinish[]
   filteredCollections     UserCollectionFiltered[]
-  excludedBy              ProjectExclusion[]
+  inclusions              ProjectInclusion[]
   attestations            UserAttestation[]
 }
 
@@ -135,13 +135,19 @@ model Share {
   @@id([userId, projectId])
 }
 
-model ProjectExclusion {
-  userId    Int      @map("user_id")
-  projectId Int      @map("project_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @map("updated_at")
-  user      User     @relation(fields: [userId], references: [id])
-  project   Project  @relation(fields: [projectId], references: [id])
+enum InclusionState {
+  included
+  excluded
+}
+
+model ProjectInclusion {
+  userId    Int            @map("user_id")
+  projectId Int            @map("project_id")
+  state     InclusionState
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @default(now()) @map("updated_at")
+  user      User           @relation(fields: [userId], references: [id])
+  project   Project        @relation(fields: [projectId], references: [id])
 
   @@id([userId, projectId])
 }

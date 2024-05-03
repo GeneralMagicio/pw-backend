@@ -20,7 +20,7 @@ import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
-import { ExcludeProjectBody, FinishCollectionBody } from './dto/bodies';
+import { FinishCollectionBody, InclusionProjectBody } from './dto/bodies';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -414,12 +414,12 @@ export class FlowController {
   @ApiOperation({
     summary: 'Exclude a project from subsequent pairwise ranking',
   })
-  @Post('/projects/exclude')
+  @Post('/projects/set-inclusion')
   async excludeProjects(
     @Req() { userId }: AuthedReq,
-    @Body() { id }: ExcludeProjectBody,
+    @Body() { id, state }: InclusionProjectBody,
   ) {
-    await this.flowService.excludeProject(userId, id);
+    await this.flowService.setInclusionState(userId, id, state);
     return 'Success';
   }
 
@@ -457,6 +457,21 @@ export class FlowController {
     });
 
     return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary:
+      'Use it at your own risk for testing. It will remove all the inclusions associated with your account',
+  })
+  // @ApiResponse({ status: 200, description: 'All your voting data is removed' })
+  @Get('/temp-reset-inclusions')
+  async resetInclusions(@Req() { userId }: AuthedReq) {
+    await this.prismaService.projectInclusion.deleteMany({
+      where: {
+        userId,
+      },
+    });
   }
 
   @UseGuards(AuthGuard)

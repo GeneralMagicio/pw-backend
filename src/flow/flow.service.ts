@@ -18,7 +18,7 @@ import {
   CollectionRanking,
   ProjectRanking,
 } from './types';
-import { ProjectType } from '@prisma/client';
+import { InclusionState, ProjectType } from '@prisma/client';
 import axios from 'axios';
 import * as fs from 'fs';
 import * as FormData from 'form-data';
@@ -127,19 +127,19 @@ export class FlowService {
         hasThresholdVotes,
         hasVotes,
         isFiltered,
-        exclusions,
+        inclusion,
       ] = await Promise.all([
         this.isCollectionAttested(userId, collectionId),
         this.isCollectionFinished(userId, collectionId),
         this.hasThresholdVotes(collectionId, userId),
         this.isCollectionStarted(userId, collectionId),
         this.isCollectionFiltered(userId, collectionId),
-        this.prismaService.projectExclusion.findFirst({
+        this.prismaService.projectInclusion.findFirst({
           where: { userId, project: { parentId: collectionId } },
         }),
       ]);
 
-      const isFiltering = exclusions !== null;
+      const isFiltering = inclusion !== null;
 
       return isAttested
         ? 'Attested'
@@ -236,19 +236,33 @@ export class FlowService {
     return res !== null;
   };
 
-  excludeProject = async (userId: number, projectId: number) => {
-    const excludedProject = await this.prismaService.projectExclusion.create({
-      data: {
+  setInclusionState = async (
+    userId: number,
+    projectId: number,
+    state: InclusionState,
+  ) => {
+    const project = await this.prismaService.projectInclusion.upsert({
+      where: {
+        userId_projectId: {
+          projectId,
+          userId,
+        },
+      },
+      create: {
         projectId,
         userId,
+        state,
+      },
+      update: {
+        state,
       },
       include: {
         project: true,
       },
     });
 
-    if (excludedProject.project.type !== 'project') {
-      await this.prismaService.projectExclusion.delete({
+    if (project.project.type !== 'project') {
+      await this.prismaService.projectInclusion.delete({
         where: {
           userId_projectId: {
             projectId,
@@ -443,12 +457,12 @@ export class FlowService {
 
     const withAdditionalFields = await Promise.all(
       projects.map(async (project) => {
-        const [isExcluded] = await Promise.all([
-          this.isProjectExcluded(userId, project.id),
+        const [inclusionState] = await Promise.all([
+          this.getProjectInclusionState(userId, project.id),
         ]);
         return {
           ...project,
-          isExcluded,
+          inclusionState,
         };
       }),
     );
@@ -1126,17 +1140,17 @@ export class FlowService {
     if (pickedId !== null && pickedId !== project1Id && pickedId !== project2Id)
       throw new BadRequestException('Picked project invalid id');
 
-    const [project1, project2, exclusion1, exclusion2] = await Promise.all([
+    const [project1, project2, inclusion1, inclusion2] = await Promise.all([
       this.prismaService.project.findFirst({
         where: { id: project1Id },
       }),
       this.prismaService.project.findFirst({
         where: { id: project2Id },
       }),
-      this.prismaService.projectExclusion.findUnique({
+      this.prismaService.projectInclusion.findUnique({
         where: { userId_projectId: { projectId: project1Id, userId } },
       }),
-      this.prismaService.projectExclusion.findUnique({
+      this.prismaService.projectInclusion.findUnique({
         where: { userId_projectId: { projectId: project2Id, userId } },
       }),
     ]);
@@ -1144,17 +1158,20 @@ export class FlowService {
     if (!project1 || !project2 || project1.parentId !== project2.parentId)
       throw new BadRequestException('Invalid pair of projects');
 
-    if (exclusion1 !== null || exclusion2 !== null)
+    if (inclusion1?.state !== 'included' || inclusion2?.state !== 'included')
       throw new BadRequestException(
         'Already excluded projects can not be compared',
       );
   };
 
-  private isProjectExcluded = async (userId: number, projectId: number) => {
-    const exclusion = await this.prismaService.projectExclusion.findUnique({
+  private getProjectInclusionState = async (
+    userId: number,
+    projectId: number,
+  ) => {
+    const exclusion = await this.prismaService.projectInclusion.findUnique({
       where: { userId_projectId: { userId, projectId } },
     });
 
-    return exclusion !== null;
+    return exclusion?.state || 'pending';
   };
 }
