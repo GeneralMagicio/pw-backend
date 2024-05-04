@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-
+import { verifySignature } from 'thirdweb/auth';
 import { generateRandomString } from 'src/utils';
-import { SiweMessage } from 'siwe';
 import { PrismaService } from 'src/prisma.service';
+import { chain, thirdwebClient } from 'src/thirdweb';
 
 @Injectable()
 export class AuthService {
@@ -82,15 +82,15 @@ export class AuthService {
     return user;
   };
 
-  verifyUser = async (message: SiweMessage, signature: any) => {
-    const siweMessage = new SiweMessage(message);
-    try {
-      await this.isNonceValid(message.nonce);
-      await siweMessage.verify({ signature });
-      return true;
-    } catch (err) {
-      console.error('ERROR:', err);
-      return false;
-    }
+  verifyUser = async (message: string, signature: string, address: string) => {
+    const isValid = await verifySignature({
+      message,
+      signature,
+      address,
+      client: thirdwebClient,
+      chain,
+    });
+
+    return isValid;
   };
 }

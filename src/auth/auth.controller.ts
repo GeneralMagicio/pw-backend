@@ -9,6 +9,7 @@ import {
   Req,
   UseGuards,
   UnprocessableEntityException,
+  BadRequestException,
 } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
@@ -19,7 +20,7 @@ import { AuthGuard } from './auth.guard';
 import { LoginDTO } from './dto/login.dto';
 import { ApiResponse } from '@nestjs/swagger';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
-import { STAGING_API } from 'src/utils';
+import { STAGING_API, generateRandomString } from 'src/utils';
 import { FlowService } from 'src/flow/flow.service';
 
 @Controller({ path: 'auth' })
@@ -60,9 +61,15 @@ export class AuthController {
 
   @ApiResponse({ status: 200, description: 'Sets an auth cookie' })
   @Post('/login')
-  async login(@Res() res: Response, @Body() { message, signature }: LoginDTO) {
-    const { address, nonce } = message;
-    const isAuthentic = await this.authService.verifyUser(message, signature);
+  async login(
+    @Res() res: Response,
+    @Body() { message, signature, address, chainId }: LoginDTO,
+  ) {
+    const isAuthentic = await this.authService.verifyUser(
+      message,
+      signature,
+      address,
+    );
     if (!isAuthentic) throw new UnauthorizedException('Invalid signature');
     let user = await this.prismaService.user.findFirst({
       where: { address },
@@ -80,11 +87,16 @@ export class AuthController {
       },
     });
 
-    await this.prismaService.nonce.updateMany({
-      where: {
-        nonce,
-      },
+    const token = generateRandomString({
+      length: 32,
+      lowercase: true,
+      numerical: true,
+      uppercase: true,
+    });
+
+    await this.prismaService.nonce.create({
       data: {
+        nonce: token,
         userId: user.id,
         expiresAt: `${Date.now() + this.authService.TokenExpirationDuration}`,
       },
@@ -96,6 +108,7 @@ export class AuthController {
 
     const isFirstLogin = hasEarlierShares === null;
 
+    // TODO: Rethink this because of the project filtering flow
     if (isFirstLogin) await this.flowService.populateInitialRanking(user.id);
     // res.cookie('auth', nonce, {
     //   httpOnly: true,
@@ -107,7 +120,7 @@ export class AuthController {
 
     // return nonce;
 
-    res.status(200).send(nonce);
+    res.status(200).send(token);
   }
 
   @ApiResponse({
