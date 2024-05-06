@@ -1,6 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SiweMessage } from 'siwe';
-
 export class SiweMessageClass {
   @ApiProperty({
     description: 'RFC 4501 dns authority that is requesting the signing.',

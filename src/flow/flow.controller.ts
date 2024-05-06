@@ -472,6 +472,12 @@ export class FlowController {
         userId,
       },
     });
+
+    await this.prismaService.userCollectionFiltered.deleteMany({
+      where: {
+        userId,
+      },
+    });
   }
 
   @UseGuards(AuthGuard)

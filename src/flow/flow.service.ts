@@ -4,6 +4,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { getPairwiseCombinations, sortCombinations } from 'src/utils';
@@ -241,6 +242,29 @@ export class FlowService {
     projectId: number,
     state: InclusionState,
   ) => {
+    const parent = await this.prismaService.project.findFirst({
+      select: { id: true },
+      where: {
+        type: 'collection',
+        children: {
+          some: {
+            id: projectId,
+          },
+        },
+      },
+    });
+    if (!parent)
+      throw new UnprocessableEntityException(
+        "The project doesn't have a valid parent (or doesn't exist at all)",
+      );
+
+    const status = await this.getCollectionProgressStatus(userId, parent.id);
+
+    if (status !== 'Filtering' && status !== 'Pending')
+      throw new BadRequestException(
+        'Inclusion states in a filtered collection can not be modified',
+      );
+
     const project = await this.prismaService.projectInclusion.upsert({
       where: {
         userId_projectId: {

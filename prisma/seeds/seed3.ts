@@ -90,7 +90,7 @@ async function insertProjects(prisma: PrismaClient) {
   // const jsonData: Row[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
   let count = 0;
   for (let i = 0; i < data.length; i++) {
-    if (Math.random() > 0.2) continue;
+    if (Math.random() > 0.4) continue;
     const row = data[i];
     // console.log(row);
     // if (i > 30) return;
@@ -184,16 +184,16 @@ const main = async () => {
 
   await prisma.$connect();
 
-  const space = getSpace();
-  await prisma.space.create({
-    data: space,
-  });
+  // const space = getSpace();
+  // await prisma.space.create({
+  //   data: space,
+  // });
 
-  // add poll
-  const poll = getPoll();
-  await prisma.poll.create({
-    data: poll,
-  });
+  // // add poll
+  // const poll = getPoll();
+  // await prisma.poll.create({
+  //   data: poll,
+  // });
 
   // await insertTopCollections(prisma);
 
