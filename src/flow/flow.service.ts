@@ -298,6 +298,7 @@ export class FlowService {
     }
   };
 
+  // TODO: redistribute the shares based on the filtering
   markCollectionsFiltered = async (userId: number, collectionId: number) => {
     const filteredCollection =
       await this.prismaService.userCollectionFiltered.create({
@@ -328,30 +329,17 @@ export class FlowService {
     cid: number | null = null,
   ): Promise<(CollectionRanking | ProjectRanking)[]> => {
     let result = [];
-    const [collection, collections] = await Promise.all([
-      this.prismaService.project.findUnique({
-        where: { id: cid || -1 },
-      }),
-      this.prismaService.project.findMany({
-        select: { id: true, name: true, type: true, RPGF4Id: true },
-        where: {
-          parentId: cid,
-          type: { in: [ProjectType.compositeProject, ProjectType.collection] },
-        },
-      }),
-      // this.prismaService.userCollectionFinish.findMany({
-      //   select: { collectionId: true },
-      //   where: {
-      //     userId: userId,
-      //     collection: {
-      //       parentId: cid,
-      //     },
-      //   },
-      // }),
-    ]);
+    const collections = await this.prismaService.project.findMany({
+      select: { id: true, name: true, type: true, RPGF4Id: true },
+      where: {
+        parentId: cid,
+        type: { in: [ProjectType.compositeProject, ProjectType.collection] },
+      },
+    });
 
     const ranking = await this.getRanking(userId, cid);
 
+    // collection is top level and only contain projects
     if (collections.length === 0) {
       result = ranking.map(({ name, id, share, type, RPGF4Id }) => ({
         name,
@@ -602,7 +590,7 @@ export class FlowService {
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
-    const [allVotes, allChildren] = await Promise.all([
+    const [allVotes, allInclusionChildren] = await Promise.all([
       this.prismaService.vote.findMany({
         where: {
           userId: userId,
@@ -610,13 +598,18 @@ export class FlowService {
           project2: { parentId: collectionId },
         },
       }),
-      this.prismaService.project.findMany({
+      this.prismaService.projectInclusion.findMany({
         where: {
-          parentId: collectionId,
+          project: {
+            parentId: collectionId,
+          },
+          state: 'included',
         },
+        include: { project: true },
       }),
     ]);
 
+    const allChildren = allInclusionChildren.map((item) => item.project);
     const winningProjects = allChildren.filter(
       (project) =>
         allVotes.some((vote) => vote.pickedId === project.id) === true,
@@ -709,27 +702,38 @@ export class FlowService {
   };
 
   getPairs = async (userId: number, parentCollection?: number, count = 1) => {
-    const [collection, allVotes, allChildren] = await Promise.all([
-      this.prismaService.project.findUnique({
-        where: {
-          id: parentCollection || -1,
-          type: { in: [ProjectType.collection, ProjectType.compositeProject] },
-        },
-        select: { name: true, id: true },
-      }),
-      this.prismaService.vote.findMany({
-        where: {
-          userId: userId,
-          project1: { parentId: parentCollection },
-          project2: { parentId: parentCollection },
-        },
-      }),
-      this.prismaService.project.findMany({
-        where: {
-          parentId: parentCollection,
-        },
-      }),
-    ]);
+    const [collection, allVotes, allChildrenProjectInclusions] =
+      await Promise.all([
+        this.prismaService.project.findUnique({
+          where: {
+            id: parentCollection || -1,
+            type: {
+              in: [ProjectType.collection, ProjectType.compositeProject],
+            },
+          },
+          select: { name: true, id: true },
+        }),
+        this.prismaService.vote.findMany({
+          where: {
+            userId: userId,
+            project1: { parentId: parentCollection },
+            project2: { parentId: parentCollection },
+          },
+        }),
+        this.prismaService.projectInclusion.findMany({
+          where: {
+            project: {
+              parentId: parentCollection,
+            },
+            state: 'included',
+          },
+          include: { project: true },
+        }),
+      ]);
+
+    const allChildren = allChildrenProjectInclusions.map(
+      (item) => item.project,
+    );
 
     const votedIds = allVotes.reduce(
       (acc, vote) => [...acc, vote.project1Id, vote.project2Id],
@@ -827,22 +831,40 @@ export class FlowService {
     userId: number,
   ): Promise<boolean> => {
     // const type = await this.getCollectionSubunitType(collectionId);
-    const collection = await this.prismaService.project.findUnique({
-      where: {
-        id: collectionId,
-        type: { in: [ProjectType.collection, ProjectType.compositeProject] },
-      },
-      include: {
-        children: true,
-      },
-    });
-    if (!collection) throw new BadRequestException('Collection id invalid');
+    // const collection = await this.prismaService.project.findUnique({
+    //   where: {
+    //     id: collectionId,
+    //     type: { in: [ProjectType.collection, ProjectType.compositeProject] },
+    //   },
+    //   include: {
+    //     children: true,
+    //   },
+    // });
 
-    const { children } = collection;
+    const res = await this.prismaService.projectInclusion.findMany({
+      where: {
+        state: 'included',
+        project: {
+          parentId: collectionId,
+          parent: {
+            type: {
+              in: [ProjectType.collection, ProjectType.compositeProject],
+            },
+          },
+        },
+      },
+      include: { project: true },
+    });
+
+    const cid = res[0].project.parentId;
+
+    if (!cid) throw new BadRequestException('Collection id invalid');
+
+    const children = res.map((item) => item.project);
 
     const count = children.length;
 
-    const threshold = this.calculateThreshold(count, collection.id);
+    const threshold = this.calculateThreshold(count, cid);
 
     let numOfVotes = 0;
 
