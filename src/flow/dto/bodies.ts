@@ -1,9 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { InclusionState } from '@prisma/client';
-import { IsIn } from 'class-validator';
+import { IsDefined, IsIn } from 'class-validator';
 
 export class FinishCollectionBody {
   @ApiProperty({ description: 'Collection id' })
+  @IsDefined()
   cid: number;
 }
 
@@ -11,7 +12,16 @@ export class InclusionProjectBody {
   @ApiProperty({ description: 'Project id' })
   id: number;
 
-  @ApiProperty({ description: 'Inclusion state' })
   @IsIn(['included', 'excluded'])
   state: InclusionState;
+}
+
+export class DnDBody {
+  @ApiProperty({ description: 'collection id' })
+  @IsDefined()
+  collectionId: number;
+
+  @ApiProperty({ description: 'New order of the projects in descending order' })
+  @IsDefined()
+  projectIds: number[];
 }

@@ -19,8 +19,12 @@ import { VoteProjectsDTO } from './dto/voteProjects.dto';
 import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
-import { sortProjectId } from 'src/utils';
-import { FinishCollectionBody, InclusionProjectBody } from './dto/bodies';
+import { areEqualNumberArrays, sortProjectId } from 'src/utils';
+import {
+  DnDBody,
+  FinishCollectionBody,
+  InclusionProjectBody,
+} from './dto/bodies';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -121,6 +125,41 @@ export class FlowController {
       pickedId,
     );
   }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used for a pairwise vote between two collections',
+  })
+  @Get('/temp/test')
+  async test() {
+    return await this.flowService.justTesting();
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used for a pairwise vote between two collections',
+  })
+  @Get('/temp/test3')
+  async test3() {
+    return await this.flowService.populateInitialRanking(1);
+  }
+
+  // @UseGuards(AuthGuard)
+  // @ApiOperation({
+  //   summary: 'Used for a pairwise vote between two collections',
+  // })
+  // @Get('/temp/test2')
+  // async test2() {
+  //   const votes = await this.prismaService.vote.findMany({
+  //     where: {
+  //       project1: {
+  //         parentId: 174,
+  //       },
+  //     },
+  //   });
+
+  //   return votes;
+  // }
 
   @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
   @ApiResponse({
@@ -321,44 +360,68 @@ export class FlowController {
   //   return pinataUrl;
   // }
 
-  // @UseGuards(AuthGuard)
-  // // @ApiResponse({ status: 200, description: 'Overall ranking' })
-  // @Post('/ranking')
-  // async submitEditedRanking(
-  //   @Req() { userId }: AuthedReq,
-  //   @Body() input: { shares: CollectionRanking },
-  // ) {
-  //   if (!validateRanking(input.shares))
-  //     throw new BadRequestException('Invalid ranking list');
+  @UseGuards(AuthGuard)
+  // @ApiResponse({ status: 200, description: 'Overall ranking' })
+  @Post('/dnd')
+  async submitEditedRanking(
+    @Req() { userId }: AuthedReq,
+    @Body()
+    { collectionId, projectIds }: DnDBody,
+  ) {
+    const [res, res2] = await Promise.all([
+      this.prismaService.projectInclusion.findMany({
+        select: { projectId: true },
+        where: {
+          userId,
+          project: { parentId: collectionId },
+          state: 'included',
+        },
+      }),
+      this.prismaService.share.findMany({
+        select: {
+          share: true,
+          projectId: true,
+        },
+        where: {
+          userId,
+          project: { parentId: collectionId },
+        },
+        orderBy: {
+          share: 'desc',
+        },
+      }),
+    ]);
 
-  //   const lists = this.flowService.breakOverallRankingDown(input.shares);
-  //   if (!(await this.flowService.allSiblingsExist(lists))) {
-  //     throw new BadRequestException('All siblings should exist');
-  //   }
+    if (
+      !areEqualNumberArrays(
+        projectIds,
+        res.map((item) => item.projectId),
+        res2.map((item) => item.projectId),
+      )
+    ) {
+      throw new BadRequestException(
+        'All included projects should be in the input',
+      );
+    }
 
-  //   // console.log(
-  //   //   lists.reduce(
-  //   //     (acc, curr) => [
-  //   //       ...acc,
-  //   //       ...curr.ranking.map((el) => ({ id: el.id, share: el.share })),
-  //   //     ],
-  //   //     [] as { id: number; share: number }[],
-  //   //   ),
-  //   // );
+    await Promise.all(
+      res2.map(async (item, index) => {
+        return this.prismaService.share.update({
+          where: {
+            userId_projectId: {
+              userId,
+              projectId: projectIds[index],
+            },
+          },
+          data: {
+            share: item.share,
+          },
+        });
+      }),
+    );
 
-  //   await this.flowService.addManyShares(
-  //     lists.reduce(
-  //       (acc, curr) => [
-  //         ...acc,
-  //         ...curr.ranking.map((el) => ({ id: el.id, share: el.share })),
-  //       ],
-  //       [] as { id: number; share: number }[],
-  //     ),
-  //     userId,
-  //   );
-
-  //   return 'created';
-  // }
+    return 'success';
+  }
 
   @UseGuards(AuthGuard)
   @ApiOperation({

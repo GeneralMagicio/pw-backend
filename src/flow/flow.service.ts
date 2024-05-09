@@ -299,10 +299,21 @@ export class FlowService {
   };
 
   // TODO: redistribute the shares based on the filtering
+  // TODO: Do not let collections with fewer than 2 inclusions to be marked filtered
   markCollectionsFiltered = async (userId: number, collectionId: number) => {
     const filteredCollection =
-      await this.prismaService.userCollectionFiltered.create({
-        data: {
+      await this.prismaService.userCollectionFiltered.upsert({
+        where: {
+          userId_collectionId: {
+            userId,
+            collectionId,
+          },
+        },
+        create: {
+          collectionId,
+          userId,
+        },
+        update: {
           collectionId,
           userId,
         },
@@ -459,6 +470,36 @@ export class FlowService {
     return res !== null;
   };
 
+  justTesting = async () => {
+    const collections = await this.prismaService.project.findMany({
+      where: {
+        type: 'collection',
+      },
+    });
+
+    const result = collections.reduce(
+      (acc, curr) => ({ ...acc, [curr.id]: 0 }),
+      {} as Record<number, number>,
+    );
+
+    for (let i = 0; i < collections.length; i++) {
+      const item = collections[i];
+      const temp = await this.prismaService.projectInclusion.findMany({
+        where: {
+          state: 'included',
+          userId: 1,
+          project: {
+            parentId: item.id,
+          },
+        },
+      });
+
+      result[item.id] = temp.length;
+    }
+
+    return result;
+  };
+
   getProjects = async (parentCollectionId: number | null, userId: number) => {
     const projects = await this.prismaService.project.findMany({
       where: {
@@ -604,6 +645,7 @@ export class FlowService {
             parentId: collectionId,
           },
           state: 'included',
+          userId,
         },
         include: { project: true },
       }),
@@ -694,6 +736,7 @@ export class FlowService {
         id: item.projectId,
         name: item.project.name,
         share: item.share,
+        image: item.project.image,
         type: item.project.type,
         RPGF4Id: item.project.RPGF4Id,
         hasRanking: false,
@@ -726,6 +769,7 @@ export class FlowService {
               parentId: parentCollection,
             },
             state: 'included',
+            userId,
           },
           include: { project: true },
         }),
@@ -852,9 +896,13 @@ export class FlowService {
             },
           },
         },
+        userId,
       },
       include: { project: true },
     });
+
+    // The collection has no projects selected for voting
+    if (res.length === 0) return false;
 
     const cid = res[0].project.parentId;
 
@@ -876,10 +924,7 @@ export class FlowService {
       },
     });
 
-    if (count < 2)
-      throw new ForbiddenException(
-        "Number of projects in a collection shouldn't be less than 2",
-      );
+    if (count < 2) return false;
 
     return numOfVotes / combinations(count, 2) >= threshold;
   };
