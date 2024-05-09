@@ -298,9 +298,23 @@ export class FlowService {
     }
   };
 
-  // TODO: redistribute the shares based on the filtering
-  // TODO: Do not let collections with fewer than 2 inclusions to be marked filtered
   markCollectionsFiltered = async (userId: number, collectionId: number) => {
+    const includedProjects = await this.prismaService.projectInclusion.findMany(
+      {
+        select: { projectId: true },
+        where: {
+          project: { parentId: collectionId },
+          userId,
+          state: 'included',
+        },
+      },
+    );
+
+    if (includedProjects.length < 2)
+      throw new ForbiddenException(
+        'You must at least include 2 projects in your selection',
+      );
+
     const filteredCollection =
       await this.prismaService.userCollectionFiltered.upsert({
         where: {
@@ -333,6 +347,30 @@ export class FlowService {
       });
       throw new BadRequestException('Only collections can be marked filtered');
     }
+
+    const collectionVotingPower = await this.getCollectionVotingPower(
+      collectionId,
+      userId,
+    );
+
+    const share = collectionVotingPower / includedProjects.length;
+
+    await Promise.all([
+      this.prismaService.share.updateMany({
+        where: {
+          userId,
+          projectId: { in: includedProjects.map((item) => item.projectId) },
+        },
+        data: { share },
+      }),
+      this.prismaService.share.updateMany({
+        where: {
+          userId,
+          projectId: { notIn: includedProjects.map((item) => item.projectId) },
+        },
+        data: { share: 0 },
+      }),
+    ]);
   };
 
   getOverallRanking = async (
