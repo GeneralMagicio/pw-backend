@@ -366,6 +366,7 @@ export class FlowService {
       this.prismaService.share.updateMany({
         where: {
           userId,
+          project: { parentId: collectionId },
           projectId: { notIn: includedProjects.map((item) => item.projectId) },
         },
         data: { share: 0 },
@@ -764,12 +765,30 @@ export class FlowService {
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
-    const savedResults = await this.prismaService.share.findMany({
-      where: { project: { parentId: collectionId }, userId: userId },
-      include: { project: true },
-    });
+    const [savedResults, includedProjects] = await Promise.all([
+      this.prismaService.share.findMany({
+        where: {
+          project: { parentId: collectionId },
+          userId: userId,
+        },
+        include: { project: true },
+      }),
+      collectionId
+        ? this.getIncludedProjectIds(userId, collectionId)
+        : Promise.resolve([]),
+    ]);
 
-    return savedResults
+    // filter out the projects that were already filtered out
+    // in the project filtering phase
+    const includedProjectsResults = savedResults.filter(
+      (item) =>
+        !(
+          item.project.type === 'project' &&
+          !includedProjects.includes(item.projectId)
+        ),
+    );
+
+    return includedProjectsResults
       .map((item) => ({
         id: item.projectId,
         name: item.project.name,
@@ -780,6 +799,21 @@ export class FlowService {
         hasRanking: false,
       }))
       .sort((a, b) => b.share - a.share);
+  };
+
+  getIncludedProjectIds = async (userId: number, collectionId: number) => {
+    const includedProjects = await this.prismaService.projectInclusion.findMany(
+      {
+        select: { projectId: true },
+        where: {
+          userId,
+          project: { parentId: collectionId },
+          state: 'included',
+        },
+      },
+    );
+
+    return includedProjects.map((el) => el.projectId);
   };
 
   getPairs = async (userId: number, parentCollection?: number, count = 1) => {

@@ -368,15 +368,9 @@ export class FlowController {
     @Body()
     { collectionId, projectIds }: DnDBody,
   ) {
-    const [res, res2] = await Promise.all([
-      this.prismaService.projectInclusion.findMany({
-        select: { projectId: true },
-        where: {
-          userId,
-          project: { parentId: collectionId },
-          state: 'included',
-        },
-      }),
+    // const userId = 5;
+    const [includedProjects, shares] = await Promise.all([
+      this.flowService.getIncludedProjectIds(userId, collectionId),
       this.prismaService.share.findMany({
         select: {
           share: true,
@@ -392,11 +386,14 @@ export class FlowController {
       }),
     ]);
 
+    const includedProjectsShares = shares.filter((item) =>
+      includedProjects.includes(item.projectId),
+    );
+
     if (
       !areEqualNumberArrays(
         projectIds,
-        res.map((item) => item.projectId),
-        res2.map((item) => item.projectId),
+        includedProjectsShares.map((item) => item.projectId),
       )
     ) {
       throw new BadRequestException(
@@ -404,21 +401,21 @@ export class FlowController {
       );
     }
 
-    await Promise.all(
-      res2.map(async (item, index) => {
-        return this.prismaService.share.update({
-          where: {
-            userId_projectId: {
-              userId,
-              projectId: projectIds[index],
-            },
+    const promises = includedProjectsShares.map(async (item, index) =>
+      this.prismaService.share.update({
+        where: {
+          userId_projectId: {
+            userId,
+            projectId: projectIds[index],
           },
-          data: {
-            share: item.share,
-          },
-        });
+        },
+        data: {
+          share: item.share,
+        },
       }),
     );
+
+    await Promise.all(promises);
 
     return 'success';
   }
@@ -543,7 +540,7 @@ export class FlowController {
     });
   }
 
-  @UseGuards(AuthGuard)
+  // @UseGuards(AuthGuard)
   @ApiOperation({
     summary:
       'Use it at your own risk for testing. It will remove all the data associated with your account',
@@ -561,8 +558,16 @@ export class FlowController {
 
     // const userId = userId || 1;
 
-    // const userId = 3;
+    // userId = 4;
     await this.prismaService.nonce.deleteMany({
+      where: { userId: userId },
+    });
+
+    await this.prismaService.userCollectionFiltered.deleteMany({
+      where: { userId: userId },
+    });
+
+    await this.prismaService.projectInclusion.deleteMany({
       where: { userId: userId },
     });
 

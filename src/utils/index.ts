@@ -94,25 +94,27 @@ export const sortProjectId = (
 export const STAGING_API = 'pairwise.cupofjoy.store';
 
 export function areEqualNumberArrays(
-  arr1: number[],
-  arr2: number[],
-  arr3: number[],
+  array1: number[],
+  array2: number[],
+  // arr3: number[],
 ): boolean {
+  const arr1 = [...array1];
+  const arr2 = [...array2];
   const N = arr1.length;
   const M = arr2.length;
-  const O = arr3.length;
+  // const O = arr3.length;
 
   // If lengths of array are not equal means array are not equal
-  if (N !== M || N !== O || M !== O) return false;
+  if (N !== M /* || N !== O || M !== O */) return false;
 
   // Sort both arrays
   arr1.sort((a, b) => a - b);
   arr2.sort((a, b) => a - b);
-  arr3.sort((a, b) => a - b);
+  // arr3.sort((a, b) => a - b);
 
   // Linearly compare elements
   for (let i = 0; i < N; i++)
-    if (arr1[i] !== arr2[i] || arr1[i] !== arr3[i] || arr2[i] !== arr3[i])
+    if (arr1[i] !== arr2[i] /* || arr1[i] !== arr3[i] || arr2[i] !== arr3[i]*/)
       return false;
 
   // If all elements were same.
