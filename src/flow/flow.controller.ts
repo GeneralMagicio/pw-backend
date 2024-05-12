@@ -176,6 +176,9 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Query('cid') collectionId?: number,
   ) {
+    if (!collectionId)
+      return this.flowService.getFinishedCollectionPairs(userId);
+
     const pairs: PairsResult = await this.flowService.getPairs(
       userId,
       collectionId,
@@ -287,16 +290,16 @@ export class FlowController {
     };
   }
 
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Returns the ranking among all the projects',
-  })
-  @ApiResponse({ status: 200, description: 'Overall ranking' })
-  @Get('/ranking/overall')
-  async getOverallRanking(@Req() { userId }: AuthedReq) {
-    const result = await this.flowService.getOverallRanking(userId);
-    return result;
-  }
+  // @UseGuards(AuthGuard)
+  // @ApiOperation({
+  //   summary: 'Returns the ranking among all the projects',
+  // })
+  // @ApiResponse({ status: 200, description: 'Overall ranking' })
+  // @Get('/ranking/overall')
+  // async getOverallRanking(@Req() { userId }: AuthedReq) {
+  //   const result = await this.flowService.getOverallRanking(userId);
+  //   return result;
+  // }
 
   // @UseGuards(AuthGuard)
   // @ApiResponse({ status: 200, description: 'Overall ranking' })
@@ -368,7 +371,7 @@ export class FlowController {
     @Body()
     { collectionId, projectIds }: DnDBody,
   ) {
-    // const userId = 5;
+    // userId = 5;
     const [includedProjects, shares] = await Promise.all([
       this.flowService.getIncludedProjectIds(userId, collectionId),
       this.prismaService.share.findMany({
@@ -389,6 +392,9 @@ export class FlowController {
     const includedProjectsShares = shares.filter((item) =>
       includedProjects.includes(item.projectId),
     );
+
+    console.log('pids:', projectIds);
+    console.log('included project shares', includedProjectsShares);
 
     if (
       !areEqualNumberArrays(

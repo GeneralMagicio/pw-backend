@@ -754,6 +754,49 @@ export class FlowService {
     return makeIt100(ranking.sort((a, b) => b.share - a.share));
   };
 
+  getRootRanking = async (userId: number) => {
+    const [savedResults, finishedCollectionIds] = await Promise.all([
+      this.prismaService.share.findMany({
+        where: {
+          project: { parentId: null },
+          userId: userId,
+        },
+        include: { project: true },
+      }),
+      this.prismaService.userCollectionFinish.findMany({
+        select: { collectionId: true },
+        where: {
+          userId,
+          collection: {
+            parentId: null,
+          },
+        },
+      }),
+    ]);
+
+    console.log(finishedCollectionIds);
+
+    // filter just finished collections
+    const finishedCollectionsRanking = savedResults.filter((item) =>
+      finishedCollectionIds
+        .map((item) => item.collectionId)
+        .includes(item.projectId),
+    );
+
+    return finishedCollectionsRanking
+      .map((item) => ({
+        id: item.projectId,
+        name: item.project.name,
+        share: item.share,
+        image: item.project.image,
+        type: item.project.type,
+        description: item.project.impactDescription,
+        RPGF4Id: item.project.RPGF4Id,
+        hasRanking: false,
+      }))
+      .sort((a, b) => b.share - a.share);
+  };
+
   /**
    * This method calculates ranking in a collection/composite project either by votes or saved results
    * @param userId
@@ -765,6 +808,8 @@ export class FlowService {
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
+    if (collectionId === null) return this.getRootRanking(userId);
+
     const [savedResults, includedProjects] = await Promise.all([
       this.prismaService.share.findMany({
         where: {
@@ -814,6 +859,52 @@ export class FlowService {
     );
 
     return includedProjects.map((el) => el.projectId);
+  };
+
+  getFinishedCollectionPairs = async (userId: number) => {
+    // const collectionId = null;
+
+    const [allCollections, collectionPairwises] = await Promise.all([
+      this.getCollections(userId, null),
+      this.prismaService.vote.findMany({
+        where: {
+          project1: {
+            parentId: null,
+            type: 'collection',
+          },
+        },
+        orderBy: {
+          project1Id: 'asc',
+        },
+      }),
+    ]);
+
+    const finishedCollections = allCollections.filter(
+      (collection) =>
+        collection.progress === 'Finished' ||
+        collection.progress === 'Attested',
+    );
+
+    if (finishedCollections.length < 2) return [];
+
+    const allFinishedPairs = getPairwiseCombinations(
+      finishedCollections.map((el) => el.id),
+    );
+
+    const remainingPairs = allFinishedPairs.filter((pair) => {
+      const index = collectionPairwises.findIndex(
+        (item) => item.project1Id === pair[0] && item.project2Id === pair[1],
+      );
+
+      if (index === -1) return true;
+      return false;
+    });
+
+    if (remainingPairs.length === 0) return [];
+
+    return allCollections.filter((collection) =>
+      remainingPairs[0].includes(collection.id),
+    );
   };
 
   getPairs = async (userId: number, parentCollection?: number, count = 1) => {
