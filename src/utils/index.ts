@@ -2,9 +2,9 @@ import * as bcrypt from 'bcrypt';
 
 export const generateRandomString = ({
   length,
-  uppercase = true,
-  lowercase = true,
-  numerical = true,
+  uppercase = false,
+  lowercase = false,
+  numerical = false,
   special = false,
 }: {
   length: number;

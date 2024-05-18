@@ -22,6 +22,7 @@ import { ApiResponse } from '@nestjs/swagger';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { STAGING_API, generateRandomString } from 'src/utils';
 import { FlowService } from 'src/flow/flow.service';
+import { OtpDTO } from './dto/otp.dto';
 
 @Controller({ path: 'auth' })
 export class AuthController {
@@ -140,5 +141,31 @@ export class AuthController {
       },
     });
     return nonce;
+  }
+
+  @ApiResponse({
+    status: 200,
+    type: String,
+    description: 'a 6 character numerical OTP is returned',
+  })
+  @UseGuards(AuthGuard)
+  @Get('/otp')
+  async getOtp(@Req() { userId }: AuthedReq) {
+    const otp = await this.authService.assignOtp(userId);
+
+    return otp;
+  }
+
+  @ApiResponse({
+    status: 200,
+    type: Boolean,
+    description:
+      'false or returning the id of the user whose otp has been entered',
+  })
+  @Post('/otp/validate')
+  async validateOtp(@Body() { otp }: OtpDTO) {
+    const res = await this.authService.checkOtpValidity(otp);
+
+    return res;
   }
 }

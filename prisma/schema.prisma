@@ -16,6 +16,7 @@ model User {
   projectVotes       Vote[]
   expertiseVotes     ExpertiseVote[]
   nonce              Nonce?
+  otp                Otp?
   finishedCollection UserCollectionFinish[]
   filteredCollection UserCollectionFiltered[]
   shares             Share[]
@@ -121,6 +122,16 @@ model Nonce {
   expiresAt String   @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
   user      User?    @relation(fields: [userId], references: [id])
+}
+
+model Otp {
+  userId    Int      @unique() @map("user_id")
+  otp       String
+  expiresAt String   @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@id([userId, otp])
 }
 
 model Share {

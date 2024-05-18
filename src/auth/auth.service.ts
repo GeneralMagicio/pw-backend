@@ -38,6 +38,52 @@ export class AuthService {
     });
   };
 
+  assignOtp = async (userId: number) => {
+    const record = await this.prismaService.otp.findFirst({
+      where: {
+        userId,
+        expiresAt: {
+          lt: `${Date.now()}`,
+        },
+      },
+    });
+
+    if (record) return record.otp;
+    const otp = generateRandomString({ length: 6, numerical: true });
+    await this.prismaService.otp.delete({
+      where: {
+        userId_otp: {
+          otp,
+          userId,
+        },
+      },
+    });
+    await this.prismaService.otp.create({
+      data: {
+        otp,
+        userId,
+        expiresAt: `${Date.now() + 15 * 60 * 1000}`, // 15 minutes
+      },
+    });
+
+    return otp;
+  };
+
+  checkOtpValidity = async (otp: string) => {
+    const record = await this.prismaService.otp.findFirst({
+      where: {
+        otp,
+        expiresAt: {
+          lt: `${Date.now()}`,
+        },
+      },
+    });
+
+    if (!record) return false;
+
+    return record.userId;
+  };
+
   generateNonce = () => {
     const nonce = generateRandomString({
       length: 48,
