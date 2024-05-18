@@ -670,7 +670,7 @@ export class FlowService {
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
-    const [allVotes, allInclusionChildren] = await Promise.all([
+    const [allVotes, allInclusionChildren, allCollections] = await Promise.all([
       this.prismaService.vote.findMany({
         where: {
           userId: userId,
@@ -688,9 +688,19 @@ export class FlowService {
         },
         include: { project: true },
       }),
+      this.prismaService.project.findMany({
+        where: {
+          parentId: null,
+          type: 'collection',
+        },
+      }),
     ]);
 
-    const allChildren = allInclusionChildren.map((item) => item.project);
+    const allChildren =
+      collectionId === null
+        ? allCollections
+        : allInclusionChildren.map((item) => item.project);
+
     const winningProjects = allChildren.filter(
       (project) =>
         allVotes.some((vote) => vote.pickedId === project.id) === true,
@@ -755,14 +765,8 @@ export class FlowService {
   };
 
   getRootRanking = async (userId: number) => {
-    const [savedResults, finishedCollectionIds] = await Promise.all([
-      this.prismaService.share.findMany({
-        where: {
-          project: { parentId: null },
-          userId: userId,
-        },
-        include: { project: true },
-      }),
+    const [ranking, finishedCollectionIds] = await Promise.all([
+      this.getRankingFromVotes(userId, null),
       this.prismaService.userCollectionFinish.findMany({
         select: { collectionId: true },
         where: {
@@ -774,24 +778,26 @@ export class FlowService {
       }),
     ]);
 
-    console.log(finishedCollectionIds);
-
     // filter just finished collections
-    const finishedCollectionsRanking = savedResults.filter((item) =>
-      finishedCollectionIds
-        .map((item) => item.collectionId)
-        .includes(item.projectId),
+    const finishedCollectionsRanking = ranking.filter((item) =>
+      finishedCollectionIds.map((item) => item.collectionId).includes(item.id),
     );
 
-    return finishedCollectionsRanking
-      .map((item) => ({
-        id: item.projectId,
-        name: item.project.name,
-        share: item.share,
-        image: item.project.image,
-        type: item.project.type,
-        description: item.project.impactDescription,
-        RPGF4Id: item.project.RPGF4Id,
+    const filteredCollections = await this.prismaService.project.findMany({
+      where: {
+        id: { in: finishedCollectionsRanking.map((el) => el.id) },
+      },
+    });
+
+    return filteredCollections
+      .map(({ id, name, image, type, impactDescription, RPGF4Id }) => ({
+        id,
+        name,
+        share: finishedCollectionsRanking.find((el) => el.id === id)!.share,
+        image,
+        type,
+        impactDescription,
+        RPGF4Id,
         hasRanking: false,
       }))
       .sort((a, b) => b.share - a.share);
@@ -1133,7 +1139,7 @@ export class FlowService {
   populateInitialRanking = async (userId: number) => {
     const [entities] = await Promise.all([
       this.prismaService.project.findMany({
-        select: { id: true, type: true, name: true },
+        select: { id: true, type: true, name: true, parentId: true },
       }),
       // this.prismaService.project.count({
       //   where: { type: 'project' },
@@ -1141,28 +1147,35 @@ export class FlowService {
     ]);
 
     const projects = entities.filter((el) => el.type === 'project');
-    const total = projects.length;
 
     const collections = entities.filter((el) => el.type !== 'project');
 
     await this.prismaService.share.createMany({
-      data: projects.map((item) => ({
-        share: 1 / total,
+      data: collections.map((item) => ({
+        share: 1 / collections.length,
         userId: userId,
         projectId: item.id,
       })),
     });
 
-    for (const item of collections) {
-      const childrenCount = await this.countNumOfProjects(item.id);
-      await this.prismaService.share.create({
-        data: {
-          share: childrenCount / total,
-          userId: userId,
-          projectId: item.id,
-        },
-      });
+    const promises = [];
+
+    for (const project of projects) {
+      const siblings = projects.filter(
+        (el) => el.parentId === project.parentId,
+      );
+      promises.push(
+        this.prismaService.share.create({
+          data: {
+            share: (1 / siblings.length) * (1 / collections.length),
+            userId: userId,
+            projectId: project.id,
+          },
+        }),
+      );
     }
+
+    await Promise.all(promises);
   };
 
   allSiblingsExist = async (
