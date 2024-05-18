@@ -43,19 +43,16 @@ export class AuthService {
       where: {
         userId,
         expiresAt: {
-          lt: `${Date.now()}`,
+          gte: `${Date.now()}`,
         },
       },
     });
 
     if (record) return record.otp;
     const otp = generateRandomString({ length: 6, numerical: true });
-    await this.prismaService.otp.delete({
+    await this.prismaService.otp.deleteMany({
       where: {
-        userId_otp: {
-          otp,
-          userId,
-        },
+        userId,
       },
     });
     await this.prismaService.otp.create({
@@ -74,7 +71,7 @@ export class AuthService {
       where: {
         otp,
         expiresAt: {
-          lt: `${Date.now()}`,
+          gte: `${Date.now()}`,
         },
       },
     });
