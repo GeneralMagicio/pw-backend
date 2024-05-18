@@ -65,6 +65,7 @@ export class AuthController {
     @Res() res: Response,
     @Body() { message, signature, address, chainId }: LoginDTO,
   ) {
+    let isNewUser = false;
     const isAuthentic = await this.authService.verifyUser(
       message,
       signature,
@@ -76,6 +77,7 @@ export class AuthController {
     });
     if (!user) {
       user = await this.usersService.create({ address, isBadgeHolder: true });
+      isNewUser = true;
     }
 
     if (!user)
@@ -102,14 +104,14 @@ export class AuthController {
       },
     });
 
-    const hasEarlierShares = await this.prismaService.share.findFirst({
-      where: { userId: user.id },
-    });
+    // const hasEarlierShares = await this.prismaService.share.findFirst({
+    //   where: { userId: user.id },
+    // });
 
-    const isFirstLogin = hasEarlierShares === null;
+    // const isFirstLogin = hasEarlierShares === null;
 
     // TODO: Rethink this because of the project filtering flow
-    if (isFirstLogin) await this.flowService.populateInitialRanking(user.id);
+    if (isNewUser) await this.flowService.populateInitialRanking(user.id);
     // res.cookie('auth', nonce, {
     //   httpOnly: true,
     //   sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
@@ -120,7 +122,7 @@ export class AuthController {
 
     // return nonce;
 
-    res.status(200).send(token);
+    res.status(200).send({ token, isNewUser });
   }
 
   @ApiResponse({

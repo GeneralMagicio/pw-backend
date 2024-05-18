@@ -10,7 +10,7 @@ export class AuthService {
   constructor(private readonly prismaService: PrismaService) {}
 
   /**
-   * 24 hours
+   * 48 hours
    */
   public TokenExpirationDuration = 48 * 60 * 60 * 1000;
 
