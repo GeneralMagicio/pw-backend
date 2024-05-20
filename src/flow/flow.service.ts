@@ -265,6 +265,26 @@ export class FlowService {
         'Inclusion states in a filtered collection can not be modified',
       );
 
+    const [siblingExclusions, allChildren] = await Promise.all([
+      this.prismaService.projectInclusion.count({
+        where: {
+          userId,
+          project: {
+            parentId: parent.id,
+          },
+          state: 'excluded',
+        },
+      }),
+      this.prismaService.project.count({
+        where: {
+          parentId: parent.id,
+        },
+      }),
+    ]);
+
+    if (siblingExclusions === allChildren - 2 && state === 'excluded')
+      throw new ForbiddenException('You should at least include 2 projects');
+
     const project = await this.prismaService.projectInclusion.upsert({
       where: {
         userId_projectId: {
