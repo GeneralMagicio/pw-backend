@@ -906,9 +906,7 @@ export class FlowService {
     ]);
 
     const finishedCollections = allCollections.filter(
-      (collection) =>
-        collection.progress === 'Finished' ||
-        collection.progress === 'Attested',
+      (collection) => collection.progress === 'Attested',
     );
 
     if (finishedCollections.length < 2) return [];
@@ -989,7 +987,17 @@ export class FlowService {
 
     const combinations = getPairwiseCombinations(allIds);
 
-    if (allVotes.length === combinations.length)
+    if (allVotes.length === combinations.length) {
+      if (collection) {
+        // There's no other pairs to vote from so finishing the collection automatically
+        await this.prismaService.userCollectionFinish.create({
+          data: {
+            collectionId: collection.id,
+            userId,
+          },
+        });
+      }
+
       return {
         pairs: [],
         totalPairs: combinations.length,
@@ -1000,6 +1008,7 @@ export class FlowService {
           collection?.id || null,
         ),
       };
+    }
 
     const sortedCombinations = sortCombinations(combinations, idRanking);
 
@@ -1442,12 +1451,32 @@ export class FlowService {
       }),
     ]);
 
-    if (!project1 || !project2 || project1.parentId !== project2.parentId)
+    if (
+      !project1 ||
+      !project2 ||
+      !project1.parentId ||
+      !project2.parentId ||
+      project1.parentId !== project2.parentId
+    )
       throw new BadRequestException('Invalid pair of projects');
 
     if (inclusion1?.state !== 'included' || inclusion2?.state !== 'included')
       throw new BadRequestException(
         'Already excluded projects can not be compared',
+      );
+
+    const progressStatus = await this.getCollectionProgressStatus(
+      userId,
+      project1.parentId,
+    );
+
+    if (
+      progressStatus !== 'Filtered' &&
+      progressStatus !== 'WIP' &&
+      progressStatus !== 'WIP - Threshold'
+    )
+      throw new ForbiddenException(
+        "You can only get pairs for a collection that's Filtered, WIP or WIP-Threshold",
       );
   };
 

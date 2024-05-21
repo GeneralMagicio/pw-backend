@@ -179,6 +179,20 @@ export class FlowController {
     if (!collectionId)
       return this.flowService.getFinishedCollectionPairs(userId);
 
+    const progressStatus = await this.flowService.getCollectionProgressStatus(
+      userId,
+      collectionId,
+    );
+
+    if (
+      progressStatus !== 'Filtered' &&
+      progressStatus !== 'WIP' &&
+      progressStatus !== 'WIP - Threshold'
+    )
+      throw new ForbiddenException(
+        "You can only vote for a collection that's Filtered, WIP or WIP-Threshold",
+      );
+
     const pairs: PairsResult = await this.flowService.getPairs(
       userId,
       collectionId,
@@ -562,10 +576,15 @@ export class FlowController {
 
     // console.log(user?.id);
 
-    // const userId = userId || 1;
+    // const userId = 4;
 
-    // userId = 4;
+    // userId = 15;
+
     await this.prismaService.nonce.deleteMany({
+      where: { userId: userId },
+    });
+
+    await this.prismaService.share.deleteMany({
       where: { userId: userId },
     });
 
@@ -593,9 +612,14 @@ export class FlowController {
       where: { userId: userId },
     });
 
-    await this.prismaService.share.deleteMany({
+    await this.prismaService.otp.deleteMany({
       where: { userId: userId },
     });
+
+    await this.prismaService.user.deleteMany({
+      where: { id: userId },
+    });
+
     // }
   }
 }
