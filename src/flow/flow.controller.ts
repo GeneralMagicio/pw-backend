@@ -239,36 +239,39 @@ export class FlowController {
         throw new ForbiddenException('Threshold votes missing');
     }
 
-    let isSaved = true;
+    // let isSaved = true;
     if (collectionId && isLastLayerCollection) {
       const item = await this.flowService.isCollectionFinished(
         userId,
         collectionId,
       );
 
-      if (!item) isSaved = false;
+      if (!item)
+        throw new ForbiddenException(
+          'There is no ranking for un-finished collections',
+        );
     }
 
-    if (!isSaved) {
-      await Promise.all([
-        this.flowService.saveResultsFromVotes(userId, collectionId || null),
-        // this.prismaService.userCollectionFinish.create({
-        //   data: { userId: userId, collectionId: collectionId! },
-        // }),
-      ]);
-    }
+    // if (!isSaved) {
+    //   await Promise.all([
+    //     this.flowService.saveResultsFromVotes(userId, collectionId || null),
+    //     // this.prismaService.userCollectionFinish.create({
+    //     //   data: { userId: userId, collectionId: collectionId! },
+    //     // }),
+    //   ]);
+    // }
 
-    if (!collectionId && collectionId !== 0) {
-      const alreadySaved = await this.prismaService.share.findFirst({
-        where: {
-          project: {
-            parentId: null,
-          },
-        },
-      });
-      if (alreadySaved === null)
-        await this.flowService.saveResultsFromVotes(userId, null);
-    }
+    // if (!collectionId && collectionId !== 0) {
+    //   const alreadySaved = await this.prismaService.share.findFirst({
+    //     where: {
+    //       project: {
+    //         parentId: null,
+    //       },
+    //     },
+    // });
+    // if (alreadySaved === null)
+    //   await this.flowService.saveResultsFromVotes(userId, null);
+    // }
 
     const [ranking, votingPower, collection, progress] = await Promise.all([
       this.flowService.getRanking(userId, collectionId || null),
@@ -536,6 +539,8 @@ export class FlowController {
       data: { userId: userId, collectionId: cid },
     });
 
+    await this.flowService.saveResultsFromVotes(userId, cid);
+
     return 'Success';
   }
 
@@ -578,7 +583,7 @@ export class FlowController {
 
     // const userId = 4;
 
-    // userId = 15;
+    // userId = 18;
 
     await this.prismaService.nonce.deleteMany({
       where: { userId: userId },
