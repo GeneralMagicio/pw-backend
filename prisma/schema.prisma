@@ -129,7 +129,7 @@ model Otp {
   otp       String
   expiresAt String   @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
-  user      User?    @relation(fields: [userId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
 
   @@id([userId, otp])
 }

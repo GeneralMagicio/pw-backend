@@ -59,7 +59,7 @@ export class AuthService {
       data: {
         otp,
         userId,
-        expiresAt: `${Date.now() + 15 * 60 * 1000}`, // 15 minutes
+        expiresAt: `${Date.now() + 4 * 60 * 60 * 1000}`, // 4 hours
       },
     });
 
@@ -74,11 +74,12 @@ export class AuthService {
           gte: `${Date.now()}`,
         },
       },
+      include: { user: true },
     });
 
     if (!record) return false;
 
-    return record.userId;
+    return record.user.address;
   };
 
   generateNonce = () => {
