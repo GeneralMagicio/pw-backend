@@ -37,6 +37,7 @@
     "class-validator": "^0.14.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
+    "ethers": "^6.12.2",
     "form-data": "^4.0.0",
     "mathjs": "^11.9.1",
     "ml-matrix": "^6.10.5",
