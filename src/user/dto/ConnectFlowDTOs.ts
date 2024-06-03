@@ -4,4 +4,12 @@ export class StoreBadgesDTO {
   @IsEthereumAddress()
   @IsDefined()
   mainAddress: string;
+
+  @IsDefined()
+  signature: string;
+}
+
+export class StoreIdentityDTO {
+  @IsDefined()
+  identity: string;
 }

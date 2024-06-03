@@ -10,6 +10,7 @@ import {
   UseGuards,
   UnprocessableEntityException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
@@ -159,13 +160,35 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     type: Boolean,
-    description:
-      'false or returning the id of the user whose otp has been entered',
+    description: 'false or returning an auth token',
   })
   @Post('/otp/validate')
   async validateOtp(@Body() { otp }: OtpDTO) {
-    const res = await this.authService.checkOtpValidity(otp);
+    const userId = await this.authService.checkOtpValidity(otp);
 
-    return res;
+    if (!userId) throw new ForbiddenException('OTP invalid');
+
+    await this.prismaService.nonce.deleteMany({
+      where: {
+        userId,
+      },
+    });
+
+    const token = generateRandomString({
+      length: 32,
+      lowercase: true,
+      numerical: true,
+      uppercase: true,
+    });
+
+    await this.prismaService.nonce.create({
+      data: {
+        nonce: token,
+        userId,
+        expiresAt: `${Date.now() + this.authService.TokenExpirationDuration}`,
+      },
+    });
+
+    return token;
   }
 }

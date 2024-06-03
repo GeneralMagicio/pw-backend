@@ -79,7 +79,7 @@ export class AuthService {
 
     if (!record) return false;
 
-    return record.user.address;
+    return record.user.id;
   };
 
   generateNonce = () => {

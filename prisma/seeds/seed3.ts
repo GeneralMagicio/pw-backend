@@ -207,4 +207,4 @@ const main = async () => {
   await prisma.$disconnect();
 };
 
-void main();
+// void main();
