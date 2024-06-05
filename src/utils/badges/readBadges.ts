@@ -1,4 +1,6 @@
 import * as fs from 'fs';
+import * as path from 'path';
+
 import { ethers } from 'ethers';
 
 // Type definitions for badge data
@@ -76,9 +78,7 @@ export const processCSV = async (csvPath: string) => {
   return badgesMap;
 };
 
-void processCSV(
-  '/Users/mahdighajary/Projects/pw-backend/src/utils/badges/points_snapshot.csv',
-);
+void processCSV('./assets/points_snapshot.csv');
 
 // Function to get badge data by user address from the Map
 export const getBadges = async (
