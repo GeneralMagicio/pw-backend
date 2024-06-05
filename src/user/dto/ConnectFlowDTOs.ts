@@ -13,3 +13,8 @@ export class StoreIdentityDTO {
   @IsDefined()
   identity: string;
 }
+export class GetBadgesDTO {
+  @IsEthereumAddress()
+  @IsDefined()
+  address: string;
+}

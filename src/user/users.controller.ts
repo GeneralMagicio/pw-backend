@@ -1,48 +1,101 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Logger,
+  Param,
   Post,
+  Query,
   Req,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 
 import { UsersService } from './users.service';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
-import { StoreBadgesDTO } from './dto/ConnectFlowDTOs';
+import {
+  GetBadgesDTO,
+  StoreBadgesDTO,
+  StoreIdentityDTO,
+} from './dto/ConnectFlowDTOs';
 import { getBadges, processedCSV } from 'src/utils/badges/readBadges';
 import { verifySignature } from 'src/utils/badges';
+import { PrismaService } from 'src/prisma.service';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller({ path: 'user' })
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
-  // @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard)
   @Post('/store-badges')
   async storeBadges(
     @Req() { userId }: AuthedReq,
     @Body() { mainAddress, signature }: StoreBadgesDTO,
   ) {
-    if (!(await verifySignature('Pairwise', signature, mainAddress)))
+    if (
+      !(await verifySignature(
+        'Sign this message to generate your Semaphore identity.',
+        signature,
+        mainAddress,
+      ))
+    )
       throw new UnauthorizedException('Signature invalid');
 
-    const badges = getBadges(processedCSV, mainAddress);
+    const badges = await getBadges(processedCSV, mainAddress);
+
+    if (!badges) throw new ForbiddenException('Address is not a badge-holder');
+
+    await this.prismaService.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        badges,
+      },
+    });
 
     return badges;
   }
 
-  // @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard)
   @Get('/badges')
+  async getBadges(@Req() { userId }: AuthedReq) {
+    const res = await this.prismaService.user.findUnique({
+      select: { badges: true },
+      where: { id: userId },
+    });
+
+    return res?.badges || {};
+  }
+
+  @Get('/public/badges')
+  async getPublicBadges(@Query() { address }: GetBadgesDTO) {
+    const badges = await getBadges(processedCSV, address);
+
+    return badges || {};
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('/store-identity')
   async storeIdentity(
     @Req() { userId }: AuthedReq,
-    @Body() { mainAddress, signature }: StoreBadgesDTO,
+    @Body() { identity }: StoreIdentityDTO,
   ) {
-    // Do some custom identity verification
+    // if (!verifyIdentity(identity))
+    //   throw new UnauthorizedException('Invalid identity format');
 
-    const badges = getBadges(processedCSV, mainAddress);
+    await this.prismaService.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        identity,
+      },
+    });
 
-    return badges;
+    return 'success';
   }
 }

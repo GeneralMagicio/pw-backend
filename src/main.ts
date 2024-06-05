@@ -65,7 +65,8 @@ async function bootstrap() {
         if (
           !origin ||
           CorsWhitelist.includes(origin) ||
-          (origin.includes('vercel.app') && origin.includes('pairwise'))
+          (origin.includes('vercel.app') && origin.includes('pairwise')) ||
+          origin.includes('localhost:')
         )
           return callback(null, true);
         return callback(new Error('Not allowed by CORS'));
