@@ -55,11 +55,16 @@ export const processCSV = async (csvPath: string) => {
   const csvContent = fs.readFileSync(csvPath).toString();
 
   const rows = csvContent.split(/\r?\n/);
-  const headers = rows[0].split(',');
-  console.log('csvContent:', csvContent);
+  // console.log('rows[0]', rows[0]);
+  // console.log('rows[1]', rows[1]);
+  // console.log('number of rows:', rows.length);
+  const headers = rows[1].split(',');
+  // console.log('csvContent:', csvContent);
   const badgesMap = new Map<string, RawBadgeData>();
-  for (let i = 1; i < rows.length; i++) {
+  for (let i = 2; i < rows.length; i++) {
     const cells = rows[i].split(',');
+    // console.log('Reached here for row', i);
+    // console.log('cell length', cells.length, 'headers length', headers.length);
     if (cells.length === headers.length) {
       const userAddress = cells[0].trim();
       const userData = {
@@ -68,12 +73,18 @@ export const processCSV = async (csvPath: string) => {
         recipientsPoints: parseInt(cells[3], 10),
         badgeholderPoints: parseInt(cells[4], 10),
       };
+      // console.log('user data for row', userData);
       if (!checkCSVDataValidity(userData)) return;
 
+      // console.log('badge map should set');
       badgesMap.set(userAddress, userData);
     }
   }
-  console.log('Badges Map:', badgesMap);
+  // console.log('Badges Map:', badgesMap.size);
+  // console.log(
+  //   'Badges Map:',
+  //   badgesMap.get('0x316131DC685A63B1dbC8E0Fc6B893ec51CF159DA'),
+  // );
   processedCSV = badgesMap;
   return badgesMap;
 };
