@@ -4,6 +4,7 @@ type Attestation = {
   listName: string;
   listMetadataPtrType: number; // Assuming uint256 is represented as number
   listMetadataPtr: string;
+  attester: string;
   // projects: string[];
   // proof: string[];
 };
@@ -24,7 +25,7 @@ interface DecodedDataItem {
 interface GroupByAttestationItem {
   id: string;
   decodedDataJson: string; // This will be parsed into DecodedDataArray
-  // Add other properties here if they exist
+  attester: string;
 }
 
 interface GraphQlResponse {
@@ -42,10 +43,11 @@ export const getAllAttestations = async (
   query AllAttestationsQuery($where: AttestationWhereInput) {
     groupByAttestation(
       where: $where,
-      by: [id, decodedDataJson]
+      by: [id, decodedDataJson, attester]
     ) {
       id
       decodedDataJson
+			attester
     }
   }
 `;
@@ -60,7 +62,7 @@ export const getAllAttestations = async (
         schemaId: {
           equals: schemaId,
         },
-        // attester: { equals: address },
+        // attester: { equals: '0xcb73a971e3643f756E0Ce8c81cccA3D7B6AB2b9d' },
       },
       by: null,
     },
@@ -73,20 +75,21 @@ export const getAllAttestations = async (
     }),
   );
 
-  console.log('temp is', temp);
+  // console.log('temp is', temp);
 
   const attestations: Attestation[] = [];
 
-  temp.forEach(({ decodedDataJson }) => {
+  temp.forEach(({ decodedDataJson, attester }) => {
     const attestation: any = {};
+    attestation['attester'] = attester;
     for (const field of decodedDataJson) {
-      console.log('field', field);
+      // console.log('field', field);
       attestation[field.name] = field.value.value;
     }
     attestations.push(attestation);
   });
 
-  console.log('attestations:', attestations);
+  // console.log('attestations:', attestations);
 
   return attestations;
 };

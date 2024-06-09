@@ -12,10 +12,9 @@ import {
   getRankingDistribution,
   getVoteWeight,
   initializeWeightList,
-  printLists,
 } from './utils';
 import axios from 'axios';
-import { getBadges, processedCSV } from 'src/utils/badges/readBadges';
+import { BadgeData } from 'src/utils/badges/readBadges';
 
 const readAllAttestations = async () => {
   const chain = optimismSepolia;
@@ -27,7 +26,11 @@ const readAllAttestations = async () => {
   return attestations;
 };
 
-export const calculateWeightedLists = async () => {
+export const calculateWeightedLists = async (
+  getBadgesFromDb: (
+    disposableAddress: string,
+  ) => Promise<BadgeData | undefined>,
+) => {
   const attestations = await readAllAttestations();
 
   // TODO: You can use object cloning and only do it once
@@ -62,9 +65,14 @@ export const calculateWeightedLists = async () => {
     delegateWeightList,
   ];
 
-  console.log('reaching here?', attestations);
+  // console.log('reaching here?', attestations);
   for (const attestation of attestations) {
     if (!checkAttestationValidity(attestation)) continue;
+
+    // console.log('Attester is', attestation.attester);
+    const badges = await getBadgesFromDb(attestation.attester);
+    if (!badges) continue;
+    // console.log('Attester has this badge', badges);
 
     // console.log('attestation', attestation);
     let metadata: AttestationMetadata;
@@ -77,14 +85,7 @@ export const calculateWeightedLists = async () => {
       continue;
     }
 
-    const badges = await getBadges(
-      processedCSV,
-      // Add attestation author to the attestation obejct too
-      '0x316131DC685A63B1dbC8E0Fc6B893ec51CF159DA',
-    );
-    if (!badges) continue;
-
-    console.log('metadata for attestation', metadata, attestation);
+    // console.log('metadata for attestation', metadata, attestation);
 
     for (let i = 0; i < metadata.listContent.length; i++) {
       const project = metadata.listContent[i];
@@ -113,7 +114,7 @@ export const calculateWeightedLists = async () => {
     }
   }
 
-  printLists(lists);
+  // printLists(lists);
 
   return lists;
 };

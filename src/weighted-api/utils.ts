@@ -1,9 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import {
-  BadgeData,
-  getBadges,
-  processedCSV,
-} from 'src/utils/badges/readBadges';
+import { BadgeData } from 'src/utils/badges/readBadges';
 
 export type StakeHolderType =
   | 'badgeholder'
@@ -24,7 +20,7 @@ interface ProjectWeight {
 export interface CategoryWeight {
   categoryName: string;
   weight: number;
-  children: ProjectWeight[];
+  projects: ProjectWeight[];
 }
 
 export type AttestationMetadata = {
@@ -69,7 +65,7 @@ export const initializeWeightList = async () => {
 
     weightList.push({
       categoryName: category.name,
-      children: children.map(({ RPGF4Id }) => {
+      projects: children.map(({ RPGF4Id }) => {
         if (!RPGF4Id) throw new Error('All projects must have a RPGF4 id');
         return {
           projectRPGFId: RPGF4Id,
@@ -94,13 +90,13 @@ export const addWeightToList = (
   weight: number,
   list: CategoryWeight[],
 ) => {
-  console.log('Adding', weight, 'to project', projectId);
+  // console.log('Adding', weight, 'to project', projectId);
   const clonedList = cloneObjects(list);
 
   for (const category of clonedList) {
     if (category.categoryName !== categoryName) continue;
 
-    for (const project of category.children) {
+    for (const project of category.projects) {
       if (project.projectRPGFId !== projectId) continue;
 
       project.weight = project.weight + weight;
@@ -145,7 +141,7 @@ export const printLists = (lists: List[]) => {
         category.categoryName,
         '*************',
       );
-      for (const project of category.children) {
+      for (const project of category.projects) {
         console.log('************* Project:', project.weight, '*************');
       }
     }

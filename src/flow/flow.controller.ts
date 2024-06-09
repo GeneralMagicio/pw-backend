@@ -151,7 +151,9 @@ export class FlowController {
   })
   @Get('/temp/api')
   async test4() {
-    const lists = await calculateWeightedLists();
+    const lists = await calculateWeightedLists(
+      this.flowService.getBadgesFromDb,
+    );
 
     return lists;
   }

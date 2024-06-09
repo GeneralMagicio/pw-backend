@@ -23,6 +23,7 @@ import { InclusionState, ProjectType } from '@prisma/client';
 import axios from 'axios';
 import * as fs from 'fs';
 import * as FormData from 'form-data';
+import { BadgeData } from 'src/utils/badges/readBadges';
 
 @Injectable()
 export class FlowService {
@@ -1133,6 +1134,17 @@ export class FlowService {
       share: el.share,
       name: el.name,
     }));
+  };
+
+  getBadgesFromDb = async (address: string): Promise<BadgeData | undefined> => {
+    const res = await this.prismaService.user.findFirst({
+      select: { badges: true },
+      where: { address },
+    });
+
+    if (!res || !res.badges) return undefined;
+
+    return res.badges.valueOf() as BadgeData;
   };
 
   breakOverallRankingDown = (input: CollectionRanking) => {
