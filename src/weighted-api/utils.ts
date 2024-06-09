@@ -1,13 +1,27 @@
 import { PrismaClient } from '@prisma/client';
+import {
+  BadgeData,
+  getBadges,
+  processedCSV,
+} from 'src/utils/badges/readBadges';
 
-type StakeHolderType = 'badgeholder' | 'delegate' | 'recipient' | 'holder';
+export type StakeHolderType =
+  | 'badgeholder'
+  | 'delegate'
+  | 'recipient'
+  | 'holder';
+
+export interface List {
+  weightList: CategoryWeight[];
+  type: StakeHolderType;
+}
 
 interface ProjectWeight {
   projectRPGFId: string;
   weight: number;
 }
 
-interface CategoryWeight {
+export interface CategoryWeight {
   categoryName: string;
   weight: number;
   children: ProjectWeight[];
@@ -98,10 +112,21 @@ export const addWeightToList = (
 
 // TODO: rewrite this part
 export const getVoteWeight = (
-  userId: number,
+  badges: BadgeData,
   stakeHolderType: StakeHolderType,
 ) => {
-  return 1;
+  switch (stakeHolderType) {
+    case 'badgeholder':
+      return badges.badgeholderPoints || 0;
+    case 'recipient':
+      return badges.recipientsPoints || 0;
+    case 'delegate':
+      return badges.delegatePoints || 0;
+    case 'holder':
+      return badges.holderPoints || 0;
+    default:
+      return 0;
+  }
 };
 
 // TODO: Make this as sophisticated as you want
@@ -109,4 +134,20 @@ export const getRankingDistribution = (rank: number, total: number) => {
   const totalWeight = (1 + total) * (total / 2);
 
   return (total + 1 - rank) / totalWeight;
+};
+
+export const printLists = (lists: List[]) => {
+  for (const list of lists) {
+    console.log(list.type, '-------------------------------------');
+    for (const category of list.weightList) {
+      console.log(
+        '************* Category:',
+        category.categoryName,
+        '*************',
+      );
+      for (const project of category.children) {
+        console.log('************* Project:', project.weight, '*************');
+      }
+    }
+  }
 };

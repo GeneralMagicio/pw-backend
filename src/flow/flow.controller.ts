@@ -25,6 +25,7 @@ import {
   FinishCollectionBody,
   InclusionProjectBody,
 } from './dto/bodies';
+import { calculateWeightedLists } from 'src/weighted-api/main';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -142,6 +143,17 @@ export class FlowController {
   @Get('/temp/test3')
   async test3() {
     return await this.flowService.populateInitialRanking(1);
+  }
+
+  // @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used for a pairwise vote between two collections',
+  })
+  @Get('/temp/api')
+  async test4() {
+    const lists = await calculateWeightedLists();
+
+    return lists;
   }
 
   // @UseGuards(AuthGuard)

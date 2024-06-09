@@ -11,7 +11,7 @@ type RawBadgeData = {
   badgeholderPoints: 0 | 1;
 };
 
-type BadgeData = {
+export type BadgeData = {
   holderPoints?: number;
   delegatePoints?: number;
   recipientsPoints?: 1;
