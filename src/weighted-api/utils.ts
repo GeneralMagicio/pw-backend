@@ -132,6 +132,14 @@ export const getRankingDistribution = (rank: number, total: number) => {
   return (total + 1 - rank) / totalWeight;
 };
 
+export const sortWeightedList = (list: List) => {
+  list.weightList.sort((a, b) => b.weight - a.weight);
+  for (const category of list.weightList) {
+    category.projects.sort((a, b) => b.weight - a.weight);
+  }
+  return list;
+};
+
 export const printLists = (lists: List[]) => {
   for (const list of lists) {
     console.log(list.type, '-------------------------------------');

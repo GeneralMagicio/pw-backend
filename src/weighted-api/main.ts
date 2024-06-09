@@ -12,6 +12,7 @@ import {
   getRankingDistribution,
   getVoteWeight,
   initializeWeightList,
+  sortWeightedList,
 } from './utils';
 import axios from 'axios';
 import { BadgeData } from 'src/utils/badges/readBadges';
@@ -116,7 +117,7 @@ export const calculateWeightedLists = async (
 
   // printLists(lists);
 
-  return lists;
+  return lists.map((list) => sortWeightedList(list));
 };
 
 // void main();
