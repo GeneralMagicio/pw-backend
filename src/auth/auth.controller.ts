@@ -168,11 +168,16 @@ export class AuthController {
 
     if (!userId) throw new ForbiddenException('OTP invalid');
 
-    await this.prismaService.nonce.deleteMany({
-      where: {
-        userId,
-      },
-    });
+    await Promise.all([
+      this.prismaService.nonce.deleteMany({
+        where: {
+          userId,
+        },
+      }),
+      this.prismaService.otp.delete({
+        where: { userId },
+      }),
+    ]);
 
     const token = generateRandomString({
       length: 32,

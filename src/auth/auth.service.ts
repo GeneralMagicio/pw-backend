@@ -1,4 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { verifySignature } from 'thirdweb/auth';
 import { generateRandomString } from 'src/utils';
 import { PrismaService } from 'src/prisma.service';
@@ -46,9 +51,18 @@ export class AuthService {
           gte: `${Date.now()}`,
         },
       },
+      include: { user: true },
     });
 
+    const user = record?.user;
+
+    if (!user) throw new InternalServerErrorException("User doesn't exist");
+
+    if (user.identity?.valueOf() || user.badges?.valueOf())
+      throw new ForbiddenException('User has already connected');
+
     if (record) return record.otp;
+
     const otp = generateRandomString({ length: 6, numerical: true });
     await this.prismaService.otp.deleteMany({
       where: {

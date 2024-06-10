@@ -3,6 +3,7 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  InternalServerErrorException,
   Logger,
   Param,
   Post,
@@ -48,6 +49,16 @@ export class UsersController {
 
     if (!badges) throw new ForbiddenException('Address is not a badge-holder');
 
+    const user = await this.prismaService.user.findUnique({
+      select: { badges: true, identity: true },
+      where: { id: userId },
+    });
+
+    if (!user) throw new InternalServerErrorException("User doesn't exist");
+
+    if (user.identity?.valueOf() || user.badges?.valueOf())
+      throw new ForbiddenException('User has already connected');
+
     await this.prismaService.user.update({
       where: {
         id: userId,
@@ -86,6 +97,16 @@ export class UsersController {
   ) {
     // if (!verifyIdentity(identity))
     //   throw new UnauthorizedException('Invalid identity format');
+
+    const user = await this.prismaService.user.findUnique({
+      select: { badges: true, identity: true },
+      where: { id: userId },
+    });
+
+    if (!user) throw new InternalServerErrorException("User doesn't exist");
+
+    if (user.identity?.valueOf() || user.badges?.valueOf())
+      throw new ForbiddenException('User has already connected');
 
     await this.prismaService.user.update({
       where: {
