@@ -54,14 +54,16 @@ export class AuthService {
       include: { user: true },
     });
 
-    const user = record?.user;
+    if (record) {
+      const { user } = record;
 
-    if (!user) throw new InternalServerErrorException("User doesn't exist");
+      if (!user) throw new InternalServerErrorException("User doesn't exist");
 
-    if (user.identity?.valueOf() || user.badges?.valueOf())
-      throw new ForbiddenException('User has already connected');
+      if (user.identity?.valueOf() || user.badges?.valueOf())
+        throw new ForbiddenException('User has already connected');
 
-    if (record) return record.otp;
+      return record.otp;
+    }
 
     const otp = generateRandomString({ length: 6, numerical: true });
     await this.prismaService.otp.deleteMany({

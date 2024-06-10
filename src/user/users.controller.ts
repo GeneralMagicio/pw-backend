@@ -56,7 +56,7 @@ export class UsersController {
 
     if (!user) throw new InternalServerErrorException("User doesn't exist");
 
-    if (user.identity?.valueOf() || user.badges?.valueOf())
+    if (user.badges?.valueOf())
       throw new ForbiddenException('User has already connected');
 
     await this.prismaService.user.update({
@@ -105,7 +105,7 @@ export class UsersController {
 
     if (!user) throw new InternalServerErrorException("User doesn't exist");
 
-    if (user.identity?.valueOf() || user.badges?.valueOf())
+    if (user.identity?.valueOf())
       throw new ForbiddenException('User has already connected');
 
     await this.prismaService.user.update({
