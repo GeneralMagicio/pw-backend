@@ -13,7 +13,7 @@ model User {
   address            String                   @unique()
   isBadgeHolder      Int                      @map("is_badgeholder")
   createdAt          DateTime                 @default(now()) @map("created_at")
-  identity           Json?
+  identity           Json?                    @unique()
   badges             Json?
   projectVotes       Vote[]
   expertiseVotes     ExpertiseVote[]
