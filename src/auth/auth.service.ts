@@ -44,26 +44,28 @@ export class AuthService {
   };
 
   assignOtp = async (userId: number) => {
-    const record = await this.prismaService.otp.findFirst({
-      where: {
-        userId,
-        expiresAt: {
-          gte: `${Date.now()}`,
+    const [record, user] = await Promise.all([
+      this.prismaService.otp.findFirst({
+        where: {
+          userId,
+          expiresAt: {
+            gte: `${Date.now()}`,
+          },
         },
-      },
-      include: { user: true },
-    });
+        include: { user: true },
+      }),
+      this.prismaService.user.findUnique({
+        where: { id: userId },
+        select: { badges: true, identity: true },
+      }),
+    ]);
 
-    if (record) {
-      const { user } = record;
+    if (!user) throw new InternalServerErrorException("User doesn't exist");
 
-      if (!user) throw new InternalServerErrorException("User doesn't exist");
+    if (user.identity?.valueOf() || user.badges?.valueOf())
+      throw new ForbiddenException('User has already connected');
 
-      if (user.identity?.valueOf() || user.badges?.valueOf())
-        throw new ForbiddenException('User has already connected');
-
-      return record.otp;
-    }
+    if (record) return record.otp;
 
     const otp = generateRandomString({ length: 6, numerical: true });
     await this.prismaService.otp.deleteMany({

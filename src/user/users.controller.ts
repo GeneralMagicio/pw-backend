@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   Body,
+  ConflictException,
   Controller,
   ForbiddenException,
   Get,
@@ -24,6 +26,7 @@ import { getBadges, processedCSV } from 'src/utils/badges/readBadges';
 import { verifySignature } from 'src/utils/badges';
 import { PrismaService } from 'src/prisma.service';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { Prisma } from '@prisma/client';
 
 @Controller({ path: 'user' })
 export class UsersController {
@@ -58,6 +61,9 @@ export class UsersController {
 
     if (user.badges?.valueOf())
       throw new ForbiddenException('User has already connected');
+
+    if (!user.identity?.valueOf)
+      throw new BadRequestException('You need to insert your identity first');
 
     await this.prismaService.user.update({
       where: {
@@ -108,14 +114,23 @@ export class UsersController {
     if (user.identity?.valueOf())
       throw new ForbiddenException('User has already connected');
 
-    await this.prismaService.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        identity,
-      },
-    });
+    try {
+      await this.prismaService.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          identity,
+        },
+      });
+    } catch (e: unknown) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException('This eth address is already connected');
+      }
+    }
 
     return 'success';
   }
