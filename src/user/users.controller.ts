@@ -7,7 +7,6 @@ import {
   Get,
   InternalServerErrorException,
   Logger,
-  Param,
   Post,
   Query,
   Req,
@@ -15,18 +14,18 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { UsersService } from './users.service';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import {
   GetBadgesDTO,
   StoreBadgesDTO,
   StoreIdentityDTO,
 } from './dto/ConnectFlowDTOs';
-import { getBadges, processedCSV } from 'src/utils/badges/readBadges';
+import { getBadges } from 'src/utils/badges/readBadges';
 import { verifySignature } from 'src/utils/badges';
 import { PrismaService } from 'src/prisma.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { Prisma } from '@prisma/client';
+import { snapshotPoints } from 'src/utils/badges/snapshot';
 
 @Controller({ path: 'user' })
 export class UsersController {
@@ -48,7 +47,7 @@ export class UsersController {
     )
       throw new UnauthorizedException('Signature invalid');
 
-    const badges = await getBadges(processedCSV, mainAddress);
+    const badges = await getBadges(snapshotPoints, mainAddress);
 
     if (!badges) throw new ForbiddenException('Address is not a badge-holder');
 
@@ -90,7 +89,7 @@ export class UsersController {
 
   @Get('/public/badges')
   async getPublicBadges(@Query() { address }: GetBadgesDTO) {
-    const badges = await getBadges(processedCSV, address);
+    const badges = await getBadges(snapshotPoints, address);
 
     return badges || {};
   }

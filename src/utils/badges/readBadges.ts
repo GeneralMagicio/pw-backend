@@ -1,21 +1,24 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
 import { ethers } from 'ethers';
+import { RawSnapshotPoint } from './snapshot';
 
-// Type definitions for badge data
-type RawBadgeData = {
-  holderPoints: number;
-  delegatePoints: number;
-  recipientsPoints: 0 | 1;
-  badgeholderPoints: 0 | 1;
-};
+const medalTypes = [
+  'Bronze',
+  'Diamond',
+  'Platnium',
+  'Gold',
+  'Silver',
+  'WHALE',
+] as const;
 
 export type BadgeData = {
   holderPoints?: number;
   delegatePoints?: number;
+  holderAmount?: number;
+  delegateAmount?: number;
   recipientsPoints?: 1;
   badgeholderPoints?: 1;
+  holderType?: (typeof medalTypes)[number];
+  delegateType?: (typeof medalTypes)[number];
 };
 
 // Import the ethers library
@@ -36,72 +39,101 @@ async function reverseENSLookup(address: string) {
   }
 }
 
-const checkCSVDataValidity = (data: any): data is RawBadgeData => {
-  if (
-    ![0, 1].includes(data.recipientsPoints) ||
-    ![0, 1].includes(data.badgeholderPoints) ||
-    !(data.holderPoints >= 0) ||
-    !(data.delegatePoints >= 0)
-  )
-    throw new Error('Invalid CSV file');
+// const checkCSVDataValidity = (data: any): data is RawBadgeData => {
+//   if (
+//     ![0, 1].includes(data.recipientsPoints) ||
+//     ![0, 1].includes(data.badgeholderPoints) ||
+//     !(data.holderPoints >= 0) ||
+//     !(data.delegatePoints >= 0)
+//   )
+//     throw new Error('Invalid CSV file');
 
-  return true;
-};
+//   return true;
+// };
 
-export let processedCSV: Map<string, RawBadgeData>;
+// export let processedCSV: Map<string, RawBadgeData>;
 
-// Function to process CSV content and return a Map of BadgeData
-export const processCSV = async (csvPath: string) => {
-  const csvContent = fs.readFileSync(csvPath).toString();
+// // Function to process CSV content and return a Map of BadgeData
+// export const processCSV = async (csvPath: string) => {
+//   const csvContent = fs.readFileSync(csvPath).toString();
 
-  const rows = csvContent.split(/\r?\n/);
-  // console.log('rows[0]', rows[0]);
-  // console.log('rows[1]', rows[1]);
-  // console.log('number of rows:', rows.length);
-  const headers = rows[1].split(',');
-  // console.log('csvContent:', csvContent);
-  const badgesMap = new Map<string, RawBadgeData>();
-  for (let i = 2; i < rows.length; i++) {
-    const cells = rows[i].split(',');
-    // console.log('Reached here for row', i);
-    // console.log('cell length', cells.length, 'headers length', headers.length);
-    if (cells.length === headers.length) {
-      const userAddress = cells[0].trim();
-      const userData = {
-        holderPoints: parseInt(cells[1], 10),
-        delegatePoints: parseInt(cells[2], 10),
-        recipientsPoints: parseInt(cells[3], 10),
-        badgeholderPoints: parseInt(cells[4], 10),
-      };
-      // console.log('user data for row', userData);
-      if (!checkCSVDataValidity(userData)) return;
+//   const rows = csvContent.split(/\r?\n/);
+//   // console.log('rows[0]', rows[0]);
+//   // console.log('rows[1]', rows[1]);
+//   // console.log('number of rows:', rows.length);
+//   const headers = rows[1].split(',');
+//   // console.log('csvContent:', csvContent);
+//   const badgesMap = new Map<string, RawBadgeData>();
+//   for (let i = 2; i < rows.length; i++) {
+//     const cells = rows[i].split(',');
+//     // console.log('Reached here for row', i);
+//     // console.log('cell length', cells.length, 'headers length', headers.length);
+//     if (cells.length === headers.length) {
+//       const userAddress = cells[0].trim();
+//       const userData = {
+//         holderPoints: parseInt(cells[1], 10),
+//         delegatePoints: parseInt(cells[2], 10),
+//         recipientsPoints: parseInt(cells[3], 10),
+//         badgeholderPoints: parseInt(cells[4], 10),
+//       };
+//       // console.log('user data for row', userData);
+//       if (!checkCSVDataValidity(userData)) return;
 
-      // console.log('badge map should set');
-      badgesMap.set(userAddress, userData);
-    }
-  }
-  // console.log('Badges Map:', badgesMap.size);
-  // console.log(
-  //   'Badges Map:',
-  //   badgesMap.get('0x316131DC685A63B1dbC8E0Fc6B893ec51CF159DA'),
-  // );
-  processedCSV = badgesMap;
-  return badgesMap;
-};
+//       // console.log('badge map should set');
+//       badgesMap.set(userAddress, userData);
+//     }
+//   }
+//   // console.log('Badges Map:', badgesMap.size);
+//   // console.log(
+//   //   'Badges Map:',
+//   //   badgesMap.get('0x316131DC685A63B1dbC8E0Fc6B893ec51CF159DA'),
+//   // );
+//   processedCSV = badgesMap;
+//   return badgesMap;
+// };
 
-void processCSV('./assets/points_snapshot.csv');
+// void processCSV('./assets/points_snapshot.csv');
+
+// const validatePoint = () => true;
+
+// const badgesMap = () => {
+//   const map = new Map<string, RawBadgeData>();
+//   for (const point of snapshotPoints) {
+//     const userAddress = point.User.trim();
+//     const userData = {
+//       holderPoints: parseInt(point.holderPoints, 10),
+//       delegatePoints: parseInt(point.delegatePoints, 10),
+//       recipientsPoints: parseInt(point.recipientsPoints, 10),
+//       badgeholderPoints: parseInt(point.badgeholderPoints, 10),
+//     };
+//     map.set(userAddress, userData);
+//   }
+// };
+// snapshotPoints.reduce<>(
+//   (curr, acc, i) => {
+//     return ({...acc, [curr.]: {
+
+//     }})
+//   },
+// );
+
+// const validate
+
+function isNumeric(str: string): boolean {
+  return /^\d+$/.test(str); // Matches positive integers
+}
 
 // Function to get badge data by user address from the Map
 export const getBadges = async (
-  badgesMap: Map<string, RawBadgeData>,
+  points: RawSnapshotPoint[],
   userAddress: string,
 ) => {
-  let row: RawBadgeData | undefined = undefined;
+  let row: RawSnapshotPoint | undefined = undefined;
   const ensName = await reverseENSLookup(userAddress);
-  const temp = badgesMap.get(userAddress);
+  const temp = points.find((el) => el.User === userAddress);
   if (!temp) {
     if (ensName) {
-      const temp2 = badgesMap.get(ensName);
+      const temp2 = points.find((el) => el.User === ensName);
       if (temp2) row = temp2;
     }
   } else {
@@ -113,11 +145,15 @@ export const getBadges = async (
   const filtered: BadgeData = {};
   let key: keyof typeof row;
   for (key in row) {
+    if (key === 'User') continue;
     const value = row[key];
-    if (value === 0) continue;
+    if (value === '0' || value === 'null') continue;
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    else filtered[key] = row[key];
+    if (isNumeric(value)) filtered[key] = Number(value);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    else filtered[key] = value;
   }
 
   return filtered;
