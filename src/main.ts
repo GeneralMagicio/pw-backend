@@ -6,6 +6,7 @@ import * as cors from 'cors';
 import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
+import { main } from './project-reading';
 
 const CorsWhitelist = [
   'https://localhost:3001',
@@ -26,6 +27,7 @@ const CorsWhitelist = [
 ];
 
 async function bootstrap() {
+  await main();
   let httpsOptions = undefined;
   if (process.env.NODE_ENV === 'development') {
     httpsOptions = {
