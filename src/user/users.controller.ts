@@ -12,6 +12,7 @@ import {
   Req,
   UnauthorizedException,
   UseGuards,
+  Headers,
 } from '@nestjs/common';
 
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
@@ -92,6 +93,27 @@ export class UsersController {
     const badges = await getBadges(snapshotPoints, address);
 
     return badges || {};
+  }
+
+  @Get('/smart-wallet-badges')
+  async getSmartWalletBadges(@Headers('authorization') authorization: string) {
+    if (authorization !== process.env.Smart_Wallet_Badges_Authorization)
+      throw new UnauthorizedException();
+    const userBadges = await this.prismaService.user.findMany({
+      select: {
+        address: true,
+        badges: true,
+      },
+      where: {
+        badges: {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          not: null,
+        },
+      },
+    });
+
+    return userBadges;
   }
 
   @UseGuards(AuthGuard)
