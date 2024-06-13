@@ -133,7 +133,11 @@ export const main = async () => {
     // if (count > 20) break;
   }
 
-  const filteredArray = filterJsonArray(totalProjects);
+  const filteredArray = filterJsonArray(
+    totalProjects.sort((a, b) =>
+      a.initialCategory.localeCompare(b.initialCategory),
+    ),
+  );
   // Convert JSON to CSV
   const csv = json2csv(filteredArray);
 

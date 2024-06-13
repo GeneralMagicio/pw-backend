@@ -632,6 +632,31 @@ export class FlowService {
     return hasCollectionChildren === null ? true : false;
   };
 
+  async finishCollection(userId: number, collectionId: number) {
+    const [isFinished, isLastLayerCollection, hasThresholdVotes] =
+      await Promise.all([
+        this.isCollectionFinished(userId, collectionId),
+        this.isLastLayerCollection(collectionId),
+        this.hasThresholdVotes(collectionId, userId),
+      ]);
+
+    if (isFinished) return;
+    if (!isLastLayerCollection)
+      throw new ForbiddenException(
+        'Just last layer categories are finish-able',
+      );
+    if (!hasThresholdVotes)
+      throw new ForbiddenException(
+        'You need to vote for the minimum threshold times',
+      );
+
+    await this.prismaService.userCollectionFinish.create({
+      data: { userId: userId, collectionId: collectionId },
+    });
+
+    await this.saveResultsFromVotes(userId, collectionId);
+  }
+
   saveResultsFromVotes = async (
     userId: number,
     collectionId: number | null,
@@ -991,12 +1016,7 @@ export class FlowService {
     if (allVotes.length === combinations.length) {
       if (collection) {
         // There's no other pairs to vote from so finishing the collection automatically
-        await this.prismaService.userCollectionFinish.create({
-          data: {
-            collectionId: collection.id,
-            userId,
-          },
-        });
+        await this.finishCollection(userId, collection.id);
       }
 
       return {

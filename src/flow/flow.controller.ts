@@ -158,6 +158,20 @@ export class FlowController {
     return lists;
   }
 
+  // @Get('/temp/ranking')
+  // async test5() {
+  //   const ranking = await this.flowService.saveResultsFromVotes(21, 178);
+
+  //   return ranking;
+  // }
+
+  // @Get('/temp/finish')
+  // async test6() {
+  //   const ranking = await this.flowService.finis(21, 178);
+
+  //   return ranking;
+  // }
+
   // @UseGuards(AuthGuard)
   // @ApiOperation({
   //   summary: 'Used for a pairwise vote between two collections',
@@ -530,30 +544,7 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Body() { cid }: FinishCollectionBody,
   ) {
-    // const userId = 1;
-    const [isFinished, isLastLayerCollection, hasThresholdVotes] =
-      await Promise.all([
-        this.flowService.isCollectionFinished(userId, cid),
-        this.flowService.isLastLayerCollection(cid),
-        this.flowService.hasThresholdVotes(cid, userId),
-      ]);
-
-    // if (isFinished) throw new ForbiddenException('Already finished');
-    if (isFinished) return 'Success';
-    if (!isLastLayerCollection)
-      throw new ForbiddenException(
-        'Just last layer categories are finish-able',
-      );
-    if (!hasThresholdVotes)
-      throw new ForbiddenException(
-        'You need to vote for the minimum threshold times',
-      );
-
-    await this.prismaService.userCollectionFinish.create({
-      data: { userId: userId, collectionId: cid },
-    });
-
-    await this.flowService.saveResultsFromVotes(userId, cid);
+    await this.flowService.finishCollection(userId, cid);
 
     return 'Success';
   }
