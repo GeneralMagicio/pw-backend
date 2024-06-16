@@ -56,7 +56,7 @@ export const initializeWeightList = async () => {
 
   for (const category of categories) {
     const children = await prisma.project.findMany({
-      select: { RPGF4Id: true },
+      select: { name: true, RPGF4Id: true },
       where: {
         type: 'project',
         parentId: category.id,
@@ -65,9 +65,10 @@ export const initializeWeightList = async () => {
 
     weightList.push({
       categoryName: category.name,
-      projects: children.map(({ RPGF4Id }) => {
+      projects: children.map(({ RPGF4Id, name }) => {
         if (!RPGF4Id) throw new Error('All projects must have a RPGF4 id');
         return {
+          name,
           projectRPGFId: RPGF4Id,
           weight: 0,
         };
