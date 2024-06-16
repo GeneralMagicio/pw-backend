@@ -24,6 +24,7 @@ import {
   DnDBody,
   FinishCollectionBody,
   InclusionProjectBody,
+  InclusionProjectsBulkBody,
 } from './dto/bodies';
 import { calculateWeightedLists } from 'src/weighted-api/main';
 
@@ -472,6 +473,66 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
+  @Post('/dnd-v2')
+  async dndBulk(
+    @Req() { userId }: AuthedReq,
+    @Body()
+    { collectionId, projectIds }: DnDBody,
+  ) {
+    await this.flowService.setInclusionStateBulk(projectIds, userId);
+    // userId = 5;
+    const [includedProjects, shares] = await Promise.all([
+      this.flowService.getIncludedProjectIds(userId, collectionId),
+      this.prismaService.share.findMany({
+        select: {
+          share: true,
+          projectId: true,
+        },
+        where: {
+          userId,
+          project: { parentId: collectionId },
+        },
+        orderBy: {
+          share: 'desc',
+        },
+      }),
+    ]);
+
+    const includedProjectsShares = shares.filter((item) =>
+      includedProjects.includes(item.projectId),
+    );
+
+    if (
+      !areEqualNumberArrays(
+        projectIds,
+        includedProjectsShares.map((item) => item.projectId),
+      )
+    ) {
+      throw new BadRequestException(
+        'All included projects should be in the input',
+      );
+    }
+
+    const promises = includedProjectsShares.map(async (item, index) =>
+      this.prismaService.share.update({
+        where: {
+          userId_projectId: {
+            userId,
+            projectId: projectIds[index],
+          },
+        },
+        data: {
+          share: item.share,
+        },
+      }),
+    );
+
+    await Promise.all(promises);
+
+    return 'success';
+  }
+
+  @UseGuards(AuthGuard)
   @ApiOperation({
     summary:
       'Notifies the server that the user has done an attestation for a collection',
@@ -536,6 +597,19 @@ export class FlowController {
 
   @UseGuards(AuthGuard)
   @ApiOperation({
+    summary: 'Exclude a project from subsequent pairwise ranking',
+  })
+  @Post('/projects/set-inclusion-bulk')
+  async setInclusionBulk(
+    @Req() { userId }: AuthedReq,
+    @Body() { ids }: InclusionProjectsBulkBody,
+  ) {
+    await this.flowService.setInclusionStateBulk(ids, userId);
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
     summary:
       'Used to mark a collection status "finished". After a collection is finished, voting is not longer possible in it',
   })
@@ -571,6 +645,61 @@ export class FlowController {
   }
 
   // @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'All your voting data is removed' })
+  @Get('/test/pa2')
+  async testtest2() {
+    const userId = 48;
+    const collectionId = 170;
+
+    const [variable1, variable2, variable3, variable4, variable5, variable6] =
+      await Promise.all([
+        this.flowService.isCollectionAttested(userId, collectionId),
+        this.flowService.isCollectionFinished(userId, collectionId),
+        this.flowService.hasThresholdVotes(collectionId, userId),
+        this.flowService.isCollectionStarted(userId, collectionId),
+        this.flowService.isCollectionFiltered(userId, collectionId),
+        this.prismaService.projectInclusion.findFirst({
+          where: { userId, project: { parentId: collectionId } },
+        }),
+      ]);
+    return { variable1, variable2, variable3, variable4, variable5, variable6 };
+  }
+
+  // @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'All your voting data is removed' })
+  @Get('/test/pa')
+  async testtest() {
+    const userId = 48;
+    const collectionId = 170;
+
+    const variable1 = await this.flowService.isCollectionAttested(
+      userId,
+      collectionId,
+    );
+    const variable2 = await this.flowService.isCollectionFinished(
+      userId,
+      collectionId,
+    );
+    const variable3 = await this.flowService.hasThresholdVotes(
+      collectionId,
+      userId,
+    );
+    const variable4 = await this.flowService.isCollectionStarted(
+      userId,
+      collectionId,
+    );
+    const variable5 = await this.flowService.isCollectionFiltered(
+      userId,
+      collectionId,
+    );
+    const variable6 = await this.prismaService.projectInclusion.findFirst({
+      where: { userId, project: { parentId: collectionId } },
+    });
+
+    return { variable1, variable2, variable3, variable4, variable5, variable6 };
+  }
+
+  @UseGuards(AuthGuard)
   @ApiOperation({
     summary:
       'Use it at your own risk for testing. It will remove all the data associated with your account',
@@ -588,7 +717,7 @@ export class FlowController {
 
     // const userId = 4;
 
-    // userId = 18;
+    // userId = 448;
 
     await this.prismaService.nonce.deleteMany({
       where: { userId: userId },

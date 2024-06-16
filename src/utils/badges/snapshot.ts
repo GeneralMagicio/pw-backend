@@ -1116,4 +1116,15 @@ export const snapshotPoints: RawSnapshotPoint[] = [
     holderAmount: '4800',
     delegateAmount: '250',
   },
+  {
+    User: '0x7F37e3008207C27360b20ABCFB5fdCc8e37596B8',
+    holderPoints: '5',
+    delegatePoints: '15',
+    recipientsPoints: '0',
+    badgeholderPoints: '1',
+    holderType: 'Bronze',
+    delegateType: 'Platnium',
+    holderAmount: '200',
+    delegateAmount: '1450',
+  },
 ] as const;

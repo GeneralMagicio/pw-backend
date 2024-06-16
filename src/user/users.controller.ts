@@ -88,6 +88,17 @@ export class UsersController {
     return res?.badges || {};
   }
 
+  @UseGuards(AuthGuard)
+  @Get('/identity')
+  async getIdentity(@Req() { userId }: AuthedReq) {
+    const res = await this.prismaService.user.findUnique({
+      select: { identity: true },
+      where: { id: userId },
+    });
+
+    return res?.identity || {};
+  }
+
   @Get('/public/badges')
   async getPublicBadges(@Query() { address }: GetBadgesDTO) {
     const badges = await getBadges(snapshotPoints, address);

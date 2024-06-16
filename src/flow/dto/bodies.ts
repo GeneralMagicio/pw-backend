@@ -15,6 +15,13 @@ export class InclusionProjectBody {
   @IsIn(['included', 'excluded'])
   state: InclusionState;
 }
+export class InclusionProjectsBulkBody {
+  @ApiProperty({ description: 'Project id' })
+  ids: number[];
+
+  @IsIn(['included'])
+  state: InclusionState;
+}
 
 export class DnDBody {
   @ApiProperty({ description: 'collection id' })

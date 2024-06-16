@@ -238,6 +238,42 @@ export class FlowService {
     return res !== null;
   };
 
+  setInclusionStateBulk = async (ids: number[], userId: number) => {
+    const parents = await this.prismaService.$transaction(
+      ids.map((id) =>
+        this.prismaService.project.findUnique({
+          where: { id },
+          select: { parentId: true },
+        }),
+      ),
+    );
+
+    const parentId = parents[0]?.parentId;
+
+    if (new Set(parents.map((el) => el?.parentId)).size !== 1 || !parentId)
+      throw new BadRequestException(
+        'All projects should share the same parent',
+      );
+
+    const allProjects = await this.prismaService.project.findMany({
+      select: { id: true },
+      where: { parentId },
+    });
+
+    const excludedProjects = allProjects
+      .map((el) => el.id)
+      .filter((item) => !ids.includes(item));
+
+    await Promise.allSettled([
+      ...[ids.map((id) => this.setInclusionState(userId, id, 'included'))],
+      ...[
+        excludedProjects.map((id) =>
+          this.setInclusionState(userId, id, 'excluded'),
+        ),
+      ],
+    ]);
+  };
+
   setInclusionState = async (
     userId: number,
     projectId: number,
