@@ -99,28 +99,28 @@ const validate = (input: { share: number }[]) => {
   return false;
 };
 
-export function makeIt100<T extends { share: number }>(input: T[]) {
-  let result = [...input];
+// export function makeIt100<T extends { share: number }>(input: T[]) {
+//   let result = [...input];
 
-  let breakLimit = 0;
-  while (!validate(result) && breakLimit < 100) {
-    const sum = result.reduce((acc, curr) => (acc += curr.share), 0);
+//   let breakLimit = 0;
+//   while (!validate(result) && breakLimit < 100) {
+//     const sum = result.reduce((acc, curr) => (acc += curr.share), 0);
 
-    const temp = result.map((item) => ({
-      ...item,
-      share: (item.share * 1) / sum,
-    }));
+//     const temp = result.map((item) => ({
+//       ...item,
+//       share: (item.share * 1) / sum,
+//     }));
 
-    result = temp.map((item) => ({
-      ...item,
-      share: toFixedNumber(item.share, 6),
-    }));
+//     result = temp.map((item) => ({
+//       ...item,
+//       share: toFixedNumber(item.share, 6),
+//     }));
 
-    breakLimit++;
-  }
+//     breakLimit++;
+//   }
 
-  return result;
-}
+//   return result;
+// }
 
 export const calculateCollectionRanking = (
   input: number[][],

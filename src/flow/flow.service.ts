@@ -11,7 +11,6 @@ import { getPairwiseCombinations, sortCombinations } from 'src/utils';
 import {
   generateZeroMatrix,
   getRankingForSetOfDampingFactors,
-  makeIt100,
 } from 'src/utils/mathematical-logic';
 import { combinations } from 'mathjs';
 import {
@@ -38,56 +37,6 @@ export class FlowService {
 
     return votes !== null;
   };
-
-  // This is only usable for RPGF3 structure
-  // private findMoonAndPlanet = (
-  //   input: CollectionRanking,
-  //   projectName: string,
-  // ) => {
-  //   for (let i = 0; i < input.ranking.length; i++) {
-  //     const planet = input.ranking[i];
-  //     if (planet.hasRanking) {
-  //       const isLastLayer = planet.ranking.find(
-  //         (item) =>
-  //           item.hasRanking === true &&
-  //           !!item.ranking.find((el) => el.name === projectName),
-  //       );
-  //       if (isLastLayer) return { isLastLayer: isLastLayer.name, planet: planet.name };
-  //     }
-  //   }
-  //   return { isLastLayer: '', planet: '' };
-  // };
-
-  // flattenForExcel = (
-  //   input: CollectionRanking,
-  //   overallRanking: CollectionRanking,
-  // ) => {
-  //   const result: {
-  //     Project: string;
-  //     ['Moon Category']: string;
-  //     ['Planet Category']: string;
-  //     ['OP Amount']: number;
-  //   }[] = [];
-  //   for (let i = 0; i < input.ranking.length; i++) {
-  //     const row = input.ranking[i];
-  //     if (row.type === 'project' || row.type === 'composite project') {
-  //       const { isLastLayer, planet } = this.findMoonAndPlanet(
-  //         overallRanking,
-  //         row.name,
-  //       );
-  //       result.push({
-  //         Project: row.name,
-  //         'OP Amount': Math.round(row.share * 30e6),
-  //         'Moon Category': isLastLayer,
-  //         'Planet Category': planet,
-  //       });
-  //     }
-  //     if (row.hasRanking)
-  //       result.push(...this.flattenForExcel(row, overallRanking));
-  //   }
-
-  //   return result;
-  // };
 
   isCollectionFinished = async (userId: number, collectionId: number) => {
     const res = await this.prismaService.userCollectionFinish.findUnique({
@@ -239,7 +188,7 @@ export class FlowService {
   };
 
   setInclusionStateBulk = async (ids: number[], userId: number) => {
-    const parents = await this.prismaService.$transaction(
+    const projects = await this.prismaService.$transaction(
       ids.map((id) =>
         this.prismaService.project.findUnique({
           where: { id },
@@ -248,17 +197,42 @@ export class FlowService {
       ),
     );
 
-    const parentId = parents[0]?.parentId;
+    const parentId = projects[0]?.parentId;
 
-    if (new Set(parents.map((el) => el?.parentId)).size !== 1 || !parentId)
+    if (new Set(projects.map((el) => el?.parentId)).size !== 1 || !parentId)
       throw new BadRequestException(
         'All projects should share the same parent',
       );
 
-    const allProjects = await this.prismaService.project.findMany({
-      select: { id: true },
-      where: { parentId },
-    });
+    const [allProjects, ranks] = await Promise.all([
+      this.prismaService.project.findMany({
+        select: { id: true },
+        where: { parentId },
+      }),
+      this.prismaService.rank.findFirst({
+        where: {
+          project: { parentId },
+          userId,
+          rank: { gt: 0 },
+        },
+      }),
+    ]);
+
+    if (ranks) {
+      const promises = allProjects.map((item) =>
+        this.prismaService.rank.update({
+          where: { userId_projectId: { projectId: item.id, userId: item.id } },
+          data: { rank: null },
+        }),
+      );
+
+      await Promise.all(promises);
+    }
+
+    // const allProjects = await this.prismaService.project.findMany({
+    //   select: { id: true },
+    //   where: { parentId },
+    // });
 
     const excludedProjects = allProjects
       .map((el) => el.id)
@@ -272,6 +246,8 @@ export class FlowService {
         ),
       ],
     ]);
+
+    console.log('And here after all settled');
   };
 
   setInclusionState = async (
@@ -295,12 +271,14 @@ export class FlowService {
         "The project doesn't have a valid parent (or doesn't exist at all)",
       );
 
-    const status = await this.getCollectionProgressStatus(userId, parent.id);
+    // Comment because of filtering ability in the DnD page
 
-    if (status !== 'Filtering' && status !== 'Pending')
-      throw new BadRequestException(
-        'Inclusion states in a filtered collection can not be modified',
-      );
+    // const status = await this.getCollectionProgressStatus(userId, parent.id);
+
+    // if (status !== 'Filtering' && status !== 'Pending')
+    //   throw new BadRequestException(
+    //     'Inclusion states in a filtered collection can not be modified',
+    //   );
 
     const [siblingExclusions, allChildren] = await Promise.all([
       this.prismaService.projectInclusion.count({
@@ -356,16 +334,31 @@ export class FlowService {
   };
 
   markCollectionsFiltered = async (userId: number, collectionId: number) => {
-    const includedProjects = await this.prismaService.projectInclusion.findMany(
-      {
+    const [includedProjects, excludedProjects, projects] = await Promise.all([
+      this.prismaService.projectInclusion.findMany({
         select: { projectId: true },
         where: {
           project: { parentId: collectionId },
           userId,
           state: 'included',
         },
-      },
-    );
+      }),
+      this.prismaService.projectInclusion.findMany({
+        select: { projectId: true },
+        where: {
+          project: { parentId: collectionId },
+          userId,
+          state: 'excluded',
+        },
+      }),
+      this.prismaService.projectInclusion.findMany({
+        select: { projectId: true },
+        where: {
+          project: { parentId: collectionId },
+          userId,
+        },
+      }),
+    ]);
 
     if (includedProjects.length < 2)
       throw new ForbiddenException(
@@ -405,30 +398,39 @@ export class FlowService {
       throw new BadRequestException('Only collections can be marked filtered');
     }
 
-    const collectionVotingPower = await this.getCollectionVotingPower(
-      collectionId,
-      userId,
+    if (projects.length !== includedProjects.length + excludedProjects.length)
+      throw new ForbiddenException(
+        'All projects should be marked either included or excluded',
+      );
+
+    // const collectionVotingPower = await this.getCollectionVotingPower(
+    //   collectionId,
+    //   userId,
+    // );
+
+    // const share = collectionVotingPower / includedProjects.length;
+
+    await this.prismaService.rank.updateMany({
+      where: {
+        userId,
+        projectId: { in: projects.map((item) => item.projectId) },
+      },
+      data: { rank: null },
+    });
+
+    await this.prismaService.$transaction(
+      includedProjects.map((el, index) =>
+        this.prismaService.rank.update({
+          where: {
+            userId_projectId: {
+              userId,
+              projectId: el.projectId,
+            },
+          },
+          data: { rank: index + 1 },
+        }),
+      ),
     );
-
-    const share = collectionVotingPower / includedProjects.length;
-
-    await Promise.all([
-      this.prismaService.share.updateMany({
-        where: {
-          userId,
-          projectId: { in: includedProjects.map((item) => item.projectId) },
-        },
-        data: { share },
-      }),
-      this.prismaService.share.updateMany({
-        where: {
-          userId,
-          project: { parentId: collectionId },
-          projectId: { notIn: includedProjects.map((item) => item.projectId) },
-        },
-        data: { share: 0 },
-      }),
-    ]);
   };
 
   getOverallRanking = async (
@@ -448,10 +450,10 @@ export class FlowService {
 
     // collection is top level and only contain projects
     if (collections.length === 0) {
-      result = ranking.map(({ name, id, share, type, RPGF4Id }) => ({
+      result = ranking.map(({ name, id, rank, type, RPGF4Id }) => ({
         name,
         id,
-        share,
+        rank,
         RPGF4Id: RPGF4Id || '',
         type: type as 'project',
         hasRanking: false as const,
@@ -469,7 +471,7 @@ export class FlowService {
         isTopLevel: await this.isCollectionTopLevel(id),
         progress: await this.getCollectionProgressStatus(userId, id),
         // isFinished: !!areFinished.find((el) => el.collectionId === id),
-        share: ranking.find((c) => c.id === id)!.share,
+        rank: ranking.find((c) => c.id === id)!.rank,
         ranking: [
           ...(await this.getOverallRanking(
             userId,
@@ -480,39 +482,39 @@ export class FlowService {
       })),
       ...ranking
         .filter((el) => el.type === 'project')
-        .map(({ name, id, type, share, RPGF4Id }) => ({
+        .map(({ name, id, type, rank, RPGF4Id }) => ({
           name,
           id,
           RPGF4Id: RPGF4Id || '',
           hasRanking: false as const,
-          share: share,
+          rank,
           type: type as 'project',
         })),
     ]);
 
-    return res.sort((a, b) => b.share - a.share);
+    return res.sort((a, b) => a.rank - b.rank);
   };
 
-  addManyShares = async (
-    shares: { id: number; share: number }[],
-    userId: number,
-  ) => {
-    // TODO: Is the array in .all method redundant?
-    return Promise.all([
-      shares.map(async ({ id, share }) => {
-        return this.prismaService.share.upsert({
-          update: { share: share },
-          create: { userId: userId, projectId: id, share: share },
-          where: {
-            userId_projectId: {
-              userId: userId,
-              projectId: id,
-            },
-          },
-        });
-      }),
-    ]);
-  };
+  // addManyShares = async (
+  //   shares: { id: number; share: number }[],
+  //   userId: number,
+  // ) => {
+  //   // TODO: Is the array in .all method redundant?
+  //   return Promise.all([
+  //     shares.map(async ({ id, share }) => {
+  //       return this.prismaService.share.upsert({
+  //         update: { share: share },
+  //         create: { userId: userId, projectId: id, share: share },
+  //         where: {
+  //           userId_projectId: {
+  //             userId: userId,
+  //             projectId: id,
+  //           },
+  //         },
+  //       });
+  //     }),
+  //   ]);
+  // };
 
   voteForCollections = async (
     userId: number,
@@ -618,43 +620,43 @@ export class FlowService {
     return withAdditionalFields;
   };
 
-  getCollectionVotingPower = async (
-    collectionId: number | null,
-    userId: number,
-  ): Promise<number> => {
-    if (collectionId === null) return 1;
+  // getCollectionVotingPower = async (
+  //   collectionId: number | null,
+  //   userId: number,
+  // ): Promise<number> => {
+  //   if (collectionId === null) return 1;
 
-    const collection = await this.prismaService.project.findUnique({
-      where: {
-        id: collectionId,
-        type: { in: [ProjectType.collection, ProjectType.compositeProject] },
-      },
-      select: { parentId: true },
-    });
+  //   const collection = await this.prismaService.project.findUnique({
+  //     where: {
+  //       id: collectionId,
+  //       type: { in: [ProjectType.collection, ProjectType.compositeProject] },
+  //     },
+  //     select: { parentId: true },
+  //   });
 
-    if (!collection) throw Error('No such collection or composite project');
+  //   if (!collection) throw Error('No such collection or composite project');
 
-    const savedResult = await this.prismaService.share.findFirst({
-      where: { projectId: collectionId, userId: userId },
-    });
+  //   const savedResult = await this.prismaService.share.findFirst({
+  //     where: { projectId: collectionId, userId: userId },
+  //   });
 
-    if (!savedResult) throw Error('No corresponding value for the collection');
+  //   if (!savedResult) throw Error('No corresponding value for the collection');
 
-    return savedResult.share;
+  //   return savedResult.share;
 
-    // const ranking = await this.getRankingFromVotes(userId, collection.parentId);
+  //   // const ranking = await this.getRankingFromVotes(userId, collection.parentId);
 
-    // const { share } = ranking.find((item) => item.id === collectionId)!;
+  //   // const { share } = ranking.find((item) => item.id === collectionId)!;
 
-    // if (collection.parentId === null) {
-    //   return share;
-    // } else {
-    //   return (
-    //     (await this.getCollectionVotingPower(collection.parentId, userId)) *
-    //     share
-    //   );
-    // }
-  };
+  //   // if (collection.parentId === null) {
+  //   //   return share;
+  //   // } else {
+  //   //   return (
+  //   //     (await this.getCollectionVotingPower(collection.parentId, userId)) *
+  //   //     share
+  //   //   );
+  //   // }
+  // };
 
   // Checks whether a collection is a last layer collection (i.e., not having any collection children)
   isLastLayerCollection = async (collectionId: number | null) => {
@@ -697,25 +699,41 @@ export class FlowService {
     userId: number,
     collectionId: number | null,
   ) => {
-    const [ranking, votingPower] = await Promise.all([
-      this.getRankingFromVotes(userId, collectionId),
-      this.getCollectionVotingPower(collectionId, userId),
-    ]);
+    const ranking = await this.getRankingFromVotes(userId, collectionId);
 
     await Promise.all(
-      ranking.map((rank) => {
-        const share = rank.share * votingPower;
-        return this.prismaService.share.upsert({
-          update: { share },
+      ranking.map((el) =>
+        this.prismaService.rank.upsert({
+          update: { rank: undefined },
           create: {
             userId: userId,
-            projectId: rank.id,
-            share,
+            projectId: el.id,
+            rank: null,
           },
           where: {
             userId_projectId: {
               userId: userId,
-              projectId: rank.id,
+              projectId: el.id,
+            },
+          },
+        }),
+      ),
+    );
+
+    await Promise.all(
+      ranking.map((el, index) => {
+        const rank = index + 1;
+        return this.prismaService.rank.upsert({
+          update: { rank },
+          create: {
+            userId: userId,
+            projectId: el.id,
+            rank,
+          },
+          where: {
+            userId_projectId: {
+              userId: userId,
+              projectId: el.id,
             },
           },
         });
@@ -825,17 +843,17 @@ export class FlowService {
         );
         return {
           id: project!.id,
-          share: item,
+          rank: index + 1,
           name: project!.name,
           type: project!.type,
           RPGF4Id: project!.RPGF4Id,
         };
       }),
-      ...nonWinningProjectsIds.map((id) => {
+      ...nonWinningProjectsIds.map((id, index) => {
         const project = allChildren.find((el) => el.id === id);
         return {
           id: project!.id,
-          share: 0,
+          rank: index + 1,
           name: project!.name,
           type: project!.type,
           RPGF4Id: project!.RPGF4Id,
@@ -843,7 +861,7 @@ export class FlowService {
       }),
     ];
 
-    return makeIt100(ranking.sort((a, b) => b.share - a.share));
+    return ranking.sort((a, b) => a.rank - b.rank);
   };
 
   getRootRanking = async (userId: number) => {
@@ -875,14 +893,14 @@ export class FlowService {
       .map(({ id, name, image, type, impactDescription, RPGF4Id }) => ({
         id,
         name,
-        share: finishedCollectionsRanking.find((el) => el.id === id)!.share,
+        rank: finishedCollectionsRanking.find((el) => el.id === id)!.rank,
         image,
         type,
         impactDescription,
         RPGF4Id,
         hasRanking: false,
       }))
-      .sort((a, b) => b.share - a.share);
+      .sort((a, b) => a.rank - b.rank);
   };
 
   /**
@@ -898,40 +916,38 @@ export class FlowService {
   ) => {
     if (collectionId === null) return this.getRootRanking(userId);
 
-    const [savedResults, includedProjects] = await Promise.all([
-      this.prismaService.share.findMany({
+    const [savedResults] = await Promise.all([
+      this.prismaService.rank.findMany({
         where: {
           project: { parentId: collectionId },
           userId: userId,
+          rank: { not: null },
         },
         include: { project: true },
       }),
-      collectionId
-        ? this.getIncludedProjectIds(userId, collectionId)
-        : Promise.resolve([]),
     ]);
 
-    // filter out the projects that were already filtered out
-    // in the project filtering phase
-    const includedProjectsResults = savedResults.filter(
-      (item) =>
-        !(
-          item.project.type === 'project' &&
-          !includedProjects.includes(item.projectId)
-        ),
-    );
+    // // filter out the projects that were already filtered out
+    // // in the project filtering phase
+    // const includedProjectsResults = savedResults.filter(
+    //   (item) =>
+    //     !(
+    //       item.project.type === 'project' &&
+    //       !includedProjects.includes(item.projectId)
+    //     ),
+    // );
 
-    return includedProjectsResults
+    return savedResults
       .map((item) => ({
         id: item.projectId,
         name: item.project.name,
-        share: item.share,
+        rank: item.rank!,
         image: item.project.image,
         type: item.project.type,
         RPGF4Id: item.project.RPGF4Id,
         hasRanking: false,
       }))
-      .sort((a, b) => b.share - a.share);
+      .sort((a, b) => a.rank - b.rank);
   };
 
   getIncludedProjectIds = async (userId: number, collectionId: number) => {
@@ -1187,7 +1203,7 @@ export class FlowService {
   private formatRanking = (ranking: CollectionRanking['ranking']) => {
     return ranking.map((el) => ({
       id: el.id,
-      share: el.share,
+      rank: el.rank,
       name: el.name,
     }));
   };
@@ -1247,32 +1263,28 @@ export class FlowService {
 
     const collections = entities.filter((el) => el.type !== 'project');
 
-    await this.prismaService.share.createMany({
-      data: collections.map((item) => ({
-        share: 1 / collections.length,
+    await this.prismaService.rank.createMany({
+      data: collections.map((item, index) => ({
+        rank: null,
         userId: userId,
         projectId: item.id,
       })),
     });
 
-    const promises = [];
-
-    for (const project of projects) {
+    for (let i = 0; i < collections.length; i++) {
+      const collection = collections[i];
       const siblings = projects.filter(
-        (el) => el.parentId === project.parentId,
+        (project) => project.parentId === collection.id,
       );
-      promises.push(
-        this.prismaService.share.create({
-          data: {
-            share: (1 / siblings.length) * (1 / collections.length),
-            userId: userId,
-            projectId: project.id,
-          },
-        }),
-      );
-    }
 
-    await Promise.all(promises);
+      await this.prismaService.rank.createMany({
+        data: siblings.map((item, index) => ({
+          rank: null,
+          userId,
+          projectId: item.id,
+        })),
+      });
+    }
   };
 
   allSiblingsExist = async (

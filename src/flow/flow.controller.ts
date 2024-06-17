@@ -258,15 +258,20 @@ export class FlowController {
     const isLastLayerCollection = await this.flowService.isLastLayerCollection(
       collectionId || null,
     );
-    if (collectionId) {
-      const hasThresholdVotes = await this.flowService.hasThresholdVotes(
-        collectionId,
-        userId,
-      );
 
-      if (!hasThresholdVotes && isLastLayerCollection)
-        throw new ForbiddenException('Threshold votes missing');
-    }
+    // if (collectionId && status) {
+    //   const hasThresholdVotes = await this.flowService.hasThresholdVotes(
+    //     collectionId,
+    //     userId,
+    //   );
+
+    //   if (
+    //     !hasThresholdVotes &&
+    //     isLastLayerCollection &&
+    //     (status === "")
+    //   )
+    //     throw new ForbiddenException('Threshold votes missing');
+    // }
 
     // let isSaved = true;
     if (collectionId && isLastLayerCollection) {
@@ -302,9 +307,13 @@ export class FlowController {
     //   await this.flowService.saveResultsFromVotes(userId, null);
     // }
 
-    const [ranking, votingPower, collection, progress] = await Promise.all([
+    const [ranking, rank, collection, progress] = await Promise.all([
       this.flowService.getRanking(userId, collectionId || null),
-      this.flowService.getCollectionVotingPower(collectionId || null, userId),
+      collectionId
+        ? this.prismaService.rank.findUnique({
+            where: { userId_projectId: { userId, projectId: collectionId } },
+          })
+        : 1,
       this.prismaService.project.findFirst({
         where: { id: collectionId || -1 },
       }),
@@ -331,7 +340,7 @@ export class FlowController {
       progress,
       type: collection?.type || 'collection',
       name: collection?.name || 'root',
-      share: votingPower,
+      rank,
       id: collection?.id || -1,
     };
   }
@@ -409,127 +418,86 @@ export class FlowController {
   //   return pinataUrl;
   // }
 
-  @UseGuards(AuthGuard)
-  // @ApiResponse({ status: 200, description: 'Overall ranking' })
-  @Post('/dnd')
-  async submitEditedRanking(
-    @Req() { userId }: AuthedReq,
-    @Body()
-    { collectionId, projectIds }: DnDBody,
-  ) {
-    // userId = 5;
-    const [includedProjects, shares] = await Promise.all([
-      this.flowService.getIncludedProjectIds(userId, collectionId),
-      this.prismaService.share.findMany({
-        select: {
-          share: true,
-          projectId: true,
-        },
-        where: {
-          userId,
-          project: { parentId: collectionId },
-        },
-        orderBy: {
-          share: 'desc',
-        },
-      }),
-    ]);
+  // @UseGuards(AuthGuard)
+  // // @ApiResponse({ status: 200, description: 'Overall ranking' })
+  // @Post('/dnd')
+  // async submitEditedRanking(
+  //   @Req() { userId }: AuthedReq,
+  //   @Body()
+  //   { collectionId, projectIds }: DnDBody,
+  // ) {
+  //   // userId = 5;
+  //   const [includedProjects, shares] = await Promise.all([
+  //     this.flowService.getIncludedProjectIds(userId, collectionId),
+  //     this.prismaService.share.findMany({
+  //       select: {
+  //         share: true,
+  //         projectId: true,
+  //       },
+  //       where: {
+  //         userId,
+  //         project: { parentId: collectionId },
+  //       },
+  //       orderBy: {
+  //         share: 'desc',
+  //       },
+  //     }),
+  //   ]);
 
-    const includedProjectsShares = shares.filter((item) =>
-      includedProjects.includes(item.projectId),
-    );
+  //   const includedProjectsShares = shares.filter((item) =>
+  //     includedProjects.includes(item.projectId),
+  //   );
 
-    console.log('pids:', projectIds);
-    console.log('included project shares', includedProjectsShares);
+  //   console.log('pids:', projectIds);
+  //   console.log('included project shares', includedProjectsShares);
 
-    if (
-      !areEqualNumberArrays(
-        projectIds,
-        includedProjectsShares.map((item) => item.projectId),
-      )
-    ) {
-      throw new BadRequestException(
-        'All included projects should be in the input',
-      );
-    }
+  //   if (
+  //     !areEqualNumberArrays(
+  //       projectIds,
+  //       includedProjectsShares.map((item) => item.projectId),
+  //     )
+  //   ) {
+  //     throw new BadRequestException(
+  //       'All included projects should be in the input',
+  //     );
+  //   }
 
-    const promises = includedProjectsShares.map(async (item, index) =>
-      this.prismaService.share.update({
-        where: {
-          userId_projectId: {
-            userId,
-            projectId: projectIds[index],
-          },
-        },
-        data: {
-          share: item.share,
-        },
-      }),
-    );
+  //   const promises = includedProjectsShares.map(async (item, index) =>
+  //     this.prismaService.share.update({
+  //       where: {
+  //         userId_projectId: {
+  //           userId,
+  //           projectId: projectIds[index],
+  //         },
+  //       },
+  //       data: {
+  //         share: item.share,
+  //       },
+  //     }),
+  //   );
 
-    await Promise.all(promises);
+  //   await Promise.all(promises);
 
-    return 'success';
-  }
+  //   return 'success';
+  // }
 
   @UseGuards(AuthGuard)
   @Post('/dnd-v2')
   async dndBulk(
     @Req() { userId }: AuthedReq,
     @Body()
-    { collectionId, projectIds }: DnDBody,
+    { projectIds }: DnDBody,
   ) {
     await this.flowService.setInclusionStateBulk(projectIds, userId);
-    // userId = 5;
-    const [includedProjects, shares] = await Promise.all([
-      this.flowService.getIncludedProjectIds(userId, collectionId),
-      this.prismaService.share.findMany({
-        select: {
-          share: true,
-          projectId: true,
-        },
-        where: {
-          userId,
-          project: { parentId: collectionId },
-        },
-        orderBy: {
-          share: 'desc',
-        },
-      }),
-    ]);
 
-    const includedProjectsShares = shares.filter((item) =>
-      includedProjects.includes(item.projectId),
-    );
-
-    if (
-      !areEqualNumberArrays(
-        projectIds,
-        includedProjectsShares.map((item) => item.projectId),
-      )
-    ) {
-      throw new BadRequestException(
-        'All included projects should be in the input',
-      );
-    }
-
-    const promises = includedProjectsShares.map(async (item, index) =>
-      this.prismaService.share.update({
-        where: {
-          userId_projectId: {
-            userId,
-            projectId: projectIds[index],
-          },
-        },
-        data: {
-          share: item.share,
-        },
+    const promises = projectIds.map((projectId, index) =>
+      this.prismaService.rank.update({
+        where: { userId_projectId: { projectId, userId } },
+        data: { rank: index + 1 },
       }),
     );
 
     await Promise.all(promises);
-
-    return 'success';
   }
 
   @UseGuards(AuthGuard)
@@ -699,7 +667,7 @@ export class FlowController {
     return { variable1, variable2, variable3, variable4, variable5, variable6 };
   }
 
-  @UseGuards(AuthGuard)
+  // @UseGuards(AuthGuard)
   @ApiOperation({
     summary:
       'Use it at your own risk for testing. It will remove all the data associated with your account',
@@ -708,14 +676,17 @@ export class FlowController {
   @Get('/dangerouslyRemoveData')
   async removeMydata(@Req() { userId }: AuthedReq) {
     // for (let i = 2; i < 9; i++) {
-    // const user = await this.prismaService.user.findFirst({
-    //   select: { id: true },
-    //   where: { address: '0xD7542DC0F58095064BFEf6117fac82E4c5504d28' },
-    // });
+    const user = await this.prismaService.user.findFirst({
+      select: { id: true },
+      where: { address: '0x73644771341888A86794a8aB62fd483ab91d1F8F' },
+    });
 
     // console.log(user?.id);
 
-    // const userId = 4;
+    if (user) {
+      userId = user?.id;
+      console.log(user.id);
+    } else return;
 
     // userId = 448;
 
@@ -723,7 +694,7 @@ export class FlowController {
       where: { userId: userId },
     });
 
-    await this.prismaService.share.deleteMany({
+    await this.prismaService.rank.deleteMany({
       where: { userId: userId },
     });
 

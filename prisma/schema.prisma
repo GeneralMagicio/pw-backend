@@ -21,7 +21,7 @@ model User {
   otp                Otp?
   finishedCollection UserCollectionFinish[]
   filteredCollection UserCollectionFiltered[]
-  shares             Share[]
+  ranks              Rank[]
   projectInclusions  ProjectInclusion[]
   attestations       UserAttestation[]
 }
@@ -75,7 +75,7 @@ model Project {
   options1                Vote[]                   @relation("VoteToProject1")
   options2                Vote[]                   @relation("VoteToProject2")
   voted                   Vote[]                   @relation("Voted")
-  shares                  Share[]
+  ranks                   Rank[]
   expertiseColleciton1    ExpertiseVote[]          @relation("ExpertiseVote1")
   expertiseColleciton2    ExpertiseVote[]          @relation("ExpertiseVote2")
   expertiseVoted          ExpertiseVote[]          @relation("Voted")
@@ -131,21 +131,34 @@ model Otp {
   otp       String
   expiresAt String   @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
-  user      User    @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@id([userId, otp])
 }
 
-model Share {
+// model Share {
+//   userId    Int      @map("user_id")
+//   projectId Int      @map("project_id")
+//   share     Float // the percentage of allocation from the 100% available to all projects
+//   createdAt DateTime @default(now()) @map("created_at")
+//   updatedAt DateTime @default(now()) @map("updated_at")
+//   user      User     @relation(fields: [userId], references: [id])
+//   project   Project  @relation(fields: [projectId], references: [id])
+
+//   @@id([userId, projectId])
+// }
+
+model Rank {
   userId    Int      @map("user_id")
   projectId Int      @map("project_id")
-  share     Float // the percentage of allocation from the 100% available to all projects
+  rank      Int? // the rank of a project in a category (rank = 1 is the best, etc)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @map("updated_at")
   user      User     @relation(fields: [userId], references: [id])
   project   Project  @relation(fields: [projectId], references: [id])
 
   @@id([userId, projectId])
+  @@unique([userId, projectId, rank])
 }
 
 enum InclusionState {

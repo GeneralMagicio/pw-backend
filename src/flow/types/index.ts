@@ -7,7 +7,7 @@ export interface CollectionRanking {
   id: number;
   RPGF4Id: string;
   name: string;
-  share: number;
+  rank: number;
   ranking: (CollectionRanking | ProjectRanking)[];
 }
 
@@ -16,7 +16,7 @@ export interface ProjectRanking {
   hasRanking: false;
   id: number;
   RPGF4Id: string;
-  share: number;
+  rank: number;
   name: string;
 }
 
