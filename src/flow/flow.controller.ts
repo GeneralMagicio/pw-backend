@@ -482,7 +482,7 @@ export class FlowController {
   // }
 
   @UseGuards(AuthGuard)
-  @Post('/dnd-v2')
+  @Post('/dnd')
   async dndBulk(
     @Req() { userId }: AuthedReq,
     @Body()

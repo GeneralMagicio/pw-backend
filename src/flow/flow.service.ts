@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -204,6 +206,15 @@ export class FlowService {
         'All projects should share the same parent',
       );
 
+    if (new Set(ids).size < 2)
+      throw new HttpException(
+        {
+          error: `You need to include at least ${2} projets`,
+          pwCode: 'pw1000',
+        },
+        HttpStatus.FORBIDDEN,
+      );
+
     const [allProjects, ranks] = await Promise.all([
       this.prismaService.project.findMany({
         select: { id: true },
@@ -221,7 +232,7 @@ export class FlowService {
     if (ranks) {
       const promises = allProjects.map((item) =>
         this.prismaService.rank.update({
-          where: { userId_projectId: { projectId: item.id, userId: item.id } },
+          where: { userId_projectId: { projectId: item.id, userId } },
           data: { rank: null },
         }),
       );
@@ -238,16 +249,15 @@ export class FlowService {
       .map((el) => el.id)
       .filter((item) => !ids.includes(item));
 
-    await Promise.allSettled([
-      ...[ids.map((id) => this.setInclusionState(userId, id, 'included'))],
-      ...[
-        excludedProjects.map((id) =>
-          this.setInclusionState(userId, id, 'excluded'),
-        ),
-      ],
-    ]);
+    await Promise.all(
+      ids.map((id) => this.setInclusionState(userId, id, 'included')),
+    );
 
-    console.log('And here after all settled');
+    await Promise.all(
+      excludedProjects.map((id) =>
+        this.setInclusionState(userId, id, 'excluded'),
+      ),
+    );
   };
 
   setInclusionState = async (
@@ -298,7 +308,13 @@ export class FlowService {
     ]);
 
     if (siblingExclusions === allChildren - 2 && state === 'excluded')
-      throw new ForbiddenException('You should at least include 2 projects');
+      throw new HttpException(
+        {
+          error: `You need to include at least ${2} projets`,
+          pwCode: 'pw1000',
+        },
+        HttpStatus.FORBIDDEN,
+      );
 
     const project = await this.prismaService.projectInclusion.upsert({
       where: {

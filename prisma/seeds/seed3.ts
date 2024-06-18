@@ -69,21 +69,6 @@ const printCategories = () => {
   console.log(categories);
 };
 
-function findErigonI() {
-  // const workbook = XLSX.readFile('./fdp-min.xlsx');
-  // const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-  // const jsonData: Row[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
-
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-    // console.log(row);
-    // if (i > 30) return;
-    if (row.websiteUrl === 'https://raiden-dev.xyz/') {
-      console.log(i);
-    }
-  }
-}
-
 async function insertProjects(prisma: PrismaClient) {
   // const workbook = XLSX.readFile('./fdp-min.xlsx');
   // const worksheet = workbook.Sheets[workbook.SheetNames[0]];
