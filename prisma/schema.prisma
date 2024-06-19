@@ -67,6 +67,7 @@ model Project {
   parentId                Int?                     @map("parent_id")
   image                   String?
   metadataUrl             String?                  @map("metadata_url")
+  metricsProjectId        String?                  @map("metrics_project_id")
   createdAt               DateTime                 @default(now()) @map("created_at")
   parent                  Project?                 @relation("ParentRelation", fields: [parentId], references: [id])
   children                Project[]                @relation("ParentRelation")

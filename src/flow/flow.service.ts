@@ -206,11 +206,14 @@ export class FlowService {
         'All projects should share the same parent',
       );
 
-    if (new Set(ids).size < 2)
+    const minimumInclusion = await this.getMinimumIncludedProjects(parentId);
+
+    if (new Set(ids).size < minimumInclusion)
       throw new HttpException(
         {
-          error: `You need to include at least ${2} projets`,
+          error: `You need to include at least ${minimumInclusion} projets`,
           pwCode: 'pw1000',
+          minimum: minimumInclusion,
         },
         HttpStatus.FORBIDDEN,
       );
@@ -307,11 +310,17 @@ export class FlowService {
       }),
     ]);
 
-    if (siblingExclusions === allChildren - 2 && state === 'excluded')
+    const minimumInclusion = await this.getMinimumIncludedProjects(parent.id);
+
+    if (
+      siblingExclusions === allChildren - minimumInclusion &&
+      state === 'excluded'
+    )
       throw new HttpException(
         {
-          error: `You need to include at least ${2} projets`,
+          error: `You need to include at least ${minimumInclusion} projets`,
           pwCode: 'pw1000',
+          minimum: minimumInclusion,
         },
         HttpStatus.FORBIDDEN,
       );
@@ -1455,6 +1464,18 @@ export class FlowService {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  private getMinimumIncludedProjects = async (cid: number) => {
+    const numOfProjects = await this.prismaService.project.count({
+      where: {
+        parentId: cid,
+      },
+    });
+
+    if (numOfProjects < 7) return 6;
+
+    return Math.ceil(0.21 * numOfProjects);
   };
 
   private determineIdRanking = (
