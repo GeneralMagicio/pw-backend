@@ -85,7 +85,7 @@ export class UsersController {
       where: { id: userId },
     });
 
-    return res?.badges || {};
+    return res?.badges || null;
   }
 
   @UseGuards(AuthGuard)
@@ -96,7 +96,7 @@ export class UsersController {
       where: { id: userId },
     });
 
-    return res?.identity || {};
+    return res?.identity || null;
   }
 
   @Get('/public/badges')
