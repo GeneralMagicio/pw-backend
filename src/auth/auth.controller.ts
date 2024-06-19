@@ -168,10 +168,10 @@ export class AuthController {
 
     if (!userId) throw new ForbiddenException('OTP invalid');
 
-    await Promise.all([
-      this.prismaService.nonce.deleteMany({
+    const [nonce, _] = await Promise.all([
+      this.prismaService.nonce.findUnique({
         where: {
-          userId,
+          userId: userId,
         },
       }),
       this.prismaService.otp.delete({
@@ -179,21 +179,25 @@ export class AuthController {
       }),
     ]);
 
-    const token = generateRandomString({
-      length: 32,
-      lowercase: true,
-      numerical: true,
-      uppercase: true,
-    });
+    if (!nonce) {
+      const token = generateRandomString({
+        length: 32,
+        lowercase: true,
+        numerical: true,
+        uppercase: true,
+      });
 
-    await this.prismaService.nonce.create({
-      data: {
-        nonce: token,
-        userId,
-        expiresAt: `${Date.now() + this.authService.TokenExpirationDuration}`,
-      },
-    });
+      await this.prismaService.nonce.create({
+        data: {
+          nonce: token,
+          userId,
+          expiresAt: `${Date.now() + this.authService.TokenExpirationDuration}`,
+        },
+      });
 
-    return token;
+      return token;
+    }
+
+    return nonce.nonce;
   }
 }
