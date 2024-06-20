@@ -50,8 +50,6 @@ export class UsersController {
 
     const badges = await getBadges(snapshotPoints, mainAddress);
 
-    if (!badges) throw new ForbiddenException('Address is not a badge-holder');
-
     const user = await this.prismaService.user.findUnique({
       select: { badges: true, identity: true },
       where: { id: userId },
@@ -70,7 +68,7 @@ export class UsersController {
         id: userId,
       },
       data: {
-        badges,
+        badges: badges || {},
       },
     });
 
