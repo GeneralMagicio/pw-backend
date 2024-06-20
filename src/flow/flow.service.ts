@@ -861,24 +861,31 @@ export class FlowService {
 
     const result = getRankingForSetOfDampingFactors(matrix);
 
+    const resultProjectIdMapping = result.map((percentage, index) => {
+      const project = winningProjects.find(
+        (el) => el.id === zeroBasedMappingFunction(index),
+      );
+
+      return { project: project!, percentage };
+    });
+
     const ranking = [
-      ...result.map((item, index) => {
-        const project = winningProjects.find(
-          (el) => el.id === zeroBasedMappingFunction(index),
-        );
-        return {
-          id: project!.id,
-          rank: index + 1,
-          name: project!.name,
-          type: project!.type,
-          RPGF4Id: project!.RPGF4Id,
-        };
-      }),
+      ...resultProjectIdMapping
+        .sort((a, b) => b.percentage - a.percentage)
+        .map(({ project }, index) => {
+          return {
+            id: project!.id,
+            rank: index + 1,
+            name: project!.name,
+            type: project!.type,
+            RPGF4Id: project!.RPGF4Id,
+          };
+        }),
       ...nonWinningProjectsIds.map((id, index) => {
         const project = allChildren.find((el) => el.id === id);
         return {
           id: project!.id,
-          rank: index + 1,
+          rank: result.length + index + 1,
           name: project!.name,
           type: project!.type,
           RPGF4Id: project!.RPGF4Id,
@@ -890,9 +897,9 @@ export class FlowService {
   };
 
   getRootRanking = async (userId: number) => {
-    const [ranking, finishedCollectionIds] = await Promise.all([
+    const [ranking, rankedCollectionIds] = await Promise.all([
       this.getRankingFromVotes(userId, null),
-      this.prismaService.userCollectionFinish.findMany({
+      this.prismaService.userAttestation.findMany({
         select: { collectionId: true },
         where: {
           userId,
@@ -903,22 +910,24 @@ export class FlowService {
       }),
     ]);
 
+    console.log('Ranking from votes:', ranking);
+
     // filter just finished collections
-    const finishedCollectionsRanking = ranking.filter((item) =>
-      finishedCollectionIds.map((item) => item.collectionId).includes(item.id),
+    const rankedCollectionsRanking = ranking.filter((item) =>
+      rankedCollectionIds.map((item) => item.collectionId).includes(item.id),
     );
 
-    const filteredCollections = await this.prismaService.project.findMany({
+    const finishedCollections = await this.prismaService.project.findMany({
       where: {
-        id: { in: finishedCollectionsRanking.map((el) => el.id) },
+        id: { in: rankedCollectionsRanking.map((el) => el.id) },
       },
     });
 
-    return filteredCollections
+    return finishedCollections
       .map(({ id, name, image, type, impactDescription, RPGF4Id }) => ({
         id,
         name,
-        rank: finishedCollectionsRanking.find((el) => el.id === id)!.rank,
+        rank: rankedCollectionsRanking.find((el) => el.id === id)!.rank,
         image,
         type,
         impactDescription,
@@ -990,7 +999,7 @@ export class FlowService {
     return includedProjects.map((el) => el.projectId);
   };
 
-  getFinishedCollectionPairs = async (userId: number) => {
+  getAttestedCollectionPairs = async (userId: number) => {
     // const collectionId = null;
 
     const [allCollections, collectionPairwises] = await Promise.all([
@@ -1009,21 +1018,17 @@ export class FlowService {
       }),
     ]);
 
-    const finishedCollections = allCollections.filter(
+    const attestedCollections = allCollections.filter(
       (collection) => collection.progress === 'Attested',
     );
 
-    if (finishedCollections.length < 2) return [];
+    if (attestedCollections.length < 2) return [];
 
-    console.log('Collection pairwise votes', collectionPairwises);
-
-    const allFinishedPairs = getPairwiseCombinations(
-      finishedCollections.map((el) => el.id),
+    const allAttestedPairs = getPairwiseCombinations(
+      attestedCollections.map((el) => el.id),
     );
 
-    console.log('All finished pairs', allFinishedPairs);
-
-    const remainingPairs = allFinishedPairs.filter((pair) => {
+    const remainingPairs = allAttestedPairs.filter((pair) => {
       const index = collectionPairwises.findIndex(
         (item) => item.project1Id === pair[0] && item.project2Id === pair[1],
       );
@@ -1032,15 +1037,11 @@ export class FlowService {
       return false;
     });
 
-    console.log('remaining pairs:', remainingPairs);
-
     if (remainingPairs.length === 0) return [];
 
     const result = allCollections.filter((collection) =>
       remainingPairs[0].includes(collection.id),
     );
-
-    console.log('result', result);
 
     return result;
   };

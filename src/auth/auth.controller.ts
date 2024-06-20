@@ -106,14 +106,14 @@ export class AuthController {
       },
     });
 
-    // const hasEarlierShares = await this.prismaService.share.findFirst({
-    //   where: { userId: user.id },
-    // });
+    const hasRanks = await this.prismaService.rank.findFirst({
+      where: { userId: user.id },
+    });
 
-    // const isFirstLogin = hasEarlierShares === null;
+    const noRanks = hasRanks === null;
 
-    // TODO: Rethink this because of the project filtering flow
-    if (isNewUser) await this.flowService.populateInitialRanking(user.id);
+    if (isNewUser || noRanks)
+      await this.flowService.populateInitialRanking(user.id);
     // res.cookie('auth', nonce, {
     //   httpOnly: true,
     //   sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',

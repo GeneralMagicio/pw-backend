@@ -206,7 +206,7 @@ export class FlowController {
     @Query('cid') collectionId?: number,
   ) {
     if (!collectionId)
-      return this.flowService.getFinishedCollectionPairs(userId);
+      return this.flowService.getAttestedCollectionPairs(userId);
 
     const progressStatus = await this.flowService.getCollectionProgressStatus(
       userId,
