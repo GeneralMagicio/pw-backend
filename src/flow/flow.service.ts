@@ -997,6 +997,7 @@ export class FlowService {
       this.getCollections(userId, null),
       this.prismaService.vote.findMany({
         where: {
+          userId,
           project1: {
             parentId: null,
             type: 'collection',
@@ -1014,9 +1015,13 @@ export class FlowService {
 
     if (finishedCollections.length < 2) return [];
 
+    console.log('Collection pairwise votes', collectionPairwises);
+
     const allFinishedPairs = getPairwiseCombinations(
       finishedCollections.map((el) => el.id),
     );
+
+    console.log('All finished pairs', allFinishedPairs);
 
     const remainingPairs = allFinishedPairs.filter((pair) => {
       const index = collectionPairwises.findIndex(
@@ -1027,11 +1032,17 @@ export class FlowService {
       return false;
     });
 
+    console.log('remaining pairs:', remainingPairs);
+
     if (remainingPairs.length === 0) return [];
 
-    return allCollections.filter((collection) =>
+    const result = allCollections.filter((collection) =>
       remainingPairs[0].includes(collection.id),
     );
+
+    console.log('result', result);
+
+    return result;
   };
 
   getPairs = async (userId: number, parentCollection?: number, count = 1) => {
