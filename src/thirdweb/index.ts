@@ -1,8 +1,8 @@
 import { createThirdwebClient } from 'thirdweb';
-import { optimismSepolia } from 'thirdweb/chains';
+import { optimism } from 'thirdweb/chains';
 
-const secretKey = `sZwr_L_mxe40oDxFWPB2qzVozB8Jn_1ree4aOqEDzVQ_-cwxoqkuFyISSEk5eXyvbji0EwoKdLpBCE7A-eGdRw`;
-export const chain = optimismSepolia;
+const secretKey = `uC3ZLlukCCFS0NdSQKjmHjCaZ5wEXhK__ujBT26QZDRjA6KePBU-L-bjnUnHyKKDNNXpqUIi_k_2w7ZfhXXyBg`;
+export const chain = optimism;
 
 export const thirdwebClient = createThirdwebClient({
   secretKey,
