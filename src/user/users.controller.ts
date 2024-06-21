@@ -164,4 +164,20 @@ export class UsersController {
 
     return 'success';
   }
+
+  @UseGuards(AuthGuard)
+  @Post('/continue-guest')
+  async continueGuest(@Req() { userId }: AuthedReq) {
+    await this.prismaService.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        identity: {},
+        badges: {},
+      },
+    });
+
+    return 'success';
+  }
 }
