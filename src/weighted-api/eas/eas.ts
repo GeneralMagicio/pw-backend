@@ -1,4 +1,4 @@
-import { optimismSepolia } from 'thirdweb/chains';
+import { optimism, optimismSepolia } from 'thirdweb/chains';
 import { type Address } from 'viem';
 
 export type EASConfig = {
@@ -28,4 +28,19 @@ export const EASNetworks: Record<number, Config> = {
   },
 };
 
-export const SCHEMA_UID = process.env.SCHEMA_UID;
+export const SCHEMA_UID =
+  process.env.EAS_SCHEMA_UID ||
+  '0x8c12749f56c911dbc13a6a6685b6964c3ea03023f246137e9c53ba97974e4b75';
+
+const getActiveChain = (chain?: string) => {
+  switch (chain) {
+    case 'optimism':
+      return optimism;
+    case 'optimism-sepolia':
+      return optimismSepolia;
+    default:
+      return optimismSepolia;
+  }
+};
+
+export const activeChain = getActiveChain(process.env.ACTIVE_CHAIN);

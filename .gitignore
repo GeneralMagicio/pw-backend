@@ -2,7 +2,6 @@
 /dist
 /node_modules
 /certs
-/src/read-rpgf4-projects
 /src/project-reading
 
 # Envs

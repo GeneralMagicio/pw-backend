@@ -2,7 +2,7 @@ import {
   checkAttestationValidity,
   getAllAttestations,
 } from './eas/attest-utils';
-import { EASNetworks, SCHEMA_UID } from './eas/eas';
+import { EASNetworks, SCHEMA_UID, activeChain } from './eas/eas';
 import {
   AttestationMetadata,
   List,
@@ -22,7 +22,7 @@ const readAllAttestations = async () => {
   if (!SCHEMA_UID) throw Error('Please enter an schema UID');
   const attestations = await getAllAttestations(
     SCHEMA_UID,
-    EASNetworks[chain.id].gqlUrl,
+    EASNetworks[activeChain.id].gqlUrl,
   );
 
   return attestations;
