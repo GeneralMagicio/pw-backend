@@ -68,12 +68,12 @@ export class AuthController {
     @Body() { message, signature, address, chainId }: LoginDTO,
   ) {
     let isNewUser = false;
-    // const isAuthentic = await this.authService.verifyUser(
-    //   message,
-    //   signature,
-    //   address,
-    // );
-    // if (!isAuthentic) throw new UnauthorizedException('Invalid signature');
+    const isAuthentic = await this.authService.verifyUser(
+      message,
+      signature,
+      address,
+    );
+    if (!isAuthentic) throw new UnauthorizedException('Invalid signature');
     let user = await this.prismaService.user.findFirst({
       where: { address },
     });
