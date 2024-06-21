@@ -25,6 +25,7 @@ const CorsWhitelist = [
   'http://www.pairwise.vote/',
   'https://pairwise-frontend-git-test-numerous-planets-general-magic.vercel.app',
   'https://pwrd.cupofjoy.store',
+  'pairwise.vote',
 ];
 
 async function bootstrap() {
@@ -69,7 +70,9 @@ async function bootstrap() {
       origin: (origin, callback) => {
         if (
           !origin ||
-          CorsWhitelist.includes(origin) ||
+          CorsWhitelist.filter(
+            (item) => origin.includes(item) || item.includes(origin),
+          ).length > 0 ||
           (origin.includes('vercel.app') && origin.includes('pairwise')) ||
           origin.includes('localhost:')
         )

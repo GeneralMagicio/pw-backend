@@ -1027,10 +1027,11 @@ export class FlowService {
     const allAttestedPairs = getPairwiseCombinations(
       attestedCollections.map((el) => el.id),
     );
-
     const remainingPairs = allAttestedPairs.filter((pair) => {
       const index = collectionPairwises.findIndex(
-        (item) => item.project1Id === pair[0] && item.project2Id === pair[1],
+        (item) =>
+          (item.project1Id === pair[0] && item.project2Id === pair[1]) ||
+          (item.project1Id === pair[1] && item.project2Id === pair[0]),
       );
 
       if (index === -1) return true;
