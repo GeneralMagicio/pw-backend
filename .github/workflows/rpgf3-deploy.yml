@@ -1,9 +1,9 @@
-name: deploy-pipeline
+name: rpgf3-deploy-pipeline
 
 on:
   push:
     branches:
-      - master
+      - rpgf3
 
 jobs:
   deploy:
@@ -18,12 +18,11 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd pw-backend
-            docker-compose down
-            git checkout master
+            docker-compose down -v
             docker image prune -a --force
-            git pull origin master
-            docker-compose build
-            docker-compose up -d
+            git checkout rpgf3
+            git pull origin rpgf3
+            docker-compose up -d --build
 
       - name: SSH and Redeploy Staging
         uses: appleboy/ssh-action@v1.0.0
@@ -34,9 +33,8 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd pw-backend
-            docker-compose down
+            docker-compose down -v
             docker image prune -a --force
-            git checkout master
-            git pull origin master
-            docker-compose build
-            docker-compose up -d
+            git checkout rpgf3
+            git pull origin rpgf3
+            docker-compose up -d --build
