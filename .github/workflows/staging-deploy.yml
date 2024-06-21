@@ -6,30 +6,7 @@ on:
       - staging
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: ghcr.io/generalmagicio/pw-backend:staging
-
   deploy:
-    needs: publish
     runs-on: ubuntu-latest
     steps:
       - name: SSH and Redeploy Staging
@@ -43,4 +20,6 @@ jobs:
             cd rpgf4-pw-backend
             docker-compose down -v
             docker image prune -a --force
-            docker-compose up -d
+            git checkout staging
+            git pull origin staging
+            docker-compose up -d --build

@@ -2,7 +2,8 @@ version: '3'
 
 services:
   pw-backend:
-    image: ghcr.io/GeneralMagicio/pw-backend:staging
+    build:
+      context: .
     container_name: rpgf4-pw-backend
     restart: always
     ports:
