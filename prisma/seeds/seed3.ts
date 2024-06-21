@@ -2,13 +2,13 @@ import { Prisma, PrismaClient, ProjectType } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { data } from './s4data';
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
-});
+// const prisma = new PrismaClient({
+//   datasources: {
+//     db: {
+//       url: process.env.DATABASE_URL,
+//     },
+//   },
+// });
 
 interface Row {
   CATEGORY: string;
@@ -25,8 +25,8 @@ const getSpace = (): Prisma.SpaceUncheckedCreateInput => ({
 
 const getPoll = (): Prisma.PollUncheckedCreateInput => ({
   title: 'RetroPGF 3',
-  ends_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // in 60 days
-  space_id: 1,
+  endsAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // in 60 days
+  spaceId: 1,
 });
 
 const printCategories = () => {
@@ -69,17 +69,23 @@ const printCategories = () => {
   console.log(categories);
 };
 
-async function insertProjects() {
+async function insertProjects(prisma: PrismaClient) {
   // const workbook = XLSX.readFile('./fdp-min.xlsx');
   // const worksheet = workbook.Sheets[workbook.SheetNames[0]];
   // const jsonData: Row[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
-
+  let count = 0;
   for (let i = 0; i < data.length; i++) {
+    if (Math.random() > 0.4) continue;
     const row = data[i];
     // console.log(row);
     // if (i > 30) return;
-    if (!row.pwCategory || row.pwIsFlagged) continue;
+    if (row.pwIsFlagged) continue;
 
+    if (!row.pwCategory || !row.applicationApprovalUID)
+      throw new Error('All projects must have a category and UID');
+
+    count++;
+    console.log('Importing #', count);
     const collection = await prisma.project.findFirst({
       where: {
         name: row.pwCategory,
@@ -88,7 +94,6 @@ async function insertProjects() {
     });
 
     if (!collection) {
-      // continue;
       throw new Error(`Collection with id ${row.pwCategory} not found`);
     }
 
@@ -98,40 +103,40 @@ async function insertProjects() {
         image: row.profileImageUrl,
         impactDescription: row.impactDescription,
         contributionDescription: row.contributionDescription,
-        RPGF3Id: row.RPGF3_Application_UID,
+        RPGF4Id: row.applicationApprovalUID,
         metadataUrl: row.applicationMetadataPtr,
         url: row.websiteUrl,
         parentId: collection.id,
-        poll_id: 1,
+        pollId: 1,
         type: ProjectType.project,
       },
     });
   }
 }
 
-async function insertTopCollections() {
-  const workbook = XLSX.readFile('./pwcat.xlsx');
-  const worksheet = workbook.Sheets[workbook.SheetNames[1]];
-  const jsonData: Row[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+// async function insertTopCollections(prisma: PrismaClient) {
+//   const workbook = XLSX.readFile('./pwcat.xlsx');
+//   const worksheet = workbook.Sheets[workbook.SheetNames[1]];
+//   const jsonData: Row[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
 
-  for (let i = 0; i < jsonData.length; i++) {
-    const row = jsonData[i];
+//   for (let i = 0; i < jsonData.length; i++) {
+//     const row = jsonData[i];
 
-    await prisma.project.create({
-      data: {
-        name: row.CATEGORY,
-        image: row.LOGO || '',
-        impactDescription: row.DESCRIPTION,
-        url: 'Some url',
-        parentId: null,
-        poll_id: 1,
-        type: ProjectType.collection,
-      },
-    });
-  }
-}
+//     await prisma.project.create({
+//       data: {
+//         name: row.CATEGORY,
+//         image: row.LOGO || '',
+//         impactDescription: row.DESCRIPTION,
+//         url: 'url',
+//         parentId: null,
+//         pollId: 1,
+//         type: ProjectType.collection,
+//       },
+//     });
+//   }
+// }
 
-async function insertMoonCollections() {
+async function insertMoonCollections(prisma: PrismaClient) {
   const workbook = XLSX.readFile('./pwcat.xlsx');
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
   const jsonData: Row[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
@@ -143,9 +148,10 @@ async function insertMoonCollections() {
       data: {
         name: row.CATEGORY,
         image: row.LOGO || '',
+        url: 'url',
         impactDescription: row.DESCRIPTION,
-        parentId: Number(row.pid),
-        poll_id: 1,
+        parentId: null,
+        pollId: 1,
         type: ProjectType.collection,
       },
     });
@@ -156,33 +162,34 @@ const main = async () => {
   const prisma = new PrismaClient({
     datasources: {
       db: {
-        url: process.env.DATABASE_URL,
+        url: process.env.POSTGRES_PRISMA_URL,
       },
     },
   });
 
   await prisma.$connect();
 
-  const space = getSpace();
-  await prisma.space.create({
-    data: space,
-  });
+  // const space = getSpace();
+  // await prisma.space.create({
+  //   data: space,
+  // });
 
-  // add poll
-  const poll = getPoll();
-  await prisma.poll.create({
-    data: poll,
-  });
+  // // add poll
+  // const poll = getPoll();
+  // await prisma.poll.create({
+  //   data: poll,
+  // });
 
-  await insertTopCollections();
+  // await insertTopCollections(prisma);
 
-  await insertMoonCollections();
+  await insertMoonCollections(prisma);
 
-  await insertProjects();
+  await insertProjects(prisma);
 
+  // findErigonI();
   // printCategories();
 
   await prisma.$disconnect();
 };
 
-void main();
+// void main();

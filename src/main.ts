@@ -6,6 +6,8 @@ import * as cors from 'cors';
 import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
+// import { main } from './read-rpgf4-projects';
+// import { main } from './project-reading';
 
 const CorsWhitelist = [
   'https://localhost:3001',
@@ -23,9 +25,13 @@ const CorsWhitelist = [
   'http://www.pairwise.vote/',
   'https://pairwise-frontend-git-test-numerous-planets-general-magic.vercel.app',
   'https://pwrd.cupofjoy.store',
+  'pairwise.vote',
 ];
 
 async function bootstrap() {
+  // main();
+
+  // return;
   let httpsOptions = undefined;
   if (process.env.NODE_ENV === 'development') {
     httpsOptions = {
@@ -64,8 +70,11 @@ async function bootstrap() {
       origin: (origin, callback) => {
         if (
           !origin ||
-          CorsWhitelist.includes(origin) ||
-          (origin.includes('vercel.app') && origin.includes('pairwise'))
+          CorsWhitelist.filter(
+            (item) => origin.includes(item) || item.includes(origin),
+          ).length > 0 ||
+          (origin.includes('vercel.app') && origin.includes('pairwise')) ||
+          origin.includes('localhost:')
         )
           return callback(null, true);
         return callback(new Error('Not allowed by CORS'));

@@ -1,0 +1,40 @@
+name: rpgf3-deploy-pipeline
+
+on:
+  push:
+    branches:
+      - rpgf3
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and Redeploy Production
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd pw-backend
+            docker-compose down -v
+            docker image prune -a --force
+            git checkout rpgf3
+            git pull origin rpgf3
+            docker-compose up -d --build
+
+      - name: SSH and Redeploy Staging
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USERNAME }}
+          key: ${{ secrets.STAGING_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd pw-backend
+            docker-compose down -v
+            docker image prune -a --force
+            git checkout rpgf3
+            git pull origin rpgf3
+            docker-compose up -d --build

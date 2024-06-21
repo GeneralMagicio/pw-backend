@@ -5,9 +5,9 @@ export interface CollectionRanking {
   hasRanking: true;
   // isFinished: boolean;
   id: number;
-  RPGF3Id: string;
+  RPGF4Id: string;
   name: string;
-  share: number;
+  rank: number;
   ranking: (CollectionRanking | ProjectRanking)[];
 }
 
@@ -15,8 +15,8 @@ export interface ProjectRanking {
   type: 'project' | 'collection' | 'composite project';
   hasRanking: false;
   id: number;
-  RPGF3Id: string;
-  share: number;
+  RPGF4Id: string;
+  rank: number;
   name: string;
 }
 
@@ -37,4 +37,6 @@ export type CollectionProgressStatus =
   | 'Finished'
   | 'WIP - Threshold'
   | 'WIP'
+  | 'Filtered'
+  | 'Filtering'
   | 'Pending';

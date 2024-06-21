@@ -9,6 +9,8 @@ import {
   Req,
   UseGuards,
   UnprocessableEntityException,
+  BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
@@ -19,8 +21,9 @@ import { AuthGuard } from './auth.guard';
 import { LoginDTO } from './dto/login.dto';
 import { ApiResponse } from '@nestjs/swagger';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
-import { STAGING_API } from 'src/utils';
+import { STAGING_API, generateRandomString } from 'src/utils';
 import { FlowService } from 'src/flow/flow.service';
+import { OtpDTO } from './dto/otp.dto';
 
 @Controller({ path: 'auth' })
 export class AuthController {
@@ -60,15 +63,23 @@ export class AuthController {
 
   @ApiResponse({ status: 200, description: 'Sets an auth cookie' })
   @Post('/login')
-  async login(@Res() res: Response, @Body() { message, signature }: LoginDTO) {
-    const { address, nonce } = message;
-    const isAuthentic = await this.authService.verifyUser(message, signature);
+  async login(
+    @Res() res: Response,
+    @Body() { message, signature, address, chainId }: LoginDTO,
+  ) {
+    let isNewUser = false;
+    const isAuthentic = await this.authService.verifyUser(
+      message,
+      signature,
+      address,
+    );
     if (!isAuthentic) throw new UnauthorizedException('Invalid signature');
     let user = await this.prismaService.user.findFirst({
       where: { address },
     });
     if (!user) {
       user = await this.usersService.create({ address, isBadgeHolder: true });
+      isNewUser = true;
     }
 
     if (!user)
@@ -76,25 +87,32 @@ export class AuthController {
 
     await this.prismaService.nonce.deleteMany({
       where: {
-        user_id: user.id,
+        userId: user.id,
       },
     });
 
-    await this.prismaService.nonce.updateMany({
-      where: {
-        nonce,
-      },
+    const token = generateRandomString({
+      length: 32,
+      lowercase: true,
+      numerical: true,
+      uppercase: true,
+    });
+
+    await this.prismaService.nonce.create({
       data: {
-        user_id: user.id,
-        expires_at: `${Date.now() + this.authService.TokenExpirationDuration}`,
+        nonce: token,
+        userId: user.id,
+        expiresAt: `${Date.now() + this.authService.TokenExpirationDuration}`,
       },
     });
 
-    const isFirstLogin = await this.prismaService.share.findFirst({
-      where: { user_id: user.id },
+    const hasRanks = await this.prismaService.rank.findFirst({
+      where: { userId: user.id },
     });
 
-    if (isFirstLogin === null)
+    const noRanks = hasRanks === null;
+
+    if (isNewUser || noRanks)
       await this.flowService.populateInitialRanking(user.id);
     // res.cookie('auth', nonce, {
     //   httpOnly: true,
@@ -106,7 +124,7 @@ export class AuthController {
 
     // return nonce;
 
-    res.status(200).send(nonce);
+    res.status(200).send({ token, isNewUser });
   }
 
   @ApiResponse({
@@ -120,9 +138,66 @@ export class AuthController {
     await this.prismaService.nonce.create({
       data: {
         nonce,
-        expires_at: `${Date.now() + this.authService.NonceExpirationDuration}`,
+        expiresAt: `${Date.now() + this.authService.NonceExpirationDuration}`,
       },
     });
     return nonce;
+  }
+
+  @ApiResponse({
+    status: 200,
+    type: String,
+    description: 'a 6 character numerical OTP is returned',
+  })
+  @UseGuards(AuthGuard)
+  @Get('/otp')
+  async getOtp(@Req() { userId }: AuthedReq) {
+    const otp = await this.authService.assignOtp(userId);
+
+    return otp;
+  }
+
+  @ApiResponse({
+    status: 200,
+    type: Boolean,
+    description: 'false or returning an auth token',
+  })
+  @Post('/otp/validate')
+  async validateOtp(@Body() { otp }: OtpDTO) {
+    const userId = await this.authService.checkOtpValidity(otp);
+
+    if (!userId) throw new ForbiddenException('OTP invalid');
+
+    const [nonce, _] = await Promise.all([
+      this.prismaService.nonce.findUnique({
+        where: {
+          userId: userId,
+        },
+      }),
+      this.prismaService.otp.delete({
+        where: { userId },
+      }),
+    ]);
+
+    if (!nonce) {
+      const token = generateRandomString({
+        length: 32,
+        lowercase: true,
+        numerical: true,
+        uppercase: true,
+      });
+
+      await this.prismaService.nonce.create({
+        data: {
+          nonce: token,
+          userId,
+          expiresAt: `${Date.now() + this.authService.TokenExpirationDuration}`,
+        },
+      });
+
+      return token;
+    }
+
+    return nonce.nonce;
   }
 }

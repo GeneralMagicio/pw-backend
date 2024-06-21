@@ -1,8 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
-
+import {
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
+import { verifySignature } from 'thirdweb/auth';
 import { generateRandomString } from 'src/utils';
-import { SiweMessage } from 'siwe';
 import { PrismaService } from 'src/prisma.service';
+import { chain, thirdwebClient } from 'src/thirdweb';
 
 @Injectable()
 export class AuthService {
@@ -10,7 +15,7 @@ export class AuthService {
   constructor(private readonly prismaService: PrismaService) {}
 
   /**
-   * 24 hours
+   * 48 hours
    */
   public TokenExpirationDuration = 48 * 60 * 60 * 1000;
 
@@ -31,11 +36,68 @@ export class AuthService {
   cleanUpExpiredNonces = async () => {
     await this.prismaService.nonce.deleteMany({
       where: {
-        expires_at: {
+        expiresAt: {
           lt: `${Date.now()}`,
         },
       },
     });
+  };
+
+  assignOtp = async (userId: number) => {
+    const [record, user] = await Promise.all([
+      this.prismaService.otp.findFirst({
+        where: {
+          userId,
+          expiresAt: {
+            gte: `${Date.now()}`,
+          },
+        },
+        include: { user: true },
+      }),
+      this.prismaService.user.findUnique({
+        where: { id: userId },
+        select: { badges: true, identity: true },
+      }),
+    ]);
+
+    if (!user) throw new InternalServerErrorException("User doesn't exist");
+
+    if (user.identity?.valueOf() || user.badges?.valueOf())
+      throw new ForbiddenException('User has already connected');
+
+    if (record) return record.otp;
+
+    const otp = generateRandomString({ length: 6, numerical: true });
+    await this.prismaService.otp.deleteMany({
+      where: {
+        userId,
+      },
+    });
+    await this.prismaService.otp.create({
+      data: {
+        otp,
+        userId,
+        expiresAt: `${Date.now() + 4 * 60 * 60 * 1000}`, // 4 hours
+      },
+    });
+
+    return otp;
+  };
+
+  checkOtpValidity = async (otp: string) => {
+    const record = await this.prismaService.otp.findFirst({
+      where: {
+        otp,
+        expiresAt: {
+          gte: `${Date.now()}`,
+        },
+      },
+      include: { user: true },
+    });
+
+    if (!record) return false;
+
+    return record.user.id;
   };
 
   generateNonce = () => {
@@ -58,7 +120,7 @@ export class AuthService {
     });
 
     if (isValid === null) throw new Error('Unavailable nonce');
-    if (isValid.expires_at < `${Date.now()}`) throw new Error('Expired nonce');
+    if (isValid.expiresAt < `${Date.now()}`) throw new Error('Expired nonce');
 
     return true;
   };
@@ -68,10 +130,10 @@ export class AuthService {
       select: { user: true },
       where: {
         nonce: token,
-        user_id: {
+        userId: {
           not: null,
         },
-        expires_at: {
+        expiresAt: {
           gt: `${Date.now()}`,
         },
       },
@@ -82,15 +144,15 @@ export class AuthService {
     return user;
   };
 
-  verifyUser = async (message: SiweMessage, signature: any) => {
-    const siweMessage = new SiweMessage(message);
-    try {
-      await this.isNonceValid(message.nonce);
-      await siweMessage.verify({ signature });
-      return true;
-    } catch (err) {
-      console.error('ERROR:', err);
-      return false;
-    }
+  verifyUser = async (message: string, signature: string, address: string) => {
+    const isValid = await verifySignature({
+      message,
+      signature,
+      address,
+      client: thirdwebClient,
+      chain,
+    });
+
+    return isValid;
   };
 }
