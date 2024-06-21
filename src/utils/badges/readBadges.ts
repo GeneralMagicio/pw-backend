@@ -4,10 +4,10 @@ import { RawSnapshotPoint } from './snapshot';
 const medalTypes = [
   'Bronze',
   'Diamond',
-  'Platnium',
+  'Platinum',
   'Gold',
   'Silver',
-  'WHALE',
+  'Whale',
 ] as const;
 
 export type BadgeData = {
@@ -67,7 +67,8 @@ export const getBadges = async (
   for (key in row) {
     if (key === 'User') continue;
     const value = row[key];
-    if (value === '0' || value === 'null') continue;
+    if (value === 0 || value === null || value === '0' || value === 'null')
+      continue;
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     if (isNumeric(value)) filtered[key] = Number(value);
