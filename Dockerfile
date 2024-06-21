@@ -7,6 +7,6 @@ RUN npm install -g @nestjs/cli
 RUN npm install
 COPY . .
 RUN npm run build
-RUN npx prisma migrate dev
+RUN npx prisma migrate deploy
 EXPOSE 7070
 CMD ["npm", "run", "start"]
