@@ -20,6 +20,6 @@ jobs:
             cd rpgf4-pw-backend
             docker-compose down -v
             docker image prune -a --force
-            git checkout master
-            git pull origin master
+            git checkout staging
+            git pull origin staging
             docker-compose up -d --build
