@@ -1,8 +1,12 @@
 import { createThirdwebClient } from 'thirdweb';
-import { optimism } from 'thirdweb/chains';
+import { optimism, optimismSepolia } from 'thirdweb/chains';
 
-const secretKey = `uC3ZLlukCCFS0NdSQKjmHjCaZ5wEXhK__ujBT26QZDRjA6KePBU-L-bjnUnHyKKDNNXpqUIi_k_2w7ZfhXXyBg`;
-export const chain = optimism;
+const secretKey = process.env.SECRET_KEY;
+
+if (!secretKey) throw new Error('No Third Web Secret Key');
+
+export const chain =
+  process.env.ACTIVE_CHAIN === 'optimism' ? optimism : optimismSepolia;
 
 export const thirdwebClient = createThirdwebClient({
   secretKey,

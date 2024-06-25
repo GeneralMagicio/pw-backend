@@ -25,9 +25,12 @@ export type BadgeData = {
 
 // Define an async function to resolve the ENS name
 async function reverseENSLookup(address: string) {
+  const dkey = process.env.DKEY;
   // Connect to the Ethereum network (mainnet)
   const provider = new ethers.JsonRpcProvider(
-    'https://lb.drpc.org/ogrpc?network=ethereum&dkey=AkwVEpAy8kYom-mKjqkdWlU3QXKgGEMR77kfsvbGyHm5',
+    dkey
+      ? `https://lb.drpc.org/ogrpc?network=ethereum&dkey=${dkey}`
+      : 'https://eth.llamarpc.com',
   );
 
   try {

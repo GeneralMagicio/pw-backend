@@ -28,5 +28,4 @@ export const EASNetworks: Record<number, Config> = {
   },
 };
 
-export const SCHEMA_UID =
-  '0x3e3e2172aebb902cf7aa6e1820809c5b469af139e7a4265442b1c22b97c6b2a5';
+export const SCHEMA_UID = process.env.SCHEMA_UID;
