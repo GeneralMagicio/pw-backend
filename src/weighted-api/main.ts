@@ -18,6 +18,7 @@ import axios from 'axios';
 import { BadgeData } from 'src/utils/badges/readBadges';
 
 const readAllAttestations = async () => {
+  if (!SCHEMA_UID) throw Error('Please enter an schema UID');
   const chain = optimismSepolia;
   const attestations = await getAllAttestations(
     SCHEMA_UID,
