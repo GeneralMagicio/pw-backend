@@ -293,7 +293,16 @@ export class FlowService {
     //     'Inclusion states in a filtered collection can not be modified',
     //   );
 
-    const [siblingExclusions, allChildren] = await Promise.all([
+    const [inclusionState, siblingExclusions, allChildren] = await Promise.all([
+      this.prismaService.projectInclusion.findUnique({
+        select: { state: true },
+        where: {
+          userId_projectId: {
+            userId,
+            projectId,
+          },
+        },
+      }),
       this.prismaService.projectInclusion.count({
         where: {
           userId,
@@ -314,7 +323,8 @@ export class FlowService {
 
     if (
       siblingExclusions === allChildren - minimumInclusion &&
-      state === 'excluded'
+      state === 'excluded' &&
+      (!inclusionState || inclusionState.state === 'included')
     )
       throw new HttpException(
         {
