@@ -201,17 +201,29 @@ export class FlowService {
 
     const parentId = projects[0]?.parentId;
 
+    const minimumInclusion = parentId
+      ? await this.getMinimumIncludedProjects(parentId)
+      : 2;
+
+    if (ids.length === 0)
+      throw new HttpException(
+        {
+          error: `You need to include at least ${minimumInclusion} projects`,
+          pwCode: 'pw1000',
+          minimum: minimumInclusion,
+        },
+        HttpStatus.FORBIDDEN,
+      );
+
     if (new Set(projects.map((el) => el?.parentId)).size !== 1 || !parentId)
       throw new BadRequestException(
         'All projects should share the same parent',
       );
 
-    const minimumInclusion = await this.getMinimumIncludedProjects(parentId);
-
     if (new Set(ids).size < minimumInclusion)
       throw new HttpException(
         {
-          error: `You need to include at least ${minimumInclusion} projets`,
+          error: `You need to include at least ${minimumInclusion} projects`,
           pwCode: 'pw1000',
           minimum: minimumInclusion,
         },
@@ -328,7 +340,7 @@ export class FlowService {
     )
       throw new HttpException(
         {
-          error: `You need to include at least ${minimumInclusion} projets`,
+          error: `You need to include at least ${minimumInclusion} projects`,
           pwCode: 'pw1000',
           minimum: minimumInclusion,
         },
