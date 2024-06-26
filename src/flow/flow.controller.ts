@@ -486,9 +486,13 @@ export class FlowController {
   async dndBulk(
     @Req() { userId }: AuthedReq,
     @Body()
-    { projectIds }: DnDBody,
+    { projectIds, collectionId }: DnDBody,
   ) {
-    await this.flowService.setInclusionStateBulk(projectIds, userId);
+    await this.flowService.setInclusionStateBulk(
+      projectIds,
+      userId,
+      collectionId,
+    );
 
     const promises = projectIds.map((projectId, index) =>
       this.prismaService.rank.update({
@@ -570,9 +574,9 @@ export class FlowController {
   @Post('/projects/set-inclusion-bulk')
   async setInclusionBulk(
     @Req() { userId }: AuthedReq,
-    @Body() { ids }: InclusionProjectsBulkBody,
+    @Body() { ids, collectionId }: InclusionProjectsBulkBody,
   ) {
-    await this.flowService.setInclusionStateBulk(ids, userId);
+    await this.flowService.setInclusionStateBulk(ids, userId, collectionId);
     return 'Success';
   }
 
