@@ -189,7 +189,11 @@ export class FlowService {
     return res !== null;
   };
 
-  setInclusionStateBulk = async (ids: number[], userId: number) => {
+  setInclusionStateBulk = async (
+    ids: number[],
+    userId: number,
+    cid: number,
+  ) => {
     const projects = await this.prismaService.$transaction(
       ids.map((id) =>
         this.prismaService.project.findUnique({
@@ -201,17 +205,31 @@ export class FlowService {
 
     const parentId = projects[0]?.parentId;
 
+    const tempMinimum = await this.getMinimumIncludedProjects(cid);
+
+    if (ids.length === 0)
+      throw new HttpException(
+        {
+          error: `You need to include at least ${tempMinimum} projects`,
+          pwCode: 'pw1000',
+          minimum: tempMinimum,
+        },
+        HttpStatus.FORBIDDEN,
+      );
+
     if (new Set(projects.map((el) => el?.parentId)).size !== 1 || !parentId)
       throw new BadRequestException(
         'All projects should share the same parent',
       );
 
+    // Since we're not sure the cid passed by the user is indeed the parentId, we fetch
+    // the minimum inclusion number again
     const minimumInclusion = await this.getMinimumIncludedProjects(parentId);
 
     if (new Set(ids).size < minimumInclusion)
       throw new HttpException(
         {
-          error: `You need to include at least ${minimumInclusion} projets`,
+          error: `You need to include at least ${minimumInclusion} projects`,
           pwCode: 'pw1000',
           minimum: minimumInclusion,
         },
@@ -293,7 +311,16 @@ export class FlowService {
     //     'Inclusion states in a filtered collection can not be modified',
     //   );
 
-    const [siblingExclusions, allChildren] = await Promise.all([
+    const [inclusionState, siblingExclusions, allChildren] = await Promise.all([
+      this.prismaService.projectInclusion.findUnique({
+        select: { state: true },
+        where: {
+          userId_projectId: {
+            userId,
+            projectId,
+          },
+        },
+      }),
       this.prismaService.projectInclusion.count({
         where: {
           userId,
@@ -314,11 +341,12 @@ export class FlowService {
 
     if (
       siblingExclusions === allChildren - minimumInclusion &&
-      state === 'excluded'
+      state === 'excluded' &&
+      (!inclusionState || inclusionState.state === 'included')
     )
       throw new HttpException(
         {
-          error: `You need to include at least ${minimumInclusion} projets`,
+          error: `You need to include at least ${minimumInclusion} projects`,
           pwCode: 'pw1000',
           minimum: minimumInclusion,
         },

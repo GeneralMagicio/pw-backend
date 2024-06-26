@@ -21,12 +21,16 @@ export class InclusionProjectsBulkBody {
 
   @IsIn(['included'])
   state: InclusionState;
+
+  @ApiProperty({ description: 'collection id' })
+  @IsDefined()
+  collectionId: number;
 }
 
 export class DnDBody {
-  // @ApiProperty({ description: 'collection id' })
-  // @IsDefined()
-  // collectionId: number;
+  @ApiProperty({ description: 'collection id' })
+  @IsDefined()
+  collectionId: number;
 
   @ApiProperty({ description: 'New order of the projects in descending order' })
   @IsDefined()
