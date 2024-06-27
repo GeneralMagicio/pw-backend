@@ -1,4 +1,3 @@
-import { optimismSepolia } from 'thirdweb/chains';
 import {
   checkAttestationValidity,
   getAllAttestations,
@@ -7,19 +6,20 @@ import { EASNetworks, SCHEMA_UID } from './eas/eas';
 import {
   AttestationMetadata,
   List,
-  addWeightToList,
+  addWeightToCategory,
+  addWeightToProject,
   cloneObjects,
-  getRankingDistribution,
   getVoteWeight,
   initializeWeightList,
   sortWeightedList,
 } from './utils';
+import { chain } from 'src/thirdweb';
+import { getRankingDistribution } from './algo';
 import axios from 'axios';
 import { BadgeData } from 'src/utils/badges/readBadges';
 
 const readAllAttestations = async () => {
   if (!SCHEMA_UID) throw Error('Please enter an schema UID');
-  const chain = optimismSepolia;
   const attestations = await getAllAttestations(
     SCHEMA_UID,
     EASNetworks[chain.id].gqlUrl,
@@ -89,15 +89,31 @@ export const calculateWeightedLists = async (
 
     // console.log('metadata for attestation', metadata, attestation);
 
+    const rankingDistribution = getRankingDistribution(
+      metadata.listContent.length,
+    );
+
     for (let i = 0; i < metadata.listContent.length; i++) {
       const project = metadata.listContent[i];
-      const rankWeight = getRankingDistribution(
-        i + 1,
-        metadata.listContent.length,
-      );
+      const rankWeight = rankingDistribution[i];
 
       for (const list of lists) {
         const coefficient = getVoteWeight(badges, list.type);
+
+        if (attestation.listName === 'Pairwise categories') {
+          list.weightList = addWeightToCategory(
+            project.RPGF3_Application_UID,
+            coefficient * rankWeight,
+            list.weightList,
+          );
+        } else {
+          list.weightList = addWeightToProject(
+            attestation.listName,
+            project.RPGF3_Application_UID,
+            coefficient * rankWeight,
+            list.weightList,
+          );
+        }
 
         // console.log(
         //   'Giving it to wtl with weight',
@@ -105,13 +121,6 @@ export const calculateWeightedLists = async (
         //   'for project:',
         //   project.RPGF3_Application_UID,
         // );
-
-        list.weightList = addWeightToList(
-          attestation.listName,
-          project.RPGF3_Application_UID,
-          coefficient * rankWeight,
-          list.weightList,
-        );
       }
     }
   }

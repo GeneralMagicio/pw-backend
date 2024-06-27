@@ -20,6 +20,7 @@ interface ProjectWeight {
 export interface CategoryWeight {
   categoryName: string;
   weight: number;
+  categoryRPGFId: string;
   projects: ProjectWeight[];
 }
 
@@ -47,7 +48,7 @@ export const initializeWeightList = async () => {
   await prisma.$connect();
 
   const categories = await prisma.project.findMany({
-    select: { name: true, id: true },
+    select: { name: true, id: true, RPGF4Id: true },
     where: {
       type: 'collection',
       parentId: null,
@@ -55,8 +56,19 @@ export const initializeWeightList = async () => {
   });
 
   for (const category of categories) {
+    if (!category.RPGF4Id)
+      throw new Error('All categories must have a RPGF4 id');
+
     const children = await prisma.project.findMany({
-      select: { name: true, RPGF4Id: true },
+      select: {
+        name: true,
+        RPGF4Id: true,
+        image: true,
+        url: true,
+        impactDescription: true,
+        contributionDescription: true,
+        metadataUrl: true,
+      },
       where: {
         type: 'project',
         parentId: category.id,
@@ -65,10 +77,11 @@ export const initializeWeightList = async () => {
 
     weightList.push({
       categoryName: category.name,
-      projects: children.map(({ RPGF4Id, name }) => {
+      categoryRPGFId: category.RPGF4Id,
+      projects: children.map(({ RPGF4Id, ...metadata }) => {
         if (!RPGF4Id) throw new Error('All projects must have a RPGF4 id');
         return {
-          name,
+          metadata,
           projectRPGFId: RPGF4Id,
           weight: 0,
         };
@@ -85,7 +98,24 @@ export const initializeWeightList = async () => {
 export const cloneObjects = <T>(object: T): T =>
   JSON.parse(JSON.stringify(object));
 
-export const addWeightToList = (
+export const addWeightToCategory = (
+  categoryId: string,
+  weight: number,
+  list: CategoryWeight[],
+) => {
+  // console.log('Adding', weight, 'to project', projectId);
+  const clonedList = cloneObjects(list);
+
+  for (const category of clonedList) {
+    if (category.categoryRPGFId === categoryId) {
+      category.weight = category.weight + weight;
+    }
+  }
+
+  return clonedList;
+};
+
+export const addWeightToProject = (
   categoryName: string,
   projectId: string,
   weight: number,
