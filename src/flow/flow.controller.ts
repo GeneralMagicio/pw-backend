@@ -710,10 +710,6 @@ export class FlowController {
       where: { userId: userId },
     });
 
-    await this.prismaService.expertiseVote.deleteMany({
-      where: { userId: userId },
-    });
-
     await this.prismaService.vote.deleteMany({
       where: { userId: userId },
     });

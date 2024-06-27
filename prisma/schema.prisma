@@ -11,12 +11,13 @@ generator client {
 model User {
   id                 Int                      @id @default(autoincrement())
   address            String                   @unique()
+  opAddress          String?                  @unique() @map("op_address")
   isBadgeHolder      Int                      @map("is_badgeholder")
   createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @default(now()) @updatedAt @map("updated_at")
   identity           Json?                    @unique()
   badges             Json?
   projectVotes       Vote[]
-  expertiseVotes     ExpertiseVote[]
   nonce              Nonce?
   otp                Otp?
   finishedCollection UserCollectionFinish[]
@@ -77,9 +78,6 @@ model Project {
   options2                Vote[]                   @relation("VoteToProject2")
   voted                   Vote[]                   @relation("Voted")
   ranks                   Rank[]
-  expertiseColleciton1    ExpertiseVote[]          @relation("ExpertiseVote1")
-  expertiseColleciton2    ExpertiseVote[]          @relation("ExpertiseVote2")
-  expertiseVoted          ExpertiseVote[]          @relation("Voted")
   finishedCollections     UserCollectionFinish[]
   filteredCollections     UserCollectionFiltered[]
   inclusions              ProjectInclusion[]
@@ -93,29 +91,13 @@ model Vote {
   project2Id Int      @map("project2_id")
   pickedId   Int?     @map("picked_id")
   createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @default(now()) @map("updated_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
   user       User     @relation(fields: [userId], references: [id])
   project1   Project  @relation("VoteToProject1", fields: [project1Id], references: [id])
   project2   Project  @relation("VoteToProject2", fields: [project2Id], references: [id])
   picked     Project? @relation("Voted", fields: [pickedId], references: [id])
 
   @@unique([project1Id, project2Id, userId])
-}
-
-model ExpertiseVote {
-  id            Int      @id @default(autoincrement())
-  userId        Int      @map("user_id")
-  collection1Id Int      @map("collection1_id")
-  collection2Id Int      @map("collection2_id")
-  pickedId      Int?     @map("picked_id")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @default(now()) @map("updated_at")
-  user          User     @relation(fields: [userId], references: [id])
-  collection1   Project  @relation("ExpertiseVote1", fields: [collection1Id], references: [id])
-  collection2   Project  @relation("ExpertiseVote2", fields: [collection2Id], references: [id])
-  picked        Project? @relation("Voted", fields: [pickedId], references: [id])
-
-  @@unique([collection1Id, collection2Id, userId])
 }
 
 model Nonce {
@@ -154,7 +136,7 @@ model Rank {
   projectId Int      @map("project_id")
   rank      Int? // the rank of a project in a category (rank = 1 is the best, etc)
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @map("updated_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
   user      User     @relation(fields: [userId], references: [id])
   project   Project  @relation(fields: [projectId], references: [id])
 
@@ -172,7 +154,7 @@ model ProjectInclusion {
   projectId Int            @map("project_id")
   state     InclusionState
   createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @default(now()) @map("updated_at")
+  updatedAt DateTime       @default(now()) @updatedAt @map("updated_at")
   user      User           @relation(fields: [userId], references: [id])
   project   Project        @relation(fields: [projectId], references: [id])
 
@@ -183,7 +165,7 @@ model UserCollectionFiltered {
   userId       Int      @map("user_id")
   collectionId Int      @map("collection_id")
   createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @default(now()) @map("updated_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
   user         User     @relation(fields: [userId], references: [id])
   collection   Project  @relation(fields: [collectionId], references: [id])
 
@@ -194,7 +176,7 @@ model UserCollectionFinish {
   userId       Int      @map("user_id")
   collectionId Int      @map("collection_id")
   createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @default(now()) @map("updated_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
   user         User     @relation(fields: [userId], references: [id])
   collection   Project  @relation(fields: [collectionId], references: [id])
 
@@ -205,7 +187,7 @@ model UserAttestation {
   userId       Int      @map("user_id")
   collectionId Int      @map("collection_id")
   createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @default(now()) @map("updated_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
   user         User     @relation(fields: [userId], references: [id])
   collection   Project  @relation(fields: [collectionId], references: [id])
 
