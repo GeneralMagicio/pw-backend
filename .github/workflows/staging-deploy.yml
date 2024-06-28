@@ -22,4 +22,5 @@ jobs:
             docker image prune -a --force
             git checkout staging
             git pull origin staging
-            docker-compose up -d --build
+            docker-compose build --no-cache
+            docker-compose up -d
