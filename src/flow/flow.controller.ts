@@ -617,59 +617,59 @@ export class FlowController {
   }
 
   // @UseGuards(AuthGuard)
-  @ApiResponse({ status: 200, description: 'All your voting data is removed' })
-  @Get('/test/pa2')
-  async testtest2() {
-    const userId = 48;
-    const collectionId = 170;
+  // @ApiResponse({ status: 200, description: 'All your voting data is removed' })
+  // @Get('/test/pa2')
+  // async testtest2() {
+  //   const userId = 48;
+  //   const collectionId = 170;
 
-    const [variable1, variable2, variable3, variable4, variable5, variable6] =
-      await Promise.all([
-        this.flowService.isCollectionAttested(userId, collectionId),
-        this.flowService.isCollectionFinished(userId, collectionId),
-        this.flowService.hasThresholdVotes(collectionId, userId),
-        this.flowService.isCollectionStarted(userId, collectionId),
-        this.flowService.isCollectionFiltered(userId, collectionId),
-        this.prismaService.projectInclusion.findFirst({
-          where: { userId, project: { parentId: collectionId } },
-        }),
-      ]);
-    return { variable1, variable2, variable3, variable4, variable5, variable6 };
-  }
+  //   const [variable1, variable2, variable3, variable4, variable5, variable6] =
+  //     await Promise.all([
+  //       this.flowService.isCollectionAttested(userId, collectionId),
+  //       this.flowService.isCollectionFinished(userId, collectionId),
+  //       this.flowService.hasThresholdVotes(collectionId, userId),
+  //       this.flowService.isCollectionStarted(userId, collectionId),
+  //       this.flowService.isCollectionFiltered(userId, collectionId),
+  //       this.prismaService.projectInclusion.findFirst({
+  //         where: { userId, project: { parentId: collectionId } },
+  //       }),
+  //     ]);
+  //   return { variable1, variable2, variable3, variable4, variable5, variable6 };
+  // }
 
-  // @UseGuards(AuthGuard)
-  @ApiResponse({ status: 200, description: 'All your voting data is removed' })
-  @Get('/test/pa')
-  async testtest() {
-    const userId = 48;
-    const collectionId = 170;
+  // // @UseGuards(AuthGuard)
+  // @ApiResponse({ status: 200, description: 'All your voting data is removed' })
+  // @Get('/test/pa')
+  // async testtest() {
+  //   const userId = 48;
+  //   const collectionId = 170;
 
-    const variable1 = await this.flowService.isCollectionAttested(
-      userId,
-      collectionId,
-    );
-    const variable2 = await this.flowService.isCollectionFinished(
-      userId,
-      collectionId,
-    );
-    const variable3 = await this.flowService.hasThresholdVotes(
-      collectionId,
-      userId,
-    );
-    const variable4 = await this.flowService.isCollectionStarted(
-      userId,
-      collectionId,
-    );
-    const variable5 = await this.flowService.isCollectionFiltered(
-      userId,
-      collectionId,
-    );
-    const variable6 = await this.prismaService.projectInclusion.findFirst({
-      where: { userId, project: { parentId: collectionId } },
-    });
+  //   const variable1 = await this.flowService.isCollectionAttested(
+  //     userId,
+  //     collectionId,
+  //   );
+  //   const variable2 = await this.flowService.isCollectionFinished(
+  //     userId,
+  //     collectionId,
+  //   );
+  //   const variable3 = await this.flowService.hasThresholdVotes(
+  //     collectionId,
+  //     userId,
+  //   );
+  //   const variable4 = await this.flowService.isCollectionStarted(
+  //     userId,
+  //     collectionId,
+  //   );
+  //   const variable5 = await this.flowService.isCollectionFiltered(
+  //     userId,
+  //     collectionId,
+  //   );
+  //   const variable6 = await this.prismaService.projectInclusion.findFirst({
+  //     where: { userId, project: { parentId: collectionId } },
+  //   });
 
-    return { variable1, variable2, variable3, variable4, variable5, variable6 };
-  }
+  //   return { variable1, variable2, variable3, variable4, variable5, variable6 };
+  // }
 
   // @UseGuards(AuthGuard)
   @ApiOperation({
