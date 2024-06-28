@@ -21,6 +21,7 @@ jobs:
             docker-compose down -v
             docker image prune -a --force
             git checkout staging
+            git reset --hard origin/staging
             git pull origin staging
             docker-compose build --no-cache
             docker-compose up -d
