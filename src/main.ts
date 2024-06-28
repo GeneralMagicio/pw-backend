@@ -37,7 +37,6 @@ const CorsWhitelist = [
 ];
 
 async function bootstrap() {
-  return;
   // main();
 
   // return;
