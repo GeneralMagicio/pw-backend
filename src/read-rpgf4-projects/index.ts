@@ -14,67 +14,6 @@ const getPoll = (): Prisma.PollUncheckedCreateInput => ({
   spaceId: 1,
 });
 
-const addMetricsId = async (prisma: PrismaClient, projectId: string) => {
-  const query = `
-  query MyQuery($where: code_metrics_by_project_v1_bool_exp) {
-    code_metrics_by_project_v1(
-      where: $where
-    ) {
-      display_name
-      project_name
-    }
-  }
-  `;
-
-  // const whereVar = {
-  //   project_id: { _eq: 'tcJvWiZJInhq79YFWAhvTjB-bNjhTM4evTflhFk1tNc=' },
-  // };
-
-  const gqlUrl = `https://opensource-observer.hasura.app/v1/graphql`;
-  const { data: res } = await axios.post(gqlUrl, {
-    query: query,
-    operationName: 'MyQuery',
-    variables: {
-      where: {
-        project_id: { _eq: projectId },
-      },
-    },
-  });
-
-  if (
-    !res ||
-    !res.data ||
-    !res.data.code_metrics_by_project_v1 ||
-    !res.data.code_metrics_by_project_v1[0]
-  )
-    return;
-
-  const { display_name: displayName, project_name: projectName } =
-    res.data.code_metrics_by_project_v1[0];
-
-  if (displayName || projectName) {
-    console.log(displayName, projectName);
-    const exists = await prisma.project.findFirst({
-      select: { id: true },
-      where: {
-        name: { in: [displayName, projectName] },
-      },
-    });
-
-    if (exists) {
-      console.log('added metric id');
-      await prisma.project.update({
-        where: {
-          id: exists.id,
-        },
-        data: {
-          metricsProjectId: projectId,
-        },
-      });
-    } else console.log("Doesn't exist");
-  }
-};
-
 const addImages = async (prisma: PrismaClient) => {
   const { data: allProjects } = await axios.get<
     {
@@ -86,18 +25,50 @@ const addImages = async (prisma: PrismaClient) => {
   >('https://round4-api-eas.retrolist.app/projects');
 
   // console.log(allProjects);
-
+  let count = 0;
   const promises: Promise<void>[] = [];
   for (const project of allProjects) {
+    console.log('doing #', count++);
     const func = async () => {
       const exists = await prisma.project.findFirst({
         select: { id: true },
-        where: { name: `${project.displayName}`, type: 'project' },
+        where: { name: `${project.displayName}`.trim(), type: 'project' },
       });
       if (exists) {
         await prisma.project.update({
           where: { id: exists.id },
           data: { image: project.profileImageUrl, RPGF4Id: project.id },
+        });
+      }
+    };
+    promises.push(func());
+  }
+
+  await Promise.all(promises);
+};
+
+const addMetricId = async (prisma: PrismaClient) => {
+  const { data: allProjects } = await axios.get<
+    {
+      id: string;
+      displayName: string;
+    }[]
+  >('https://round4-api-eas.retrolist.app/projects');
+
+  // console.log(allProjects);
+
+  const promises: Promise<void>[] = [];
+  for (const project of allProjects) {
+    console.log('project id for', project.displayName, 'is', project.id);
+    const func = async () => {
+      const exists = await prisma.project.findFirst({
+        select: { id: true },
+        where: { name: `${project.displayName}`.trim(), type: 'project' },
+      });
+      if (exists) {
+        await prisma.project.update({
+          where: { id: exists.id },
+          data: { RPGF4Id: project.id },
         });
       }
     };
@@ -169,6 +140,8 @@ export const main = async () => {
 
   await prisma.$connect();
 
+  console.log('Connected!');
+
   // const space = getSpace();
   // await prisma.space.create({
   //   data: space,
@@ -216,7 +189,7 @@ export const main = async () => {
   //       type: 'project',
   //       parentId: category.id,
   //       pollId: 1,
-  //       name: `${project.displayName}`,
+  //       name: `${project.displayName}`.trim(),
   //       impactDescription: project.impactDescription,
   //       contributionDescription: project.contributionDescription,
   //       shortDescription: project['Short description'],
