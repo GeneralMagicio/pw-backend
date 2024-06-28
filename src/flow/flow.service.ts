@@ -1406,7 +1406,7 @@ export class FlowService {
   private calculateThreshold = (count: number, collectionId: number | null) => {
     if (collectionId === null || count < 7) return 0.4;
     // const threshold = 1 / (count - 1);
-    const threshold = 0.2;
+    const threshold = 0.3;
     return threshold;
   };
 

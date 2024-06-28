@@ -69,6 +69,7 @@ export class UsersController {
       },
       data: {
         badges: badges || {},
+        opAddress: mainAddress,
       },
     });
 
@@ -96,6 +97,18 @@ export class UsersController {
 
     return res?.identity || null;
   }
+
+  // @Get('/public/duplicates')
+  // async getDuplicates() {
+  //   snapshotPoints.forEach((point, index) => {
+  //     const newIndex = snapshotPoints.findIndex(
+  //       (el, i2) =>
+  //         index !== i2 && point.User.toLowerCase() === el.User.toLowerCase(),
+  //     );
+
+  //     if (newIndex !== -1) console.log(snapshotPoints[newIndex]);
+  //   });
+  // }
 
   @Get('/public/badges')
   async getPublicBadges(@Query() { address }: GetBadgesDTO) {

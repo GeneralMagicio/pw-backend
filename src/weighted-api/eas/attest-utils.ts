@@ -62,7 +62,7 @@ export const getAllAttestations = async (
         schemaId: {
           equals: schemaId,
         },
-        // attester: { equals: '0xcb73a971e3643f756E0Ce8c81cccA3D7B6AB2b9d' },
+        // attester: { equals: '0xad8E1dffBDFb3c265FE9E6f2a54C871bD46f553f' },
       },
       by: null,
     },
@@ -96,11 +96,11 @@ export const getAllAttestations = async (
 
 // TODO: Check if we do want to let this attestation be part of the ranking
 export const checkAttestationValidity = (attestation: Attestation) => {
-  if (
-    attestation.listName === 'root' ||
-    attestation.listName === 'Pairwise Categories'
-  )
-    return false;
+  // if (
+  //   attestation.listName === 'root' ||
+  //   attestation.listName === 'Pairwise Categories'
+  // )
+  //   return false;
 
   return true;
 };

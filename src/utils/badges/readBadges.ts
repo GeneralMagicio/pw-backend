@@ -53,10 +53,15 @@ export const getBadges = async (
 ) => {
   let row: RawSnapshotPoint | undefined = undefined;
   const ensName = await reverseENSLookup(userAddress);
-  const temp = points.find((el) => el.User === userAddress);
+  const temp = points.find(
+    (el) => el.User.toLowerCase() === userAddress.toLowerCase(),
+  );
+
   if (!temp) {
     if (ensName) {
-      const temp2 = points.find((el) => el.User === ensName);
+      const temp2 = points.find(
+        (el) => el.User.toLowerCase() === ensName.toLowerCase(),
+      );
       if (temp2) row = temp2;
     }
   } else {
