@@ -153,7 +153,7 @@ export const main = async () => {
   //   data: poll,
   // });
 
-  // // add categories
+  // add categories
 
   // await prisma.project.createMany({
   //   data: Object.keys(categories).map((category) => ({
@@ -199,13 +199,13 @@ export const main = async () => {
   //   });
   // }
 
+  // await addRpgf4IdToCollections(prisma);
+
   // for (const metric of metricsArray) {
   //   await addMetricsId(prisma, metric.project_id);
   // }
 
-  await addImages(prisma);
-
-  // await addRpgf4IdToCollections(prisma);
+  // await addImages(prisma);
 
   // await insertTopCollections(prisma);
 
