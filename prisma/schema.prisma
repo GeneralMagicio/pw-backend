@@ -64,6 +64,7 @@ model Project {
   url                     String?
   impactDescription       String                   @map("impact_description")
   contributionDescription String?                  @map("contribution_description")
+  shortDescription        String?                  @map("short_description")
   RPGF4Id                 String?                  @map("rpgf4_id")
   parentId                Int?                     @map("parent_id")
   image                   String?
