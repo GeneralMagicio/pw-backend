@@ -682,7 +682,7 @@ export class FlowController {
     // for (let i = 2; i < 9; i++) {
     const user = await this.prismaService.user.findFirst({
       select: { id: true },
-      where: { address: '0xcb73a971e3643f756E0Ce8c81cccA3D7B6AB2b9d' },
+      where: { address: '0x9cb5129b4c710dB85F1dcd4071CB5f777e5B7612' },
     });
 
     // console.log(user?.id);
@@ -690,7 +690,7 @@ export class FlowController {
     if (user && !userId) {
       userId = user?.id;
       console.log(user.id);
-    } else return;
+    } else if (!user && !userId) return;
 
     // userId = 448;
 
@@ -726,16 +726,16 @@ export class FlowController {
       where: { userId: userId },
     });
 
-    await this.prismaService.user.update({
-      where: { id: userId },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      data: { identity: null, badges: null },
-    });
-
-    // await this.prismaService.user.deleteMany({
+    // await this.prismaService.user.update({
     //   where: { id: userId },
+    //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    //   // @ts-ignore
+    //   data: { identity: null, badges: null },
     // });
+
+    await this.prismaService.user.deleteMany({
+      where: { id: userId },
+    });
 
     // }
   }
