@@ -95,6 +95,50 @@ export const initializeWeightList = async () => {
   return weightList;
 };
 
+export const CategoriesListName = 'Pairwise categories';
+
+export const initializeCategoryTotalNumbers = async (): Promise<
+  Record<string, number>
+> => {
+  let totalNumbers: Record<string, number> = { [CategoriesListName]: 15 };
+
+  const prisma = new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.POSTGRES_PRISMA_URL,
+      },
+    },
+  });
+
+  await prisma.$connect();
+
+  const categories = await prisma.project.findMany({
+    select: { name: true, id: true, RPGF4Id: true },
+    where: {
+      type: 'collection',
+      parentId: null,
+    },
+  });
+
+  for (const category of categories) {
+    if (!category.RPGF4Id)
+      throw new Error('All categories must have a RPGF4 id');
+
+    const children = await prisma.project.count({
+      where: {
+        type: 'project',
+        parentId: category.id,
+      },
+    });
+
+    totalNumbers = { ...totalNumbers, [category.name]: children };
+  }
+
+  await prisma.$disconnect();
+
+  return totalNumbers;
+};
+
 export const cloneObjects = <T>(object: T): T =>
   JSON.parse(JSON.stringify(object));
 
@@ -157,11 +201,11 @@ export const getVoteWeight = (
 };
 
 // TODO: Make this as sophisticated as you want
-export const getRankingDistribution = (rank: number, total: number) => {
+/* export const getRankingDistribution = (rank: number, total: number) => {
   const totalWeight = (1 + total) * (total / 2);
 
   return (total + 1 - rank) / totalWeight;
-};
+}; */
 
 export const sortWeightedList = (list: List) => {
   list.weightList.sort((a, b) => b.weight - a.weight);
