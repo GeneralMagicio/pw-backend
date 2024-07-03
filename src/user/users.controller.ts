@@ -27,7 +27,7 @@ import { verifySignature } from 'src/utils/badges';
 import { PrismaService } from 'src/prisma.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { Prisma } from '@prisma/client';
-import { snapshotPoints } from 'src/utils/badges/snapshot';
+import { snapshots } from 'src/utils/badges/snapshot';
 
 @Controller({ path: 'user' })
 export class UsersController {
@@ -62,7 +62,7 @@ export class UsersController {
     if (user.identity?.valueOf() || user.badges?.valueOf() || user.opAddress)
       throw new ForbiddenException('User has already connected');
 
-    const badges = await getBadges(snapshotPoints, mainAddress);
+    const badges = await getBadges(snapshots, mainAddress);
 
     try {
       await this.prismaService.user.update({
@@ -102,7 +102,7 @@ export class UsersController {
     )
       throw new UnauthorizedException('Signature invalid');
 
-    const badges = await getBadges(snapshotPoints, mainAddress);
+    const badges = await getBadges(snapshots, mainAddress);
 
     const user = await this.prismaService.user.findUnique({
       select: { badges: true, identity: true },
@@ -175,7 +175,7 @@ export class UsersController {
 
   @Get('/public/badges')
   async getPublicBadges(@Query() { address }: GetBadgesDTO) {
-    const badges = await getBadges(snapshotPoints, address);
+    const badges = await getBadges(snapshots, address);
 
     return badges || {};
   }
