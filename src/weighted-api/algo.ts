@@ -27,6 +27,7 @@ function applyVariance(
   total: number,
   variance: number,
 ): number {
+  if (rank < 1) throw Error('Rank must be an integer >= 1');
   return (value * total) / (total + (rank + 1) * variance);
 }
 
@@ -78,4 +79,12 @@ export const getRankingDistribution = (
   );
 
   return withHandicap.slice(0, filteredLength);
+};
+
+export const exportedForTesting = {
+  addMin,
+  addHandicap,
+  normalizer,
+  calculateValue,
+  applyVariance,
 };
