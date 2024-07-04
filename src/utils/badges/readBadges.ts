@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { RawSnapshotPoint } from './snapshot';
+import { RawSnapshotPoint } from './type';
 
 const medalTypes = [
   'Bronze',

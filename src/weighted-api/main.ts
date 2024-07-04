@@ -5,11 +5,13 @@ import {
 import { EASNetworks, SCHEMA_UID } from './eas/eas';
 import {
   AttestationMetadata,
+  CategoriesListName,
   List,
   addWeightToCategory,
   addWeightToProject,
   cloneObjects,
   getVoteWeight,
+  initializeCategoryTotalNumbers,
   initializeWeightList,
   sortWeightedList,
 } from './utils';
@@ -34,6 +36,7 @@ export const calculateWeightedLists = async (
   ) => Promise<BadgeData | undefined>,
 ) => {
   const attestations = await readAllAttestations();
+  const totalNumbers = await initializeCategoryTotalNumbers();
 
   // TODO: You can use object cloning and only do it once
   const holderWeightList: List = {
@@ -91,6 +94,7 @@ export const calculateWeightedLists = async (
 
     const rankingDistribution = getRankingDistribution(
       metadata.listContent.length,
+      totalNumbers[attestation.listName],
     );
 
     for (let i = 0; i < metadata.listContent.length; i++) {
@@ -100,7 +104,7 @@ export const calculateWeightedLists = async (
       for (const list of lists) {
         const coefficient = getVoteWeight(badges, list.type);
 
-        if (attestation.listName === 'Pairwise categories') {
+        if (attestation.listName === CategoriesListName) {
           list.weightList = addWeightToCategory(
             project.RPGF3_Application_UID,
             coefficient * rankWeight,
