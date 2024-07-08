@@ -79,9 +79,10 @@ export const getAllAttestations = async (
 
   const attestations: Attestation[] = [];
 
-  temp.forEach(({ decodedDataJson, attester }) => {
+  temp.forEach(({ decodedDataJson, attester, id }) => {
     const attestation: any = {};
     attestation['attester'] = attester;
+    attestation['id'] = id;
     for (const field of decodedDataJson) {
       // console.log('field', field);
       attestation[field.name] = field.value.value;
