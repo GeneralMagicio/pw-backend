@@ -27,6 +27,8 @@ import {
   InclusionProjectsBulkBody,
 } from './dto/bodies';
 import { calculateWeightedLists } from 'src/weighted-api/main';
+import { GetBadgesDTO } from 'src/user/dto/ConnectFlowDTOs';
+import { getRankingForUser } from 'src/weighted-api/user-based';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -154,6 +156,20 @@ export class FlowController {
   async test4() {
     const lists = await calculateWeightedLists(
       this.flowService.getBadgesFromDb,
+    );
+
+    return lists;
+  }
+
+  // @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used for a pairwise vote between two collections',
+  })
+  @Get('/api')
+  async getUserOverallRanking(@Query() { address }: GetBadgesDTO) {
+    const lists = await getRankingForUser(
+      this.flowService.getBadgesFromDb,
+      address,
     );
 
     return lists;
