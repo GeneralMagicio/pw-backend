@@ -74,7 +74,26 @@ export class FlowController {
       userId,
       parentId || null,
     );
-    return collections;
+
+    const tempOrder = [
+      'NFT Collectibles',
+      'NFTverse',
+      'User & Development experience',
+      'Lending & Asset Management',
+      'DEXs & Perps',
+      'Social Networks & Platforms',
+      'DeFi UX',
+      'DeFi Ecosystems',
+      'Governance & Gov tooling',
+      'Web3 Onboarding & Engagement',
+      'Cross chain',
+    ];
+
+    return collections.sort(
+      (a, b) =>
+        tempOrder.findIndex((el) => el === a.name) -
+        tempOrder.findIndex((el) => el === b.name),
+    );
   }
 
   @UseGuards(AuthGuard)
