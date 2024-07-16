@@ -34,10 +34,26 @@ interface GraphQlResponse {
   };
 }
 
+type WhereClause = {
+  revocable?: {
+    equals: boolean;
+  };
+  revoked?: {
+    equals: boolean;
+  };
+  schemaId?: {
+    equals: string;
+  };
+  attester?: {
+    equals: string;
+  };
+};
+
 // TODO: better type safety
 export const getAllAttestations = async (
   schemaId: string,
   gqlUrl: string,
+  condition?: WhereClause,
 ): Promise<Attestation[]> => {
   const query = `
   query AllAttestationsQuery($where: AttestationWhereInput) {
@@ -62,7 +78,7 @@ export const getAllAttestations = async (
         schemaId: {
           equals: schemaId,
         },
-        // attester: { equals: '0xad8E1dffBDFb3c265FE9E6f2a54C871bD46f553f' },
+        ...condition,
       },
       by: null,
     },
