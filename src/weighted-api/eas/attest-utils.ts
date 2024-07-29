@@ -59,11 +59,12 @@ export const getAllAttestations = async (
   query AllAttestationsQuery($where: AttestationWhereInput) {
     groupByAttestation(
       where: $where,
-      by: [id, decodedDataJson, attester]
+      by: [id, decodedDataJson, attester, timeCreated]
     ) {
       id
       decodedDataJson
 			attester
+      timeCreated
     }
   }
 `;
@@ -77,6 +78,9 @@ export const getAllAttestations = async (
         revoked: { equals: false },
         schemaId: {
           equals: schemaId,
+        },
+        timeCreated: {
+          lte: 1721224800, // Jul 17 14:00 UTC
         },
         ...condition,
       },
