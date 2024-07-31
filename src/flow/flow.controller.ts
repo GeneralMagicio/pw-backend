@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { FlowService } from './flow.service';
 import { PrismaService } from 'src/prisma.service';
-import { ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { VoteProjectsDTO } from './dto/voteProjects.dto';
 import { VoteCollectionsDTO } from './dto/voteCollections.dto';
@@ -25,6 +25,7 @@ import {
   FinishCollectionBody,
   InclusionProjectBody,
   InclusionProjectsBulkBody,
+  RemoveLastVoteDto,
 } from './dto/bodies';
 import { calculateWeightedLists } from 'src/weighted-api/main';
 import { GetBadgesDTO } from 'src/user/dto/ConnectFlowDTOs';
@@ -225,7 +226,6 @@ export class FlowController {
   //   return votes;
   // }
 
-  @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
   @ApiOperation({
     summary: 'Deletes the last vote by the user in a category',
   })
@@ -233,7 +233,7 @@ export class FlowController {
   @Post('/pairs/back')
   async removeLastVote(
     @Req() { userId }: AuthedReq,
-    @Body('cid') collectionId?: number,
+    @Body('cid') { collectionId }: RemoveLastVoteDto,
   ) {
     if (!collectionId) return this.flowService.removeLastVote(userId, null);
 

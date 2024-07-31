@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { InclusionState } from '@prisma/client';
-import { IsDefined, IsIn } from 'class-validator';
+import { IsDefined, IsIn, IsOptional } from 'class-validator';
 
 export class FinishCollectionBody {
   @ApiProperty({ description: 'Collection id' })
@@ -35,4 +35,13 @@ export class DnDBody {
   @ApiProperty({ description: 'New order of the projects in descending order' })
   @IsDefined()
   projectIds: number[];
+}
+
+export class RemoveLastVoteDto {
+  @ApiProperty({
+    description:
+      'Collection id (skip for the top-level collection comparisons)',
+  })
+  @IsOptional()
+  collectionId?: number;
 }
