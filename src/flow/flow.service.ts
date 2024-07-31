@@ -6,6 +6,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
@@ -1073,6 +1074,26 @@ export class FlowService {
     );
 
     return result;
+  };
+
+  removeLastVote = async (userId: number, parentCollection: number | null) => {
+    const lastVote = await this.prismaService.vote.findFirst({
+      where: {
+        userId,
+        project1: { parentId: parentCollection },
+        project2: { parentId: parentCollection },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (!lastVote)
+      throw new NotFoundException('No earlier votes in this category');
+
+    await this.prismaService.vote.delete({
+      where: {
+        id: lastVote.id,
+      },
+    });
   };
 
   getPairs = async (userId: number, parentCollection?: number, count = 1) => {

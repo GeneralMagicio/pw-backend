@@ -226,6 +226,33 @@ export class FlowController {
   // }
 
   @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
+  @ApiOperation({
+    summary: 'Deletes the last vote by the user in a category',
+  })
+  @UseGuards(AuthGuard)
+  @Post('/pairs/back')
+  async removeLastVote(
+    @Req() { userId }: AuthedReq,
+    @Body('cid') collectionId?: number,
+  ) {
+    if (!collectionId) return this.flowService.removeLastVote(userId, null);
+
+    const progressStatus = await this.flowService.getCollectionProgressStatus(
+      userId,
+      collectionId,
+    );
+
+    if (progressStatus !== 'WIP' && progressStatus !== 'WIP - Threshold')
+      throw new ForbiddenException(
+        "You can only go back in a collection that's WIP or WIP-Threshold",
+      );
+
+    await this.flowService.removeLastVote(userId, collectionId);
+
+    return 'Success';
+  }
+
+  @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
   @ApiResponse({
     type: PairsResult,
     status: 200,
