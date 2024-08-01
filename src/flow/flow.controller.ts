@@ -233,9 +233,10 @@ export class FlowController {
   @Post('/pairs/back')
   async removeLastVote(
     @Req() { userId }: AuthedReq,
-    @Body('cid') { collectionId }: RemoveLastVoteDto,
+    @Body() { collectionId }: RemoveLastVoteDto,
   ) {
-    if (!collectionId) return this.flowService.removeLastVote(userId, null);
+    if (collectionId === null)
+      return this.flowService.removeLastVote(userId, null);
 
     const progressStatus = await this.flowService.getCollectionProgressStatus(
       userId,

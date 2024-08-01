@@ -39,9 +39,10 @@ export class DnDBody {
 
 export class RemoveLastVoteDto {
   @ApiProperty({
+    type: 'number',
     description:
-      'Collection id (skip for the top-level collection comparisons)',
+      'Collection id (null for the top-level collection comparisons)',
   })
-  @IsOptional()
-  collectionId?: number;
+  @IsDefined()
+  collectionId: number | null;
 }
