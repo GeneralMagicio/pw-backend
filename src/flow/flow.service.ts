@@ -1,13 +1,10 @@
 import {
   BadRequestException,
   ForbiddenException,
-  HttpException,
-  HttpStatus,
   Injectable,
   InternalServerErrorException,
   Logger,
   NotFoundException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { getPairwiseCombinations, sortCombinations } from 'src/utils';
@@ -15,13 +12,12 @@ import {
   generateZeroMatrix,
   getRankingForSetOfDampingFactors,
 } from 'src/utils/mathematical-logic';
-import { combinations } from 'mathjs';
 import {
   CollectionProgressStatus,
   CollectionRanking,
   ProjectRanking,
 } from './types';
-import { InclusionState, ProjectType } from '@prisma/client';
+import { ProjectType } from '@prisma/client';
 import axios from 'axios';
 import * as fs from 'fs';
 import * as FormData from 'form-data';
@@ -53,18 +49,18 @@ export class FlowService {
     return res !== null;
   };
 
-  isCollectionAttested = async (userId: number, collectionId: number) => {
-    const res = await this.prismaService.userAttestation.findUnique({
-      where: {
-        userId_collectionId: {
-          collectionId: collectionId,
-          userId: userId,
-        },
-      },
-    });
+  // isCollectionAttested = async (userId: number, collectionId: number) => {
+  //   const res = await this.prismaService.userAttestation.findUnique({
+  //     where: {
+  //       userId_collectionId: {
+  //         collectionId: collectionId,
+  //         userId: userId,
+  //       },
+  //     },
+  //   });
 
-    return res !== null;
-  };
+  //   return res !== null;
+  // };
 
   getCollectionProgressStatus = async (
     userId: number,
@@ -78,14 +74,14 @@ export class FlowService {
       const [
         // isAttested,
         isFinished,
-        hasThresholdVotes,
+        // hasThresholdVotes,
         hasVotes,
         // isFiltered,
         // inclusion,
       ] = await Promise.all([
         // this.isCollectionAttested(userId, collectionId),
         this.isCollectionFinished(userId, collectionId),
-        this.hasThresholdVotes(collectionId, userId),
+        // this.hasThresholdVotes(collectionId, userId),
         this.isCollectionStarted(userId, collectionId),
         // this.isCollectionFiltered(userId, collectionId),
         // this.prismaService.projectInclusion.findFirst({
@@ -97,9 +93,9 @@ export class FlowService {
 
       return isFinished
         ? 'Finished'
-        : hasThresholdVotes
-        ? 'WIP - Threshold'
-        : hasVotes
+        : // : hasThresholdVotes
+        // ? 'WIP - Threshold'
+        hasVotes
         ? 'WIP'
         : 'Pending';
     } else {
@@ -163,377 +159,377 @@ export class FlowService {
     await this.vote(userId, project1Id, project2Id, pickedId);
   };
 
-  isCollectionTopLevel = async (collectionId: number) => {
-    const res = await this.prismaService.project.findFirst({
-      select: { id: true },
-      where: {
-        parentId: null,
-        id: collectionId,
-        type: ProjectType.collection,
-      },
-    });
+  // isCollectionTopLevel = async (collectionId: number) => {
+  //   const res = await this.prismaService.project.findFirst({
+  //     select: { id: true },
+  //     where: {
+  //       parentId: null,
+  //       id: collectionId,
+  //       type: ProjectType.collection,
+  //     },
+  //   });
 
-    return res !== null;
-  };
+  //   return res !== null;
+  // };
 
-  setInclusionStateBulk = async (
-    ids: number[],
-    userId: number,
-    cid: number,
-  ) => {
-    const projects = await this.prismaService.$transaction(
-      ids.map((id) =>
-        this.prismaService.project.findUnique({
-          where: { id },
-          select: { parentId: true },
-        }),
-      ),
-    );
+  // setInclusionStateBulk = async (
+  //   ids: number[],
+  //   userId: number,
+  //   cid: number,
+  // ) => {
+  //   const projects = await this.prismaService.$transaction(
+  //     ids.map((id) =>
+  //       this.prismaService.project.findUnique({
+  //         where: { id },
+  //         select: { parentId: true },
+  //       }),
+  //     ),
+  //   );
 
-    const parentId = projects[0]?.parentId;
+  //   const parentId = projects[0]?.parentId;
 
-    const tempMinimum = await this.getMinimumIncludedProjects(cid);
+  //   const tempMinimum = await this.getMinimumIncludedProjects(cid);
 
-    if (ids.length === 0)
-      throw new HttpException(
-        {
-          error: `You need to include at least ${tempMinimum} projects`,
-          pwCode: 'pw1000',
-          minimum: tempMinimum,
-        },
-        HttpStatus.FORBIDDEN,
-      );
+  //   if (ids.length === 0)
+  //     throw new HttpException(
+  //       {
+  //         error: `You need to include at least ${tempMinimum} projects`,
+  //         pwCode: 'pw1000',
+  //         minimum: tempMinimum,
+  //       },
+  //       HttpStatus.FORBIDDEN,
+  //     );
 
-    if (new Set(projects.map((el) => el?.parentId)).size !== 1 || !parentId)
-      throw new BadRequestException(
-        'All projects should share the same parent',
-      );
+  //   if (new Set(projects.map((el) => el?.parentId)).size !== 1 || !parentId)
+  //     throw new BadRequestException(
+  //       'All projects should share the same parent',
+  //     );
 
-    // Since we're not sure the cid passed by the user is indeed the parentId, we fetch
-    // the minimum inclusion number again
-    const minimumInclusion = await this.getMinimumIncludedProjects(parentId);
+  //   // Since we're not sure the cid passed by the user is indeed the parentId, we fetch
+  //   // the minimum inclusion number again
+  //   const minimumInclusion = await this.getMinimumIncludedProjects(parentId);
 
-    if (new Set(ids).size < minimumInclusion)
-      throw new HttpException(
-        {
-          error: `You need to include at least ${minimumInclusion} projects`,
-          pwCode: 'pw1000',
-          minimum: minimumInclusion,
-        },
-        HttpStatus.FORBIDDEN,
-      );
+  //   if (new Set(ids).size < minimumInclusion)
+  //     throw new HttpException(
+  //       {
+  //         error: `You need to include at least ${minimumInclusion} projects`,
+  //         pwCode: 'pw1000',
+  //         minimum: minimumInclusion,
+  //       },
+  //       HttpStatus.FORBIDDEN,
+  //     );
 
-    const [allProjects, ranks] = await Promise.all([
-      this.prismaService.project.findMany({
-        select: { id: true },
-        where: { parentId },
-      }),
-      this.prismaService.rank.findFirst({
-        where: {
-          project: { parentId },
-          userId,
-          rank: { gt: 0 },
-        },
-      }),
-    ]);
+  //   const [allProjects, ranks] = await Promise.all([
+  //     this.prismaService.project.findMany({
+  //       select: { id: true },
+  //       where: { parentId },
+  //     }),
+  //     this.prismaService.rank.findFirst({
+  //       where: {
+  //         project: { parentId },
+  //         userId,
+  //         rank: { gt: 0 },
+  //       },
+  //     }),
+  //   ]);
 
-    if (ranks) {
-      const promises = allProjects.map((item) =>
-        this.prismaService.rank.update({
-          where: { userId_projectId: { projectId: item.id, userId } },
-          data: { rank: null },
-        }),
-      );
+  //   if (ranks) {
+  //     const promises = allProjects.map((item) =>
+  //       this.prismaService.rank.update({
+  //         where: { userId_projectId: { projectId: item.id, userId } },
+  //         data: { rank: null },
+  //       }),
+  //     );
 
-      await Promise.all(promises);
-    }
+  //     await Promise.all(promises);
+  //   }
 
-    // const allProjects = await this.prismaService.project.findMany({
-    //   select: { id: true },
-    //   where: { parentId },
-    // });
+  //   // const allProjects = await this.prismaService.project.findMany({
+  //   //   select: { id: true },
+  //   //   where: { parentId },
+  //   // });
 
-    const excludedProjects = allProjects
-      .map((el) => el.id)
-      .filter((item) => !ids.includes(item));
+  //   const excludedProjects = allProjects
+  //     .map((el) => el.id)
+  //     .filter((item) => !ids.includes(item));
 
-    await Promise.all(
-      ids.map((id) => this.setInclusionState(userId, id, 'included')),
-    );
+  //   await Promise.all(
+  //     ids.map((id) => this.setInclusionState(userId, id, 'included')),
+  //   );
 
-    await Promise.all(
-      excludedProjects.map((id) =>
-        this.setInclusionState(userId, id, 'excluded'),
-      ),
-    );
-  };
+  //   await Promise.all(
+  //     excludedProjects.map((id) =>
+  //       this.setInclusionState(userId, id, 'excluded'),
+  //     ),
+  //   );
+  // };
 
-  setInclusionState = async (
-    userId: number,
-    projectId: number,
-    state: InclusionState,
-  ) => {
-    const parent = await this.prismaService.project.findFirst({
-      select: { id: true },
-      where: {
-        type: 'collection',
-        children: {
-          some: {
-            id: projectId,
-          },
-        },
-      },
-    });
-    if (!parent)
-      throw new UnprocessableEntityException(
-        "The project doesn't have a valid parent (or doesn't exist at all)",
-      );
+  // setInclusionState = async (
+  //   userId: number,
+  //   projectId: number,
+  //   state: InclusionState,
+  // ) => {
+  //   const parent = await this.prismaService.project.findFirst({
+  //     select: { id: true },
+  //     where: {
+  //       type: 'collection',
+  //       children: {
+  //         some: {
+  //           id: projectId,
+  //         },
+  //       },
+  //     },
+  //   });
+  //   if (!parent)
+  //     throw new UnprocessableEntityException(
+  //       "The project doesn't have a valid parent (or doesn't exist at all)",
+  //     );
 
-    // Comment because of filtering ability in the DnD page
+  //   // Comment because of filtering ability in the DnD page
 
-    // const status = await this.getCollectionProgressStatus(userId, parent.id);
+  //   // const status = await this.getCollectionProgressStatus(userId, parent.id);
 
-    // if (status !== 'Filtering' && status !== 'Pending')
-    //   throw new BadRequestException(
-    //     'Inclusion states in a filtered collection can not be modified',
-    //   );
+  //   // if (status !== 'Filtering' && status !== 'Pending')
+  //   //   throw new BadRequestException(
+  //   //     'Inclusion states in a filtered collection can not be modified',
+  //   //   );
 
-    const [inclusionState, siblingExclusions, allChildren] = await Promise.all([
-      this.prismaService.projectInclusion.findUnique({
-        select: { state: true },
-        where: {
-          userId_projectId: {
-            userId,
-            projectId,
-          },
-        },
-      }),
-      this.prismaService.projectInclusion.count({
-        where: {
-          userId,
-          project: {
-            parentId: parent.id,
-          },
-          state: 'excluded',
-        },
-      }),
-      this.prismaService.project.count({
-        where: {
-          parentId: parent.id,
-        },
-      }),
-    ]);
+  //   const [inclusionState, siblingExclusions, allChildren] = await Promise.all([
+  //     this.prismaService.projectInclusion.findUnique({
+  //       select: { state: true },
+  //       where: {
+  //         userId_projectId: {
+  //           userId,
+  //           projectId,
+  //         },
+  //       },
+  //     }),
+  //     this.prismaService.projectInclusion.count({
+  //       where: {
+  //         userId,
+  //         project: {
+  //           parentId: parent.id,
+  //         },
+  //         state: 'excluded',
+  //       },
+  //     }),
+  //     this.prismaService.project.count({
+  //       where: {
+  //         parentId: parent.id,
+  //       },
+  //     }),
+  //   ]);
 
-    const minimumInclusion = await this.getMinimumIncludedProjects(parent.id);
+  //   const minimumInclusion = await this.getMinimumIncludedProjects(parent.id);
 
-    if (
-      siblingExclusions === allChildren - minimumInclusion &&
-      state === 'excluded' &&
-      (!inclusionState || inclusionState.state === 'included')
-    )
-      throw new HttpException(
-        {
-          error: `You need to include at least ${minimumInclusion} projects`,
-          pwCode: 'pw1000',
-          minimum: minimumInclusion,
-        },
-        HttpStatus.FORBIDDEN,
-      );
+  //   if (
+  //     siblingExclusions === allChildren - minimumInclusion &&
+  //     state === 'excluded' &&
+  //     (!inclusionState || inclusionState.state === 'included')
+  //   )
+  //     throw new HttpException(
+  //       {
+  //         error: `You need to include at least ${minimumInclusion} projects`,
+  //         pwCode: 'pw1000',
+  //         minimum: minimumInclusion,
+  //       },
+  //       HttpStatus.FORBIDDEN,
+  //     );
 
-    const project = await this.prismaService.projectInclusion.upsert({
-      where: {
-        userId_projectId: {
-          projectId,
-          userId,
-        },
-      },
-      create: {
-        projectId,
-        userId,
-        state,
-      },
-      update: {
-        state,
-      },
-      include: {
-        project: true,
-      },
-    });
+  //   const project = await this.prismaService.projectInclusion.upsert({
+  //     where: {
+  //       userId_projectId: {
+  //         projectId,
+  //         userId,
+  //       },
+  //     },
+  //     create: {
+  //       projectId,
+  //       userId,
+  //       state,
+  //     },
+  //     update: {
+  //       state,
+  //     },
+  //     include: {
+  //       project: true,
+  //     },
+  //   });
 
-    if (project.project.type !== 'project') {
-      await this.prismaService.projectInclusion.delete({
-        where: {
-          userId_projectId: {
-            projectId,
-            userId,
-          },
-        },
-      });
-      throw new BadRequestException('Only projects can be filtered');
-    }
-  };
+  //   if (project.project.type !== 'project') {
+  //     await this.prismaService.projectInclusion.delete({
+  //       where: {
+  //         userId_projectId: {
+  //           projectId,
+  //           userId,
+  //         },
+  //       },
+  //     });
+  //     throw new BadRequestException('Only projects can be filtered');
+  //   }
+  // };
 
-  markCollectionsFiltered = async (userId: number, collectionId: number) => {
-    const [includedProjects, excludedProjects, projects] = await Promise.all([
-      this.prismaService.projectInclusion.findMany({
-        select: { projectId: true },
-        where: {
-          project: { parentId: collectionId },
-          userId,
-          state: 'included',
-        },
-      }),
-      this.prismaService.projectInclusion.findMany({
-        select: { projectId: true },
-        where: {
-          project: { parentId: collectionId },
-          userId,
-          state: 'excluded',
-        },
-      }),
-      this.prismaService.projectInclusion.findMany({
-        select: { projectId: true },
-        where: {
-          project: { parentId: collectionId },
-          userId,
-        },
-      }),
-    ]);
+  // markCollectionsFiltered = async (userId: number, collectionId: number) => {
+  //   const [includedProjects, excludedProjects, projects] = await Promise.all([
+  //     this.prismaService.projectInclusion.findMany({
+  //       select: { projectId: true },
+  //       where: {
+  //         project: { parentId: collectionId },
+  //         userId,
+  //         state: 'included',
+  //       },
+  //     }),
+  //     this.prismaService.projectInclusion.findMany({
+  //       select: { projectId: true },
+  //       where: {
+  //         project: { parentId: collectionId },
+  //         userId,
+  //         state: 'excluded',
+  //       },
+  //     }),
+  //     this.prismaService.projectInclusion.findMany({
+  //       select: { projectId: true },
+  //       where: {
+  //         project: { parentId: collectionId },
+  //         userId,
+  //       },
+  //     }),
+  //   ]);
 
-    if (includedProjects.length < 2)
-      throw new ForbiddenException(
-        'You must at least include 2 projects in your selection',
-      );
+  //   if (includedProjects.length < 2)
+  //     throw new ForbiddenException(
+  //       'You must at least include 2 projects in your selection',
+  //     );
 
-    const filteredCollection =
-      await this.prismaService.userCollectionFiltered.upsert({
-        where: {
-          userId_collectionId: {
-            userId,
-            collectionId,
-          },
-        },
-        create: {
-          collectionId,
-          userId,
-        },
-        update: {
-          collectionId,
-          userId,
-        },
-        include: {
-          collection: true,
-        },
-      });
+  //   const filteredCollection =
+  //     await this.prismaService.userCollectionFiltered.upsert({
+  //       where: {
+  //         userId_collectionId: {
+  //           userId,
+  //           collectionId,
+  //         },
+  //       },
+  //       create: {
+  //         collectionId,
+  //         userId,
+  //       },
+  //       update: {
+  //         collectionId,
+  //         userId,
+  //       },
+  //       include: {
+  //         collection: true,
+  //       },
+  //     });
 
-    if (filteredCollection.collection.type !== 'collection') {
-      await this.prismaService.userCollectionFiltered.delete({
-        where: {
-          userId_collectionId: {
-            collectionId,
-            userId,
-          },
-        },
-      });
-      throw new BadRequestException('Only collections can be marked filtered');
-    }
+  //   if (filteredCollection.collection.type !== 'collection') {
+  //     await this.prismaService.userCollectionFiltered.delete({
+  //       where: {
+  //         userId_collectionId: {
+  //           collectionId,
+  //           userId,
+  //         },
+  //       },
+  //     });
+  //     throw new BadRequestException('Only collections can be marked filtered');
+  //   }
 
-    if (projects.length !== includedProjects.length + excludedProjects.length)
-      throw new ForbiddenException(
-        'All projects should be marked either included or excluded',
-      );
+  //   if (projects.length !== includedProjects.length + excludedProjects.length)
+  //     throw new ForbiddenException(
+  //       'All projects should be marked either included or excluded',
+  //     );
 
-    // const collectionVotingPower = await this.getCollectionVotingPower(
-    //   collectionId,
-    //   userId,
-    // );
+  //   // const collectionVotingPower = await this.getCollectionVotingPower(
+  //   //   collectionId,
+  //   //   userId,
+  //   // );
 
-    // const share = collectionVotingPower / includedProjects.length;
+  //   // const share = collectionVotingPower / includedProjects.length;
 
-    await this.prismaService.rank.updateMany({
-      where: {
-        userId,
-        projectId: { in: projects.map((item) => item.projectId) },
-      },
-      data: { rank: null },
-    });
+  //   await this.prismaService.rank.updateMany({
+  //     where: {
+  //       userId,
+  //       projectId: { in: projects.map((item) => item.projectId) },
+  //     },
+  //     data: { rank: null },
+  //   });
 
-    await this.prismaService.$transaction(
-      includedProjects.map((el, index) =>
-        this.prismaService.rank.update({
-          where: {
-            userId_projectId: {
-              userId,
-              projectId: el.projectId,
-            },
-          },
-          data: { rank: index + 1 },
-        }),
-      ),
-    );
-  };
+  //   await this.prismaService.$transaction(
+  //     includedProjects.map((el, index) =>
+  //       this.prismaService.rank.update({
+  //         where: {
+  //           userId_projectId: {
+  //             userId,
+  //             projectId: el.projectId,
+  //           },
+  //         },
+  //         data: { rank: index + 1 },
+  //       }),
+  //     ),
+  //   );
+  // };
 
-  getOverallRanking = async (
-    userId: number,
-    cid: number | null = null,
-  ): Promise<(CollectionRanking | ProjectRanking)[]> => {
-    let result = [];
-    const collections = await this.prismaService.project.findMany({
-      select: { id: true, name: true, type: true, RPGF4Id: true },
-      where: {
-        parentId: cid,
-        type: { in: [ProjectType.compositeProject, ProjectType.collection] },
-      },
-    });
+  // getOverallRanking = async (
+  //   userId: number,
+  //   cid: number | null = null,
+  // ): Promise<(CollectionRanking | ProjectRanking)[]> => {
+  //   let result = [];
+  //   const collections = await this.prismaService.project.findMany({
+  //     select: { id: true, name: true, type: true, RPGF4Id: true },
+  //     where: {
+  //       parentId: cid,
+  //       type: { in: [ProjectType.compositeProject, ProjectType.collection] },
+  //     },
+  //   });
 
-    const ranking = await this.getRanking(userId, cid);
+  //   const ranking = await this.getRanking(userId, cid);
 
-    // collection is top level and only contain projects
-    if (collections.length === 0) {
-      result = ranking.map(({ name, id, rank, type, RPGF4Id }) => ({
-        name,
-        id,
-        rank,
-        RPGF4Id: RPGF4Id || '',
-        type: type as 'project',
-        hasRanking: false as const,
-      }));
-      return result;
-    }
+  //   // collection is top level and only contain projects
+  //   if (collections.length === 0) {
+  //     result = ranking.map(({ name, id, rank, type, RPGF4Id }) => ({
+  //       name,
+  //       id,
+  //       rank,
+  //       RPGF4Id: RPGF4Id || '',
+  //       type: type as 'project',
+  //       hasRanking: false as const,
+  //     }));
+  //     return result;
+  //   }
 
-    const res = await Promise.all([
-      ...collections.map(async ({ type, id, name, RPGF4Id }) => ({
-        type: type as 'collection' | 'composite project',
-        id,
-        name,
-        RPGF4Id: RPGF4Id || '',
-        hasRanking: true as const,
-        isTopLevel: await this.isCollectionTopLevel(id),
-        progress: await this.getCollectionProgressStatus(userId, id),
-        // isFinished: !!areFinished.find((el) => el.collectionId === id),
-        rank: ranking.find((c) => c.id === id)!.rank,
-        ranking: [
-          ...(await this.getOverallRanking(
-            userId,
-            id,
-            // ranking.find((c) => c.id === id)!.share,
-          )),
-        ],
-      })),
-      ...ranking
-        .filter((el) => el.type === 'project')
-        .map(({ name, id, type, rank, RPGF4Id }) => ({
-          name,
-          id,
-          RPGF4Id: RPGF4Id || '',
-          hasRanking: false as const,
-          rank,
-          type: type as 'project',
-        })),
-    ]);
+  //   const res = await Promise.all([
+  //     ...collections.map(async ({ type, id, name, RPGF4Id }) => ({
+  //       type: type as 'collection' | 'composite project',
+  //       id,
+  //       name,
+  //       RPGF4Id: RPGF4Id || '',
+  //       hasRanking: true as const,
+  //       isTopLevel: await this.isCollectionTopLevel(id),
+  //       progress: await this.getCollectionProgressStatus(userId, id),
+  //       // isFinished: !!areFinished.find((el) => el.collectionId === id),
+  //       rank: ranking.find((c) => c.id === id)!.rank,
+  //       ranking: [
+  //         ...(await this.getOverallRanking(
+  //           userId,
+  //           id,
+  //           // ranking.find((c) => c.id === id)!.share,
+  //         )),
+  //       ],
+  //     })),
+  //     ...ranking
+  //       .filter((el) => el.type === 'project')
+  //       .map(({ name, id, type, rank, RPGF4Id }) => ({
+  //         name,
+  //         id,
+  //         RPGF4Id: RPGF4Id || '',
+  //         hasRanking: false as const,
+  //         rank,
+  //         type: type as 'project',
+  //       })),
+  //   ]);
 
-    return res.sort((a, b) => a.rank - b.rank);
-  };
+  //   return res.sort((a, b) => a.rank - b.rank);
+  // };
 
   // addManyShares = async (
   //   shares: { id: number; share: number }[],
@@ -608,35 +604,35 @@ export class FlowService {
     return res !== null;
   };
 
-  justTesting = async () => {
-    const collections = await this.prismaService.project.findMany({
-      where: {
-        type: 'collection',
-      },
-    });
+  // justTesting = async () => {
+  //   const collections = await this.prismaService.project.findMany({
+  //     where: {
+  //       type: 'collection',
+  //     },
+  //   });
 
-    const result = collections.reduce(
-      (acc, curr) => ({ ...acc, [curr.id]: 0 }),
-      {} as Record<number, number>,
-    );
+  //   const result = collections.reduce(
+  //     (acc, curr) => ({ ...acc, [curr.id]: 0 }),
+  //     {} as Record<number, number>,
+  //   );
 
-    for (let i = 0; i < collections.length; i++) {
-      const item = collections[i];
-      const temp = await this.prismaService.projectInclusion.findMany({
-        where: {
-          state: 'included',
-          userId: 1,
-          project: {
-            parentId: item.id,
-          },
-        },
-      });
+  //   for (let i = 0; i < collections.length; i++) {
+  //     const item = collections[i];
+  //     const temp = await this.prismaService.projectInclusion.findMany({
+  //       where: {
+  //         state: 'included',
+  //         userId: 1,
+  //         project: {
+  //           parentId: item.id,
+  //         },
+  //       },
+  //     });
 
-      result[item.id] = temp.length;
-    }
+  //     result[item.id] = temp.length;
+  //   }
 
-    return result;
-  };
+  //   return result;
+  // };
 
   getProjects = async (parentCollectionId: number | null, userId: number) => {
     const projects = await this.prismaService.project.findMany({
@@ -646,18 +642,18 @@ export class FlowService {
       },
     });
 
-    const withAdditionalFields = await Promise.all(
-      projects.map(async (project) => {
-        const [inclusionState] = await Promise.all([
-          this.getProjectInclusionState(userId, project.id),
-        ]);
-        return {
-          ...project,
-          inclusionState,
-        };
-      }),
-    );
-    return withAdditionalFields;
+    // const withAdditionalFields = await Promise.all(
+    //   projects.map(async (project) => {
+    //     const [inclusionState] = await Promise.all([
+    //       this.getProjectInclusionState(userId, project.id),
+    //     ]);
+    //     return {
+    //       ...project,
+    //       inclusionState,
+    //     };
+    //   }),
+    // );
+    return projects;
   };
 
   // getCollectionVotingPower = async (
@@ -711,22 +707,21 @@ export class FlowService {
   };
 
   async finishCollection(userId: number, collectionId: number) {
-    const [isFinished, isLastLayerCollection, hasThresholdVotes] =
-      await Promise.all([
-        this.isCollectionFinished(userId, collectionId),
-        this.isLastLayerCollection(collectionId),
-        this.hasThresholdVotes(collectionId, userId),
-      ]);
+    const [isFinished, isLastLayerCollection] = await Promise.all([
+      this.isCollectionFinished(userId, collectionId),
+      this.isLastLayerCollection(collectionId),
+      // this.hasThresholdVotes(collectionId, userId),
+    ]);
 
     if (isFinished) return;
     if (!isLastLayerCollection)
       throw new ForbiddenException(
         'Just last layer categories are finish-able',
       );
-    if (!hasThresholdVotes)
-      throw new ForbiddenException(
-        'You need to vote for the minimum threshold times',
-      );
+    // if (!hasThresholdVotes)
+    //   throw new ForbiddenException(
+    //     'You need to vote for the minimum threshold times',
+    //   );
 
     await this.prismaService.userCollectionFinish.create({
       data: { userId: userId, collectionId: collectionId },
@@ -810,7 +805,7 @@ export class FlowService {
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
-    const [allVotes, allInclusionChildren, allCollections] = await Promise.all([
+    const [allVotes, allProjectChildren, allCollections] = await Promise.all([
       this.prismaService.vote.findMany({
         where: {
           userId: userId,
@@ -818,15 +813,10 @@ export class FlowService {
           project2: { parentId: collectionId },
         },
       }),
-      this.prismaService.projectInclusion.findMany({
+      this.prismaService.project.findMany({
         where: {
-          project: {
-            parentId: collectionId,
-          },
-          state: 'included',
-          userId,
+          parentId: collectionId,
         },
-        include: { project: true },
       }),
       this.prismaService.project.findMany({
         where: {
@@ -837,9 +827,7 @@ export class FlowService {
     ]);
 
     const allChildren =
-      collectionId === null
-        ? allCollections
-        : allInclusionChildren.map((item) => item.project);
+      collectionId === null ? allCollections : allProjectChildren;
 
     const winningProjects = allChildren.filter(
       (project) =>
@@ -999,20 +987,20 @@ export class FlowService {
       .sort((a, b) => a.rank - b.rank);
   };
 
-  getIncludedProjectIds = async (userId: number, collectionId: number) => {
-    const includedProjects = await this.prismaService.projectInclusion.findMany(
-      {
-        select: { projectId: true },
-        where: {
-          userId,
-          project: { parentId: collectionId },
-          state: 'included',
-        },
-      },
-    );
+  // getIncludedProjectIds = async (userId: number, collectionId: number) => {
+  //   const includedProjects = await this.prismaService.projectInclusion.findMany(
+  //     {
+  //       select: { projectId: true },
+  //       where: {
+  //         userId,
+  //         project: { parentId: collectionId },
+  //         state: 'included',
+  //       },
+  //     },
+  //   );
 
-    return includedProjects.map((el) => el.projectId);
-  };
+  //   return includedProjects.map((el) => el.projectId);
+  // };
 
   // getAttestedCollectionPairs = async (userId: number) => {
   //   // const collectionId = null;
@@ -1208,64 +1196,64 @@ export class FlowService {
     };
   };
 
-  hasThresholdVotes = async (
-    collectionId: number,
-    userId: number,
-  ): Promise<boolean> => {
-    // const type = await this.getCollectionSubunitType(collectionId);
-    // const collection = await this.prismaService.project.findUnique({
-    //   where: {
-    //     id: collectionId,
-    //     type: { in: [ProjectType.collection, ProjectType.compositeProject] },
-    //   },
-    //   include: {
-    //     children: true,
-    //   },
-    // });
+  // hasThresholdVotes = async (
+  //   collectionId: number,
+  //   userId: number,
+  // ): Promise<boolean> => {
+  //   // const type = await this.getCollectionSubunitType(collectionId);
+  //   // const collection = await this.prismaService.project.findUnique({
+  //   //   where: {
+  //   //     id: collectionId,
+  //   //     type: { in: [ProjectType.collection, ProjectType.compositeProject] },
+  //   //   },
+  //   //   include: {
+  //   //     children: true,
+  //   //   },
+  //   // });
 
-    const res = await this.prismaService.projectInclusion.findMany({
-      where: {
-        state: 'included',
-        project: {
-          parentId: collectionId,
-          parent: {
-            type: {
-              in: [ProjectType.collection, ProjectType.compositeProject],
-            },
-          },
-        },
-        userId,
-      },
-      include: { project: true },
-    });
+  //   const res = await this.prismaService.projectInclusion.findMany({
+  //     where: {
+  //       state: 'included',
+  //       project: {
+  //         parentId: collectionId,
+  //         parent: {
+  //           type: {
+  //             in: [ProjectType.collection, ProjectType.compositeProject],
+  //           },
+  //         },
+  //       },
+  //       userId,
+  //     },
+  //     include: { project: true },
+  //   });
 
-    // The collection has no projects selected for voting
-    if (res.length === 0) return false;
+  //   // The collection has no projects selected for voting
+  //   if (res.length === 0) return false;
 
-    const cid = res[0].project.parentId;
+  //   const cid = res[0].project.parentId;
 
-    if (!cid) throw new BadRequestException('Collection id invalid');
+  //   if (!cid) throw new BadRequestException('Collection id invalid');
 
-    const children = res.map((item) => item.project);
+  //   const children = res.map((item) => item.project);
 
-    const count = children.length;
+  //   const count = children.length;
 
-    const threshold = this.calculateThreshold(count, cid);
+  //   const threshold = this.calculateThreshold(count, cid);
 
-    let numOfVotes = 0;
+  //   let numOfVotes = 0;
 
-    numOfVotes = await this.prismaService.vote.count({
-      where: {
-        userId: userId,
-        project1: { parentId: collectionId },
-        project2: { parentId: collectionId },
-      },
-    });
+  //   numOfVotes = await this.prismaService.vote.count({
+  //     where: {
+  //       userId: userId,
+  //       project1: { parentId: collectionId },
+  //       project2: { parentId: collectionId },
+  //     },
+  //   });
 
-    if (count < 2) return false;
+  //   if (count < 2) return false;
 
-    return numOfVotes / combinations(count, 2) >= threshold;
-  };
+  //   return numOfVotes / combinations(count, 2) >= threshold;
+  // };
 
   private formatRanking = (ranking: CollectionRanking['ranking']) => {
     return ranking.map((el) => ({
@@ -1286,35 +1274,35 @@ export class FlowService {
     return res.badges.valueOf() as BadgeData;
   };
 
-  breakOverallRankingDown = (input: CollectionRanking) => {
-    // const overallRanking: CollectionRanking = JSON.parse(
-    //   JSON.stringify(input),
-    // );
-    const lists: { id: number; ranking: ProjectRanking[] }[] = [];
+  // breakOverallRankingDown = (input: CollectionRanking) => {
+  //   // const overallRanking: CollectionRanking = JSON.parse(
+  //   //   JSON.stringify(input),
+  //   // );
+  //   const lists: { id: number; ranking: ProjectRanking[] }[] = [];
 
-    // console.log(input.ranking);
-    // console.log('Going for format ranking:', input);
-    lists.push({
-      id: input.id,
-      ranking: this.formatRanking(input.ranking) as ProjectRanking[],
-    });
+  //   // console.log(input.ranking);
+  //   // console.log('Going for format ranking:', input);
+  //   lists.push({
+  //     id: input.id,
+  //     ranking: this.formatRanking(input.ranking) as ProjectRanking[],
+  //   });
 
-    for (let i = 0; i < input.ranking.length; i++) {
-      const row = input.ranking[i];
-      if (row.type !== 'project' && row.hasRanking) {
-        // if lists.push(...this.breakOverallRankingDown(row));
-        if (row.ranking.some((p) => p.type !== 'project')) {
-          lists.push(...this.breakOverallRankingDown(row));
-        } else
-          lists.push({
-            id: row.id,
-            ranking: this.formatRanking(row.ranking) as ProjectRanking[],
-          });
-      }
-    }
+  //   for (let i = 0; i < input.ranking.length; i++) {
+  //     const row = input.ranking[i];
+  //     if (row.type !== 'project' && row.hasRanking) {
+  //       // if lists.push(...this.breakOverallRankingDown(row));
+  //       if (row.ranking.some((p) => p.type !== 'project')) {
+  //         lists.push(...this.breakOverallRankingDown(row));
+  //       } else
+  //         lists.push({
+  //           id: row.id,
+  //           ranking: this.formatRanking(row.ranking) as ProjectRanking[],
+  //         });
+  //     }
+  //   }
 
-    return lists;
-  };
+  //   return lists;
+  // };
 
   populateInitialRanking = async (userId: number) => {
     const [entities] = await Promise.all([
@@ -1638,16 +1626,5 @@ export class FlowService {
       throw new ForbiddenException(
         "You can only get pairs for a collection that's Filtered, WIP or WIP-Threshold",
       );
-  };
-
-  private getProjectInclusionState = async (
-    userId: number,
-    projectId: number,
-  ) => {
-    const exclusion = await this.prismaService.projectInclusion.findUnique({
-      where: { userId_projectId: { userId, projectId } },
-    });
-
-    return exclusion?.state || 'pending';
   };
 }

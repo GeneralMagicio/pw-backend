@@ -19,16 +19,7 @@ import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
-import {
-  DnDBody,
-  FinishCollectionBody,
-  InclusionProjectBody,
-  InclusionProjectsBulkBody,
-  RemoveLastVoteDto,
-} from './dto/bodies';
-import { calculateWeightedLists } from 'src/weighted-api/main';
-import { GetBadgesDTO } from 'src/user/dto/ConnectFlowDTOs';
-import { getRankingForUser } from 'src/weighted-api/user-based';
+import { RemoveLastVoteDto } from './dto/bodies';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -153,32 +144,32 @@ export class FlowController {
     );
   }
 
-  // @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Used for a pairwise vote between two collections',
-  })
-  @Get('/temp/api')
-  async test4() {
-    const lists = await calculateWeightedLists(
-      this.flowService.getBadgesFromDb,
-    );
+  // // @UseGuards(AuthGuard)
+  // @ApiOperation({
+  //   summary: 'Used for a pairwise vote between two collections',
+  // })
+  // @Get('/temp/api')
+  // async test4() {
+  //   const lists = await calculateWeightedLists(
+  //     this.flowService.getBadgesFromDb,
+  //   );
 
-    return lists;
-  }
+  //   return lists;
+  // }
 
-  // @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Used for a pairwise vote between two collections',
-  })
-  @Get('/api')
-  async getUserOverallRanking(@Query() { address }: GetBadgesDTO) {
-    const lists = await getRankingForUser(
-      this.flowService.getBadgesFromDb,
-      address,
-    );
+  // // @UseGuards(AuthGuard)
+  // @ApiOperation({
+  //   summary: 'Used for a pairwise vote between two collections',
+  // })
+  // @Get('/api')
+  // async getUserOverallRanking(@Query() { address }: GetBadgesDTO) {
+  //   const lists = await getRankingForUser(
+  //     this.flowService.getBadgesFromDb,
+  //     address,
+  //   );
 
-    return lists;
-  }
+  //   return lists;
+  // }
 
   @ApiOperation({
     summary: 'Deletes the last vote by the user in a category',
@@ -314,119 +305,119 @@ export class FlowController {
     };
   }
 
-  @UseGuards(AuthGuard)
-  @Post('/dnd')
-  async dndBulk(
-    @Req() { userId }: AuthedReq,
-    @Body()
-    { projectIds, collectionId }: DnDBody,
-  ) {
-    await this.flowService.setInclusionStateBulk(
-      projectIds,
-      userId,
-      collectionId,
-    );
+  // @UseGuards(AuthGuard)
+  // @Post('/dnd')
+  // async dndBulk(
+  //   @Req() { userId }: AuthedReq,
+  //   @Body()
+  //   { projectIds, collectionId }: DnDBody,
+  // ) {
+  //   await this.flowService.setInclusionStateBulk(
+  //     projectIds,
+  //     userId,
+  //     collectionId,
+  //   );
 
-    const promises = projectIds.map((projectId, index) =>
-      this.prismaService.rank.update({
-        where: { userId_projectId: { projectId, userId } },
-        data: { rank: index + 1 },
-      }),
-    );
+  //   const promises = projectIds.map((projectId, index) =>
+  //     this.prismaService.rank.update({
+  //       where: { userId_projectId: { projectId, userId } },
+  //       data: { rank: index + 1 },
+  //     }),
+  //   );
 
-    await Promise.all(promises);
-  }
+  //   await Promise.all(promises);
+  // }
 
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary:
-      'Notifies the server that the user has done an attestation for a collection',
-  })
-  @Post('/reportAttest')
-  async reportAttestations(
-    @Req() { userId }: AuthedReq,
-    @Body() { cid }: FinishCollectionBody,
-  ) {
-    const isFinished = await this.flowService.isCollectionFinished(userId, cid);
+  // @UseGuards(AuthGuard)
+  // @ApiOperation({
+  //   summary:
+  //     'Notifies the server that the user has done an attestation for a collection',
+  // })
+  // @Post('/reportAttest')
+  // async reportAttestations(
+  //   @Req() { userId }: AuthedReq,
+  //   @Body() { cid }: FinishCollectionBody,
+  // ) {
+  //   const isFinished = await this.flowService.isCollectionFinished(userId, cid);
 
-    if (!isFinished)
-      throw new ForbiddenException(
-        'You can not attest a collection which is yet to be finished',
-      );
+  //   if (!isFinished)
+  //     throw new ForbiddenException(
+  //       'You can not attest a collection which is yet to be finished',
+  //     );
 
-    await this.prismaService.userAttestation.upsert({
-      where: {
-        userId_collectionId: {
-          userId: userId,
-          collectionId: cid,
-        },
-      },
-      create: {
-        userId: userId,
-        collectionId: cid,
-      },
-      update: {
-        userId: userId,
-        collectionId: cid,
-      },
-    });
-    return 'Success';
-  }
+  //   await this.prismaService.userAttestation.upsert({
+  //     where: {
+  //       userId_collectionId: {
+  //         userId: userId,
+  //         collectionId: cid,
+  //       },
+  //     },
+  //     create: {
+  //       userId: userId,
+  //       collectionId: cid,
+  //     },
+  //     update: {
+  //       userId: userId,
+  //       collectionId: cid,
+  //     },
+  //   });
+  //   return 'Success';
+  // }
 
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary:
-      'Notifies the server that the user has completed filtering the projects in a collection',
-  })
-  @Post('/mark-filtered')
-  async markFiltered(
-    @Req() { userId }: AuthedReq,
-    @Body() { cid }: FinishCollectionBody,
-  ) {
-    await this.flowService.markCollectionsFiltered(userId, cid);
-    return 'Success';
-  }
+  // @UseGuards(AuthGuard)
+  // @ApiOperation({
+  //   summary:
+  //     'Notifies the server that the user has completed filtering the projects in a collection',
+  // })
+  // @Post('/mark-filtered')
+  // async markFiltered(
+  //   @Req() { userId }: AuthedReq,
+  //   @Body() { cid }: FinishCollectionBody,
+  // ) {
+  //   await this.flowService.markCollectionsFiltered(userId, cid);
+  //   return 'Success';
+  // }
 
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Exclude a project from subsequent pairwise ranking',
-  })
-  @Post('/projects/set-inclusion')
-  async excludeProjects(
-    @Req() { userId }: AuthedReq,
-    @Body() { id, state }: InclusionProjectBody,
-  ) {
-    await this.flowService.setInclusionState(userId, id, state);
-    return 'Success';
-  }
+  // @UseGuards(AuthGuard)
+  // @ApiOperation({
+  //   summary: 'Exclude a project from subsequent pairwise ranking',
+  // })
+  // @Post('/projects/set-inclusion')
+  // async excludeProjects(
+  //   @Req() { userId }: AuthedReq,
+  //   @Body() { id, state }: InclusionProjectBody,
+  // ) {
+  //   await this.flowService.setInclusionState(userId, id, state);
+  //   return 'Success';
+  // }
 
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Exclude a project from subsequent pairwise ranking',
-  })
-  @Post('/projects/set-inclusion-bulk')
-  async setInclusionBulk(
-    @Req() { userId }: AuthedReq,
-    @Body() { ids, collectionId }: InclusionProjectsBulkBody,
-  ) {
-    await this.flowService.setInclusionStateBulk(ids, userId, collectionId);
-    return 'Success';
-  }
+  // @UseGuards(AuthGuard)
+  // @ApiOperation({
+  //   summary: 'Exclude a project from subsequent pairwise ranking',
+  // })
+  // @Post('/projects/set-inclusion-bulk')
+  // async setInclusionBulk(
+  //   @Req() { userId }: AuthedReq,
+  //   @Body() { ids, collectionId }: InclusionProjectsBulkBody,
+  // ) {
+  //   await this.flowService.setInclusionStateBulk(ids, userId, collectionId);
+  //   return 'Success';
+  // }
 
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary:
-      'Used to mark a collection status "finished". After a collection is finished, voting is not longer possible in it',
-  })
-  @Post('/finish')
-  async finishCollections(
-    @Req() { userId }: AuthedReq,
-    @Body() { cid }: FinishCollectionBody,
-  ) {
-    await this.flowService.finishCollection(userId, cid);
+  // @UseGuards(AuthGuard)
+  // @ApiOperation({
+  //   summary:
+  //     'Used to mark a collection status "finished". After a collection is finished, voting is not longer possible in it',
+  // })
+  // @Post('/finish')
+  // async finishCollections(
+  //   @Req() { userId }: AuthedReq,
+  //   @Body() { cid }: FinishCollectionBody,
+  // ) {
+  //   await this.flowService.finishCollection(userId, cid);
 
-    return 'Success';
-  }
+  //   return 'Success';
+  // }
 
   // @UseGuards(AuthGuard)
   @ApiOperation({
@@ -463,9 +454,9 @@ export class FlowController {
       where: { userId: userId },
     });
 
-    await this.prismaService.projectInclusion.deleteMany({
-      where: { userId: userId },
-    });
+    // await this.prismaService.projectInclusion.deleteMany({
+    //   where: { userId: userId },
+    // });
 
     await this.prismaService.vote.deleteMany({
       where: { userId: userId },
