@@ -139,60 +139,60 @@ export class AuthController {
     return nonce;
   }
 
-  @ApiResponse({
-    status: 200,
-    type: String,
-    description: 'a 6 character numerical OTP is returned',
-  })
-  @UseGuards(AuthGuard)
-  @Get('/otp')
-  async getOtp(@Req() { userId }: AuthedReq) {
-    const otp = await this.authService.assignOtp(userId);
+  // @ApiResponse({
+  //   status: 200,
+  //   type: String,
+  //   description: 'a 6 character numerical OTP is returned',
+  // })
+  // @UseGuards(AuthGuard)
+  // @Get('/otp')
+  // async getOtp(@Req() { userId }: AuthedReq) {
+  //   const otp = await this.authService.assignOtp(userId);
 
-    return otp;
-  }
+  //   return otp;
+  // }
 
-  @ApiResponse({
-    status: 200,
-    type: Boolean,
-    description: 'false or returning an auth token',
-  })
-  @Post('/otp/validate')
-  async validateOtp(@Body() { otp }: OtpDTO) {
-    const userId = await this.authService.checkOtpValidity(otp);
+  // @ApiResponse({
+  //   status: 200,
+  //   type: Boolean,
+  //   description: 'false or returning an auth token',
+  // })
+  // @Post('/otp/validate')
+  // async validateOtp(@Body() { otp }: OtpDTO) {
+  //   const userId = await this.authService.checkOtpValidity(otp);
 
-    if (!userId) throw new ForbiddenException('OTP invalid');
+  //   if (!userId) throw new ForbiddenException('OTP invalid');
 
-    const [nonce, _] = await Promise.all([
-      this.prismaService.nonce.findUnique({
-        where: {
-          userId: userId,
-        },
-      }),
-      this.prismaService.otp.delete({
-        where: { userId },
-      }),
-    ]);
+  //   const [nonce, _] = await Promise.all([
+  //     this.prismaService.nonce.findUnique({
+  //       where: {
+  //         userId: userId,
+  //       },
+  //     }),
+  //     this.prismaService.otp.delete({
+  //       where: { userId },
+  //     }),
+  //   ]);
 
-    if (!nonce) {
-      const token = generateRandomString({
-        length: 32,
-        lowercase: true,
-        numerical: true,
-        uppercase: true,
-      });
+  //   if (!nonce) {
+  //     const token = generateRandomString({
+  //       length: 32,
+  //       lowercase: true,
+  //       numerical: true,
+  //       uppercase: true,
+  //     });
 
-      await this.prismaService.nonce.create({
-        data: {
-          nonce: token,
-          userId,
-          expiresAt: `${Date.now() + this.authService.TokenExpirationDuration}`,
-        },
-      });
+  //     await this.prismaService.nonce.create({
+  //       data: {
+  //         nonce: token,
+  //         userId,
+  //         expiresAt: `${Date.now() + this.authService.TokenExpirationDuration}`,
+  //       },
+  //     });
 
-      return token;
-    }
+  //     return token;
+  //   }
 
-    return nonce.nonce;
-  }
+  //   return nonce.nonce;
+  // }
 }

@@ -591,18 +591,18 @@ export class FlowService {
     return withAdditionalFields;
   };
 
-  isCollectionFiltered = async (userId: number, collectionId: number) => {
-    const res = await this.prismaService.userCollectionFiltered.findUnique({
-      where: {
-        userId_collectionId: {
-          collectionId,
-          userId,
-        },
-      },
-    });
+  // isCollectionFiltered = async (userId: number, collectionId: number) => {
+  //   const res = await this.prismaService.userCollectionFiltered.findUnique({
+  //     where: {
+  //       userId_collectionId: {
+  //         collectionId,
+  //         userId,
+  //       },
+  //     },
+  //   });
 
-    return res !== null;
-  };
+  //   return res !== null;
+  // };
 
   // justTesting = async () => {
   //   const collections = await this.prismaService.project.findMany({
@@ -900,24 +900,20 @@ export class FlowService {
   };
 
   getRootRanking = async (userId: number) => {
-    const [ranking, rankedCollectionIds] = await Promise.all([
+    const [ranking, collectionIds] = await Promise.all([
       this.getRankingFromVotes(userId, null),
-      this.prismaService.userAttestation.findMany({
-        select: { collectionId: true },
+      this.prismaService.project.findMany({
+        select: { id: true },
         where: {
-          userId,
-          collection: {
-            parentId: null,
-          },
+          type: 'collection',
+          parentId: null,
         },
       }),
     ]);
 
-    console.log('Ranking from votes:', ranking);
-
     // filter just finished collections
     const rankedCollectionsRanking = ranking.filter((item) =>
-      rankedCollectionIds.map((item) => item.collectionId).includes(item.id),
+      collectionIds.map((el) => el.id).includes(item.id),
     );
 
     const finishedCollections = await this.prismaService.project.findMany({

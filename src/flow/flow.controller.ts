@@ -66,29 +66,7 @@ export class FlowController {
       parentId || null,
     );
 
-    const votes = await Promise.all(
-      collections.map((el) =>
-        this.prismaService.userAttestation.count({
-          where: {
-            collectionId: el.id,
-          },
-        }),
-      ),
-    );
-
-    const collectionVotes: Record<string, number> = collections.reduce(
-      (acc, curr, index) => {
-        return {
-          ...acc,
-          [curr.id]: votes[index],
-        };
-      },
-      {},
-    );
-
-    return collections.sort(
-      (a, b) => collectionVotes[a.id] - collectionVotes[b.id],
-    );
+    return collections;
   }
 
   @UseGuards(AuthGuard)
@@ -450,9 +428,9 @@ export class FlowController {
       where: { userId: userId },
     });
 
-    await this.prismaService.userCollectionFiltered.deleteMany({
-      where: { userId: userId },
-    });
+    // await this.prismaService.userCollectionFiltered.deleteMany({
+    //   where: { userId: userId },
+    // });
 
     // await this.prismaService.projectInclusion.deleteMany({
     //   where: { userId: userId },
@@ -466,13 +444,13 @@ export class FlowController {
       where: { userId: userId },
     });
 
-    await this.prismaService.userAttestation.deleteMany({
-      where: { userId: userId },
-    });
+    // await this.prismaService.userAttestation.deleteMany({
+    //   where: { userId: userId },
+    // });
 
-    await this.prismaService.otp.deleteMany({
-      where: { userId: userId },
-    });
+    // await this.prismaService.otp.deleteMany({
+    //   where: { userId: userId },
+    // });
 
     // await this.prismaService.user.update({
     //   where: { id: userId },
