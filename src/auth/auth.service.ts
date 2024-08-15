@@ -7,7 +7,9 @@ import {
 import { verifySignature } from 'thirdweb/auth';
 import { generateRandomString } from 'src/utils';
 import { PrismaService } from 'src/prisma.service';
-import { chain, thirdwebClient } from 'src/thirdweb';
+import { ethers } from 'ethers';
+import { SiweMessage } from 'siwe';
+// import { chain, thirdwebClient } from 'src/thirdweb';
 
 @Injectable()
 export class AuthService {
@@ -144,15 +146,14 @@ export class AuthService {
     return user;
   };
 
-  verifyUser = async (message: string, signature: string, address: string) => {
-    const isValid = await verifySignature({
-      message,
-      signature,
-      address,
-      client: thirdwebClient,
-      chain,
-    });
-
-    return isValid;
+  verifyUser = async (message: SiweMessage, signature: any) => {
+    const siweMessage = new SiweMessage(message);
+    try {
+      // await this.isNonceValid(message.nonce);
+      await siweMessage.verify({ signature });
+      return true;
+    } catch (err) {
+      return false;
+    }
   };
 }
