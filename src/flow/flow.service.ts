@@ -76,37 +76,31 @@ export class FlowService {
 
     if (isLastLayerCollection) {
       const [
-        isAttested,
+        // isAttested,
         isFinished,
         hasThresholdVotes,
         hasVotes,
-        isFiltered,
-        inclusion,
+        // isFiltered,
+        // inclusion,
       ] = await Promise.all([
-        this.isCollectionAttested(userId, collectionId),
+        // this.isCollectionAttested(userId, collectionId),
         this.isCollectionFinished(userId, collectionId),
         this.hasThresholdVotes(collectionId, userId),
         this.isCollectionStarted(userId, collectionId),
-        this.isCollectionFiltered(userId, collectionId),
-        this.prismaService.projectInclusion.findFirst({
-          where: { userId, project: { parentId: collectionId } },
-        }),
+        // this.isCollectionFiltered(userId, collectionId),
+        // this.prismaService.projectInclusion.findFirst({
+        //   where: { userId, project: { parentId: collectionId } },
+        // }),
       ]);
 
-      const isFiltering = inclusion !== null;
+      // const isFiltering = inclusion !== null;
 
-      return isAttested
-        ? 'Attested'
-        : isFinished
+      return isFinished
         ? 'Finished'
         : hasThresholdVotes
         ? 'WIP - Threshold'
         : hasVotes
         ? 'WIP'
-        : isFiltered
-        ? 'Filtered'
-        : isFiltering
-        ? 'Filtering'
         : 'Pending';
     } else {
       const children = await this.prismaService.project.findMany({
@@ -123,17 +117,9 @@ export class FlowService {
         ),
       );
 
-      if (
-        childrenFinishStatus.every(
-          (child) => child === 'Finished' || child === 'Attested',
-        )
-      )
+      if (childrenFinishStatus.every((child) => child === 'Finished'))
         return 'Finished';
-      if (
-        childrenFinishStatus.some(
-          (child) => child === 'Finished' || child === 'Attested',
-        )
-      )
+      if (childrenFinishStatus.some((child) => child === 'Finished'))
         return 'WIP';
       return 'Pending';
     }
@@ -1028,53 +1014,53 @@ export class FlowService {
     return includedProjects.map((el) => el.projectId);
   };
 
-  getAttestedCollectionPairs = async (userId: number) => {
-    // const collectionId = null;
+  // getAttestedCollectionPairs = async (userId: number) => {
+  //   // const collectionId = null;
 
-    const [allCollections, collectionPairwises] = await Promise.all([
-      this.getCollections(userId, null),
-      this.prismaService.vote.findMany({
-        where: {
-          userId,
-          project1: {
-            parentId: null,
-            type: 'collection',
-          },
-        },
-        orderBy: {
-          project1Id: 'asc',
-        },
-      }),
-    ]);
+  //   const [allCollections, collectionPairwises] = await Promise.all([
+  //     this.getCollections(userId, null),
+  //     this.prismaService.vote.findMany({
+  //       where: {
+  //         userId,
+  //         project1: {
+  //           parentId: null,
+  //           type: 'collection',
+  //         },
+  //       },
+  //       orderBy: {
+  //         project1Id: 'asc',
+  //       },
+  //     }),
+  //   ]);
 
-    const attestedCollections = allCollections.filter(
-      (collection) => collection.progress === 'Attested',
-    );
+  //   const attestedCollections = allCollections.filter(
+  //     (collection) => collection.progress === 'Attested',
+  //   );
 
-    if (attestedCollections.length < 2) return [];
+  //   if (attestedCollections.length < 2) return [];
 
-    const allAttestedPairs = getPairwiseCombinations(
-      attestedCollections.map((el) => el.id),
-    );
-    const remainingPairs = allAttestedPairs.filter((pair) => {
-      const index = collectionPairwises.findIndex(
-        (item) =>
-          (item.project1Id === pair[0] && item.project2Id === pair[1]) ||
-          (item.project1Id === pair[1] && item.project2Id === pair[0]),
-      );
+  //   const allAttestedPairs = getPairwiseCombinations(
+  //     attestedCollections.map((el) => el.id),
+  //   );
+  //   const remainingPairs = allAttestedPairs.filter((pair) => {
+  //     const index = collectionPairwises.findIndex(
+  //       (item) =>
+  //         (item.project1Id === pair[0] && item.project2Id === pair[1]) ||
+  //         (item.project1Id === pair[1] && item.project2Id === pair[0]),
+  //     );
 
-      if (index === -1) return true;
-      return false;
-    });
+  //     if (index === -1) return true;
+  //     return false;
+  //   });
 
-    if (remainingPairs.length === 0) return [];
+  //   if (remainingPairs.length === 0) return [];
 
-    const result = allCollections.filter((collection) =>
-      remainingPairs[0].includes(collection.id),
-    );
+  //   const result = allCollections.filter((collection) =>
+  //     remainingPairs[0].includes(collection.id),
+  //   );
 
-    return result;
-  };
+  //   return result;
+  // };
 
   removeLastVote = async (userId: number, parentCollection: number | null) => {
     const lastVote = await this.prismaService.vote.findFirst({
@@ -1097,39 +1083,33 @@ export class FlowService {
   };
 
   getPairs = async (userId: number, parentCollection?: number, count = 1) => {
-    const [collection, allVotes, allChildrenProjectInclusions] =
-      await Promise.all([
-        this.prismaService.project.findUnique({
-          where: {
-            id: parentCollection || -1,
-            type: {
-              in: [ProjectType.collection, ProjectType.compositeProject],
-            },
+    const [collection, allVotes, allChildren] = await Promise.all([
+      this.prismaService.project.findUnique({
+        where: {
+          id: parentCollection || -1,
+          type: {
+            in: [ProjectType.collection, ProjectType.compositeProject],
           },
-          select: { name: true, id: true },
-        }),
-        this.prismaService.vote.findMany({
-          where: {
-            userId: userId,
-            project1: { parentId: parentCollection },
-            project2: { parentId: parentCollection },
-          },
-        }),
-        this.prismaService.projectInclusion.findMany({
-          where: {
-            project: {
-              parentId: parentCollection,
-            },
-            state: 'included',
-            userId,
-          },
-          include: { project: true },
-        }),
-      ]);
+        },
+        select: { name: true, id: true },
+      }),
+      this.prismaService.vote.findMany({
+        where: {
+          userId: userId,
+          project1: { parentId: parentCollection },
+          project2: { parentId: parentCollection },
+        },
+      }),
+      this.prismaService.project.findMany({
+        where: {
+          parentId: parentCollection || -1,
+        },
+      }),
+    ]);
 
-    const allChildren = allChildrenProjectInclusions.map(
-      (item) => item.project,
-    );
+    // const allChildren = allChildrenProjectInclusions.map(
+    //   (item) => item.project,
+    // );
 
     const votedIds = allVotes.reduce(
       (acc, vote) => [...acc, vote.project1Id, vote.project2Id],
@@ -1615,19 +1595,19 @@ export class FlowService {
     if (pickedId !== null && pickedId !== project1Id && pickedId !== project2Id)
       throw new BadRequestException('Picked project invalid id');
 
-    const [project1, project2, inclusion1, inclusion2] = await Promise.all([
+    const [project1, project2] = await Promise.all([
       this.prismaService.project.findFirst({
         where: { id: project1Id },
       }),
       this.prismaService.project.findFirst({
         where: { id: project2Id },
       }),
-      this.prismaService.projectInclusion.findUnique({
-        where: { userId_projectId: { projectId: project1Id, userId } },
-      }),
-      this.prismaService.projectInclusion.findUnique({
-        where: { userId_projectId: { projectId: project2Id, userId } },
-      }),
+      // this.prismaService.projectInclusion.findUnique({
+      //   where: { userId_projectId: { projectId: project1Id, userId } },
+      // }),
+      // this.prismaService.projectInclusion.findUnique({
+      //   where: { userId_projectId: { projectId: project2Id, userId } },
+      // }),
     ]);
 
     if (
@@ -1639,10 +1619,10 @@ export class FlowService {
     )
       throw new BadRequestException('Invalid pair of projects');
 
-    if (inclusion1?.state !== 'included' || inclusion2?.state !== 'included')
-      throw new BadRequestException(
-        'Already excluded projects can not be compared',
-      );
+    // if (inclusion1?.state !== 'included' || inclusion2?.state !== 'included')
+    //   throw new BadRequestException(
+    //     'Already excluded projects can not be compared',
+    //   );
 
     const progressStatus = await this.getCollectionProgressStatus(
       userId,
@@ -1650,7 +1630,8 @@ export class FlowService {
     );
 
     if (
-      progressStatus !== 'Filtered' &&
+      // progressStatus !== 'Filtered' &&
+      progressStatus !== 'Pending' &&
       progressStatus !== 'WIP' &&
       progressStatus !== 'WIP - Threshold'
     )

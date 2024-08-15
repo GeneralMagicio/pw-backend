@@ -222,22 +222,23 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Query('cid') collectionId?: number,
   ) {
-    if (!collectionId)
-      return this.flowService.getAttestedCollectionPairs(userId);
+    if (!collectionId) throw new BadRequestException('Please provide a cid');
+    // if (!collectionId)
+    //   return this.flowService.getAttestedCollectionPairs(userId);
 
-    const progressStatus = await this.flowService.getCollectionProgressStatus(
-      userId,
-      collectionId,
-    );
+    // const progressStatus = await this.flowService.getCollectionProgressStatus(
+    //   userId,
+    //   collectionId,
+    // );
 
-    if (
-      progressStatus !== 'Filtered' &&
-      progressStatus !== 'WIP' &&
-      progressStatus !== 'WIP - Threshold'
-    )
-      throw new ForbiddenException(
-        "You can only vote for a collection that's Filtered, WIP or WIP-Threshold",
-      );
+    // if (
+    //   progressStatus !== 'Filtered' &&
+    //   progressStatus !== 'WIP' &&
+    //   progressStatus !== 'WIP - Threshold'
+    // )
+    //   throw new ForbiddenException(
+    //     "You can only vote for a collection that's Filtered, WIP or WIP-Threshold",
+    //   );
 
     const pairs: PairsResult = await this.flowService.getPairs(
       userId,

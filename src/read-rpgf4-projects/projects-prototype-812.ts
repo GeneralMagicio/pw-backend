@@ -88,7 +88,7 @@ export const projects = [
     details:
       'https://round4-api-eas.retrolist.app/projects/0xcb29225932c4a69eaf01e966005c5ef595d4a7121fec2bb0c4159b11dda4a86b',
     __1: '',
-    __2: 'DeFi Ecosystems',
+    __2: 'Cross chain',
     __3: 'DeFi ecosystems encompass a range of different DeFi apps and platforms.',
   },
   {
@@ -134,7 +134,7 @@ export const projects = [
     details:
       'https://round4-api-eas.retrolist.app/projects/0x32c11a30a752ad93d1d583c2b2cb0bae88fcfffc995bad594ab5670e4a0fe59e',
     __1: '',
-    __2: 'DEXs & Perps',
+    __2: 'Cross chain',
     __3: 'Decentralized Exchanges (DEXs) and perpetual contracts (Perps) are platforms for trading cryptocurrencies.',
   },
   {
@@ -157,7 +157,7 @@ export const projects = [
     details:
       'https://round4-api-eas.retrolist.app/projects/0x719d1741c6198151d1c7cfa9f1792a29836388b86b712a20bd1186a763431ed1',
     __1: '',
-    __2: 'DeFi UX',
+    __2: 'Cross chain',
     __3: 'DeFi User Experience (UX) focuses on improving the usability and accessibility of DeFi.',
   },
   {
@@ -182,121 +182,6 @@ export const projects = [
     __1: '',
     __2: 'User & Development experience',
     __3: 'This category emphasizes tools and platforms that enhance the experience for both end-users and developers in web3.',
-  },
-  {
-    id: '0x8517c43d8d6571b847b6d6092f98246a7b51052464447f0285ee4bda46373043',
-    displayName: 'LayerZero',
-    '': '',
-    contributionDescription:
-      'LayerZero is an interoperability protocol, uniquely supporting censorship-resistant messages and permissionless development through immutable smart contracts.',
-    impactDescription: '',
-    'Short description':
-      'LayerZero is an interoperability protocol supporting censorship-resistant messages and permissionless development.',
-    websiteUrl: 'https://layerzero.network',
-    applicantType: 'PROJECT',
-    prelimResult: 'Keep',
-    reportReason: '',
-    includedInBallots: 0,
-    initialCategory: 'Cross Chain',
-    'Pairwise category': 'Cross chain',
-    "Griff's thoughts": 'Cross chain',
-    details:
-      'https://round4-api-eas.retrolist.app/projects/0x8517c43d8d6571b847b6d6092f98246a7b51052464447f0285ee4bda46373043',
-    __1: '',
-    __2: 'Governance & Gov tooling',
-    __3: 'Governance in blockchain projects involves decentralized decision-making processes. This category includes tools and platforms.',
-  },
-  {
-    id: '0xdf2c3d10ba92f670e437221d9516ea75a1efbfc6c6def5328a25937303fb1f71',
-    displayName: 'LI.FI',
-    '': '',
-    contributionDescription:
-      'One API to swap, bridge, and zap across all major blockchains and protocols. Enable trading across all DEX aggregators, bridges, and intent-systems and save hundreds of developer hours.',
-    impactDescription: '',
-    'Short description':
-      'Li.Fi is one API to swap, bridge, and zap across major blockchains, saving developer hours.',
-    websiteUrl: 'https://li.fi/',
-    applicantType: 'PROJECT',
-    prelimResult: 'Keep',
-    reportReason: '',
-    includedInBallots: 0,
-    initialCategory: 'Cross Chain',
-    'Pairwise category': 'Cross chain',
-    "Griff's thoughts": 'Cross chain',
-    details:
-      'https://round4-api-eas.retrolist.app/projects/0xdf2c3d10ba92f670e437221d9516ea75a1efbfc6c6def5328a25937303fb1f71',
-    __1: '',
-    __2: 'NFT Collectibles',
-    __3: 'This category focuses on non-fungible tokens (NFTs) used for digital collectibles.',
-  },
-  {
-    id: '0xf7ecfec563255950b89768c5293312a17a20c92a9c68784068c9c58417555a4e',
-    displayName: 'MiniBridge',
-    '': '',
-    contributionDescription:
-      'Minibridge is a "zero-fee" cross-chain tool that offers multi-chain support for BTC/EVM/non-EVM and features such as fast transactions. It was developed by the Chaineye team specifically for users\' small-amount transfer scenarios. Launched for less than half a year, Minibridge has already processed 300K transactions and served 100K Web3 users. In user ratings on dappsheriff.com, Minibridge ranks first among all cross-chain bridge projects and was awarded "Best Tool of the Year" in the "PARTY AWARD 2024" annual selection by PA News.\n\nKey Features\n\nChaineye was born from the Web3 community and we build products for the community’s needs. To better serve the community, Chaineye has built many free tools such as Onchain Map, CEX Transfer Fees, Multichain Gas, RPC List, etc. The Mini Bridge was designed specifically for retail investors with small-amount cross-chain transfer requests, including the following features:\n\nZero bridge fees: We don’t charge any bridge fees at all. This means users will get the same amount of assets on the destination chains. We are built for retail investors and we believe our community like free services. Only a minimum gas fee on the destination chain is charged.\n\nFastest transactions: Our bridge has the fastest bridging experience across all existing bridges. The bridging time largely depends on the confirmation time of source and destination blockchains. We don’t want our users to wait any longer than the evitable blockchain transaction time.\n\nDesigned especially for small-amount transfer scenarios such as gas refill, airdrop claiming, moving funds, etc. It helps to save huge money and time for individual investors when doing so.\n\nGas swap: Our community wants to use the destination chain directly after bridging. We get it! The gas swap feature allows users to swap a small amount of source chain ETH to the destination chain native gas token. It is very useful for those chains where ETH is not the native gas token such as BNB Chain, Polygon, ZetaChain, ZkFair, Avalanche, Map, Mantle, and Metis.\n\nFast Integration: Our team is monitoring the market closely and is ready to integrate the latest blockchains in time. Chaineye Mini Bridge currently supports a total of 24 networks including the latest Blast EVM L2 and Merlin BTC L2 blockchain.\n\nOpen API: We have opened the API docs on our documentation site. Any individuals or third parties can go through the API and seamlessly integrate Mini Bridge into their application. Chaineye Mini Bridge works in the same style for both requests from our front-end UI and API endpoints.\n\nSecurity: To prevent the potential security concern of smart contracts, we have implemented our bridge in a hybrid style - a combination of EOA and smart contracts. EOA for cross-chain transfers and smart contracts for cross-chain gas swaps. It helps to reduce the possibility of contract exploitation. In addition, we have our entire system audited and scrutinized by our security partners.\n\nRewards and Earn: Our users can enjoy a big bridge discount by participating in our various marketing campaigns. In addition, they can also earn referral rewards in ETH and $pMNB whenever their referred address makes a transfer. Everything is transparent and Chaineye Mini Bridge is built for the community.\n\nValue Proposition\nMiniBridge extends its liquidity aggregation services to all major OP stacks, including Optimism, Base, Zora, Mode, Fraxtal, and Redstone, enabling community users on all other chains to interact with the OP ecosystem. We are aiming to foster collaboration and engagement between our respective communities, helping OP and Chaineye users to transfer their assets freely across any supported blockchains with the lowest fees and the highest speed. \nMiniBridge was born from the community and built for the community. Our web3 community BitEye having over 300K active users is the largest Asian crypto community. MiniBridge will help bring BitEye to OP ecosystem with many highlights and marketing resources which will help both sides to grow into the next level. \nMiniBridge address on most blockchains is an EOA: 0x00000000000007736e2F9aA5630B8c812E1F3fc9. Since the birth of MiniBridge (roughly 6 months ago), it has made cumulatively 338,031 bridging transactions on all chains and 28,705 bridging transactions on Optimism and all supported OP stack blockchains. \n\nProject Resource\n\nWebsite: https://minibridge.chaineye.tools/\n\nTwitter: https://twitter.com/Chaineye_tools\n\nTelegram: https://t.me/chaineye\n\nGithub: https://github.com/DeFiEye\n\nDocumentation: https://docs.chaineye.tools/',
-    impactDescription: '',
-    'Short description':
-      'Minibridge is a "zero-fee" cross-chain tool that offers multi-chain support',
-    websiteUrl: 'https://minibridge.chaineye.tools/',
-    applicantType: 'PROJECT',
-    prelimResult: 'Keep',
-    reportReason: '',
-    includedInBallots: 0,
-    initialCategory: 'Cross Chain',
-    'Pairwise category': 'Cross chain',
-    "Griff's thoughts": '',
-    details:
-      'https://round4-api-eas.retrolist.app/projects/0xf7ecfec563255950b89768c5293312a17a20c92a9c68784068c9c58417555a4e',
-    __1: '',
-    __2: 'NFTverse',
-    __3: 'The NFTverse refers to the broader ecosystem of NFTs, including their use in virtual worlds, games, and metaverse projects.',
-  },
-  {
-    id: '0x6725fda49d187f2f33cd7c38bd5b461644415067673842bb3826a30df875df4e',
-    displayName: 'Nogem',
-    '': '',
-    contributionDescription:
-      'Mint and Bridge NFTs, refuel gas across networks, and test new solutions with various chain-to-chain technologies in one place.',
-    impactDescription: '',
-    'Short description':
-      'Nogem is all-in-one platform for NFT minting, token bridging, gas refueling, and cross-chain testing.',
-    websiteUrl: 'https://nogem.app/',
-    applicantType: 'PROJECT',
-    prelimResult: 'Keep',
-    reportReason: '',
-    includedInBallots: 0,
-    initialCategory: 'Cross Chain',
-    'Pairwise category': 'Cross chain',
-    "Griff's thoughts": 'Cross chain',
-    details:
-      'https://round4-api-eas.retrolist.app/projects/0x6725fda49d187f2f33cd7c38bd5b461644415067673842bb3826a30df875df4e',
-    __1: '',
-    __2: 'Social Networks & Platforms',
-    __3: 'Decentralized social networks and platforms aim to provide alternatives to traditional social media by leveraging blockchain technology.',
-  },
-  {
-    id: '0xac9bc0b4cd1be4c73d6ecf8e1eb69c4b447986862f9ac5243ff9f8dd37b76bf4',
-    displayName: 'Owlto Finance',
-    '': '',
-    contributionDescription:
-      '🦉 An intent-centric interoperability protocol, "Bridge the World with AI Agent". \n\nBuild on #BTC | #ETH | #SOL Eco \n\n⚡️ Safe, Fast, Low-priced and Easy-to-use.',
-    impactDescription: '',
-    'Short description':
-      'Decentralized bridge for low-cost, secure, and fast Ethereum L2 asset transfers.',
-    websiteUrl: 'https://owlto.finance',
-    applicantType: 'PROJECT',
-    prelimResult: 'Keep',
-    reportReason: '',
-    includedInBallots: 0,
-    initialCategory: 'Cross Chain',
-    'Pairwise category': 'Cross chain',
-    "Griff's thoughts": 'Cross chain',
-    details:
-      'https://round4-api-eas.retrolist.app/projects/0xac9bc0b4cd1be4c73d6ecf8e1eb69c4b447986862f9ac5243ff9f8dd37b76bf4',
-    __1: '',
-    __2: '',
-    __3: '',
   },
   {
     id: '0xe0d8908b9fe1d5065382727c1e1db2568915065c9833cb62ce73a6d4916bf59b',
@@ -409,7 +294,7 @@ export const projects = [
     details:
       'https://round4-api-eas.retrolist.app/projects/0xf0e9c2890f2ccdacd0f37785b47960d1642d98d947b7e39d39d0c8f3f0d4effc',
     __1: '',
-    __2: 'DeFi Ecosystems',
+    __2: 'Cross chain',
     __3: 19,
   },
   {
@@ -455,7 +340,7 @@ export const projects = [
     details:
       'https://round4-api-eas.retrolist.app/projects/0x5742e2ebd17ec30b22662779c4245215a6aaf57d255661c9fa42624467c8a488',
     __1: '',
-    __2: 'DEXs & Perps',
+    __2: 'Cross chain',
     __3: 29,
   },
   {
@@ -478,7 +363,7 @@ export const projects = [
     details:
       'https://round4-api-eas.retrolist.app/projects/0xe174b3d8cfd29372b9ac33218fd46354c16a06198f69455d778db66e60bbd301',
     __1: '',
-    __2: 'DeFi UX',
+    __2: 'Cross chain',
     __3: 20,
   },
   {
@@ -519,12 +404,12 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x7b752a052235f6ea9ff959180bc3b19ac118d58f21a642ddbe41722b9e4d2004',
     __1: '',
-    __2: 'Governance & Gov tooling',
+    __2: 'Cross chain',
     __3: 15,
   },
   {
@@ -542,7 +427,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xb7ca9f09f310b3fe3aa38bc2a2cfb3a123fd1bd9d7e54df0ac8747db38aa9516',
@@ -565,7 +450,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xeb4aab0863efd52f2f1c8a25fa809b977d7e132d48f5afe03ff4b5e8602da7ed',
@@ -588,7 +473,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x21e9544a242d4277c8b4a5376633e8dea88cccd75bef10fc727017009a85e80a',
@@ -611,7 +496,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x931cd5982a20d1cbc0b02de7e8e25e6fa2f38dd2f1f9dc46c7608acb8b98fc0e',
@@ -634,7 +519,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x3f193873183f8f7d5fb589dd995e6ad146417a3c4a8ebb28f7d880b7a2f4e187',
@@ -657,7 +542,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x3425e2a1d30b23bf8397aa27799ce0a64966988d400efc197b6c0855681dfe20',
@@ -680,7 +565,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xb6a7e3e68ffd95368dd29da68f06d422f81f095d71e0511c36a19ad8fde2b549',
@@ -703,7 +588,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xf2c89b7aae631a0f56b5b95fd715e6c4d9f49136e2aba7e09ad259039af6528e',
@@ -726,7 +611,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x50df5eabda10ca2d5917129f0de874137d3bdf4f6ff8b0aeaef4e0bdde67e692',
@@ -749,7 +634,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x28a0b7a4f2b2f646cd3c2bb28cd543d1c5a83150384f1f50138e1fc1d469d946',
@@ -772,7 +657,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x5151980ed8f61fee963b3e15858e20ca9345d85919ba962ed65c1340ac1c7b6f',
@@ -795,7 +680,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x27bd375b7f1af6d3e9e419c1155c93d3b43dab8c41e3997549a9a8ab58034986',
@@ -818,7 +703,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xa7e1ffee39418bae4a3a33fc9cfce40fb6d28e0d5157c0404fff5d2f941c96b2',
@@ -841,7 +726,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x26810aa49a377365b854d1edfe8e4efce3bbc60ffa7169a74854d1cb95355af8',
@@ -864,7 +749,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xf75f6689349a424d34440a6661682992e0d87169d6f0f544e9fc7542c9ed1b64',
@@ -887,7 +772,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x6d6fa7f198fb8b6c200862a00214b63c7e401d6e1175cdbb048f568bf6f7b69c',
@@ -910,7 +795,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xffcb5c93d7907670a79b1b4334d3d343b5c703d3a093b4721fc064d6fa7986e0',
@@ -933,7 +818,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi Ecosystems',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x0fdc96be82a6c734dd7a19b777356f79d005a484329f2ddc4b218894f20223a1',
@@ -956,7 +841,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x063e5de47848c11bb80caad187d14d8c4b6f59711409b77328a8970c07bc5589',
@@ -979,7 +864,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x6a34dd6ef079c2bbfba737cfcec120f2af184a3ed1c78cff23f462511913eda5',
@@ -1002,7 +887,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Utility',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x0f880f915db59ea559d87a6918af0ec8d7864177e1abe88a5191ef7d4c6f2337',
@@ -1023,7 +908,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xf2a050f303b19080d597ec4e23aca0e87897f51219ab3c4847fc24201d0ec9c1',
@@ -1046,7 +931,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x00d7a2fb2938d48554229ee5666a22341f6026c428e01a567193c034936a4f67',
@@ -1069,7 +954,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x621c78608f960dea1aacf265bdee293d2bcf207f402d9eec8dc46a1b60451cb6',
@@ -1092,7 +977,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xea348bda39e9fd3fcf126c97f29af80ac7f81010d16c49d0edd6ae2ede9e945a',
@@ -1115,7 +1000,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x989f85721a9d647b694d68f07809d29d98a219a9c792779d918e6ef74e553b70',
@@ -1138,7 +1023,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xba0f7e0bbc4e217f1cd7c2853652a40ad8f575b90529955bc78dffe101b6b250',
@@ -1161,7 +1046,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x3c9929a91bcab7ffdc113a3f31e19593932dedbda148574fa4cf5b5dee55b9a5',
@@ -1183,7 +1068,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x37e44b44f5e4d72c52dd4c6b6a9d906d876632c555544fd257951c78f1260ce9',
@@ -1206,7 +1091,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xc3d96e4bc5af3f9f92c96826a5a30ef1f7c4ed756ab04ee1ecebb71c8098e096',
@@ -1229,7 +1114,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x03d466e49fb5dea874ed93d17b980b92c1e8a2d3cba4d1b601ebf5e4efffa16f',
@@ -1252,7 +1137,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x724fc1289722319901e56986a2432493bb7ca601af0aeb7c6de2e8f4a07446f0',
@@ -1275,7 +1160,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xc667426007cd21e655b08a75ffb70efc043fdf2b103b4b49f9a81e8d8787b0a7',
@@ -1298,7 +1183,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x48376bd89a5e240d06bd47bea0f14ac3b94e498f6c75bd1359e8b5a96eb9d0c8',
@@ -1321,7 +1206,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x03b8d49377afe68dd0edd0d3d9feeac2eb9bd4f13278ab4036663b60c82a6222',
@@ -1344,7 +1229,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x4acdbb55a861bda486cc7de33c411805b8029f96239acb589bf137ce08b5feda',
@@ -1367,7 +1252,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xaa617444c29178947ad9f5540155d09d1e0ba67c49c78d75bbde4dce6d74859f',
@@ -1390,7 +1275,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DeFi UX',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x6e7731ed31233e07afafd0c6389e94aa7b004a15a2dfd14c6f679e84779589c5',
@@ -1413,7 +1298,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x5d9b376c549fbfdc4ceec55d3264affcf2a206c90c60fab9b42463143ff8be64',
@@ -1436,7 +1321,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xb2d99f37e696f528f0e8c38e18c79313d87712f0e1b32839077b143da3584349',
@@ -1459,7 +1344,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xb6e2578fcd680bf26226de25605a0487a35d30678c969f4ad902f355e6e6f8c9',
@@ -1482,7 +1367,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'perps',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x77c4d96f1265be5a083d2ea41c247a016e3f28010680d7998eddb10d00f44340',
@@ -1505,7 +1390,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xb94d4ae692e28b8360c086b3414087ce15affbfaedae53a6c9ff8d10ee533cc9',
@@ -1528,7 +1413,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xe965271c1fbaac56fd5653c6bb824e1d2ebbc685dc39f19b72b16a6f9134b2e7',
@@ -1551,7 +1436,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'perps',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xab96cd1f93d30fa80f04c83fe3a32c51b3762e16f521c17ebe0dfeef01d34390',
@@ -1574,7 +1459,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'perps',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x8f7a5ed042e2f67e2a1e476baddcb1363983432bbc93e3ee190a83b98be8aea2',
@@ -1597,7 +1482,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: '',
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details: 'MISSING',
     __1: '',
@@ -1619,7 +1504,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'perps',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x5d9fc7dc8612d1b61082409012053939c1b8411693ff231ff08df31d0f41cd48',
@@ -1642,7 +1527,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xe88613ee519b1eadf11bb904e582e2d99b92de1b4b56c1c651971427c07a143b',
@@ -1665,7 +1550,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x9fc0256a23315636219a79ef51008221e01b16cf1950a1f2c622b78ef1add3f0',
@@ -1688,7 +1573,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'perps',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x2a311a7cea1abf2a105edeab8e5e981a996bdd34f84c4ceeee9cdef632438684',
@@ -1711,7 +1596,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'perps',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xe9991b915640e2c8a26a37036aaa54301e24a8750a23074002b630b8f839be3b',
@@ -1734,7 +1619,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'agg',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x9dad68775f74559445b958fe634e1ce2d6e3bfb0cb3f5d50d14c81eda32de3f1',
@@ -1757,7 +1642,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x54e24209186d4ecee1ee65b22400bb13bc8c4f82961d6b5e3033b4ec165d2c6b',
@@ -1780,7 +1665,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'DEX',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xa261f44b23002bd2c9a0a94d523b6bec7dc0724f2724aa02ff932f31ba614fad',
@@ -1803,7 +1688,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'perps',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x0113e7dd1d3d58abd1eed9b687b27101760b531dfcbd97022880aafd7929aa96',
@@ -1826,7 +1711,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'perps',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x3ee2cd151f08a659be879a09a6d7ec8f9839a766b76c4965af5b063ed5b53638',
@@ -1849,7 +1734,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'perps',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x5d00daec27ab40356c18e89fa40766ac9d3499238fa45846a1ea0a52e5fb8437',
@@ -1872,7 +1757,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xd38ded80c41d687a63badccfdff5e58c5d7019230528a24339665d9353bda17b',
@@ -1895,7 +1780,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x46ae31a2e4a56b77f230091e8d15288cfad602051d27ef75924cea5d1e1addef',
@@ -1918,7 +1803,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x62b158fae899983897f1ee961a3b76d34b9c42ebdf41db4c0bab8f4b6181e89f',
@@ -1941,7 +1826,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'perps',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x9a3d57a84c46d02e5454b5ef4cd6e365b9395399946cdb745c43b885fc6a93e3',
@@ -1964,7 +1849,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xaee43a145c2db5bbd2e6b8edec622f193e5386919ad3c73d47253e60198ef762',
@@ -1987,7 +1872,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'perps',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x7f13d08a7e5a277aaf26acd0f2cf346ee31dcdbf8a999a80c963c5f3f4eb7537',
@@ -2010,7 +1895,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'options',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xe920a950e878a7e31769bceae2ad3eeda4c60c72df4dde716b737936bb4000b2',
@@ -2033,7 +1918,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x2f8e56a5f52719a9607ea4e1d3857923bcfb9f253c0373d86ba0d01ec77f1dce',
@@ -2056,7 +1941,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'DeFi',
-    'Pairwise category': 'DEXs & Perps',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": 'perps',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x57afdc2a66fc67fb8aacc09646b5b9c3349c102d9f2d480657945a1da825d1fa',
@@ -2079,7 +1964,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Governance',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x44e121fa31ae48d32e2fe53229343af7f78623e8c1c24127b4c2514b352a1b7a',
@@ -2102,7 +1987,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Utility',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xe4fa214360b163423c925a3efcd163b872101df877c1b0032dfa3844193e8e6a',
@@ -2125,7 +2010,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Governance',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x80ccc58b6b9f58675e81e23dd790970195babd550e9305482136b1dc8ea100ed',
@@ -2148,7 +2033,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Utility',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xf7248ad55667beaa6babe4700b52f5c868f60bdcb0e552f31369f78a22c7f1a6',
@@ -2171,7 +2056,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Governance',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xcff835bf2a944505ec72fbde9f58964b424e87cd73ccf3aceb60ea508083ca6c',
@@ -2194,7 +2079,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Utility',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x6615cc37e28128ef4dfa9b16cb7964e19d4e8da7abf70a9fdd58f5112a94cab4',
@@ -2217,7 +2102,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Governance',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x2a3435d9ce08d7c960819e627601ce3907ff0fea5ae7e7d111a869d815a2eb89',
@@ -2240,7 +2125,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Governance',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x0c4cee2c6126e815d5bf92eb21dc8666059e5e20927e352c1484442c2315d6f6',
@@ -2263,7 +2148,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Governance',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x321af43910c0018ceebe2229939b1a0a14e416d91b6da049ae4ce9b2525d87d2',
@@ -2286,7 +2171,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Utility',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0xf0189fa94452e0e2eece71975bb0f78e6cfdb19b145ce6e644841e78792d2e7d',
@@ -2309,7 +2194,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Governance',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x5536bf2cc818dbe72bf06553570a4fb9329a0e3bb4dfa2c4964b3f2353713c02',
@@ -2332,7 +2217,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Governance',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x2c00c9f1b583d52cf94e29a40d61d66dba871b62656a4fedc981537f69acb8e5',
@@ -2355,7 +2240,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Utility',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x7db631626def1223dc430692da369b9c5cf45532362bf12f22785833ec45d08a',
@@ -2378,7 +2263,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Utility',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x841ce91c36f3d97f80d01f371796eb65da0af1b008308246004160cd2320a80e',
@@ -2401,7 +2286,7 @@ export const projects = [
     reportReason: '',
     includedInBallots: 0,
     initialCategory: 'Utility',
-    'Pairwise category': 'Governance & Gov tooling',
+    'Pairwise category': 'Cross chain',
     "Griff's thoughts": '',
     details:
       'https://round4-api-eas.retrolist.app/projects/0x897d6172efca2d24a6b14f235db5127f7d747d923287ede38d776126bf02cbfe',
