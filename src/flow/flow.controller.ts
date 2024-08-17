@@ -122,33 +122,6 @@ export class FlowController {
     );
   }
 
-  // // @UseGuards(AuthGuard)
-  // @ApiOperation({
-  //   summary: 'Used for a pairwise vote between two collections',
-  // })
-  // @Get('/temp/api')
-  // async test4() {
-  //   const lists = await calculateWeightedLists(
-  //     this.flowService.getBadgesFromDb,
-  //   );
-
-  //   return lists;
-  // }
-
-  // // @UseGuards(AuthGuard)
-  // @ApiOperation({
-  //   summary: 'Used for a pairwise vote between two collections',
-  // })
-  // @Get('/api')
-  // async getUserOverallRanking(@Query() { address }: GetBadgesDTO) {
-  //   const lists = await getRankingForUser(
-  //     this.flowService.getBadgesFromDb,
-  //     address,
-  //   );
-
-  //   return lists;
-  // }
-
   @ApiOperation({
     summary: 'Deletes the last vote by the user in a category',
   })
@@ -192,22 +165,6 @@ export class FlowController {
     @Query('cid') collectionId?: number,
   ) {
     if (!collectionId) throw new BadRequestException('Please provide a cid');
-    // if (!collectionId)
-    //   return this.flowService.getAttestedCollectionPairs(userId);
-
-    // const progressStatus = await this.flowService.getCollectionProgressStatus(
-    //   userId,
-    //   collectionId,
-    // );
-
-    // if (
-    //   progressStatus !== 'Filtered' &&
-    //   progressStatus !== 'WIP' &&
-    //   progressStatus !== 'WIP - Threshold'
-    // )
-    //   throw new ForbiddenException(
-    //     "You can only vote for a collection that's Filtered, WIP or WIP-Threshold",
-    //   );
 
     const pairs: PairsResult = await this.flowService.getPairs(
       userId,
@@ -284,120 +241,6 @@ export class FlowController {
   }
 
   // @UseGuards(AuthGuard)
-  // @Post('/dnd')
-  // async dndBulk(
-  //   @Req() { userId }: AuthedReq,
-  //   @Body()
-  //   { projectIds, collectionId }: DnDBody,
-  // ) {
-  //   await this.flowService.setInclusionStateBulk(
-  //     projectIds,
-  //     userId,
-  //     collectionId,
-  //   );
-
-  //   const promises = projectIds.map((projectId, index) =>
-  //     this.prismaService.rank.update({
-  //       where: { userId_projectId: { projectId, userId } },
-  //       data: { rank: index + 1 },
-  //     }),
-  //   );
-
-  //   await Promise.all(promises);
-  // }
-
-  // @UseGuards(AuthGuard)
-  // @ApiOperation({
-  //   summary:
-  //     'Notifies the server that the user has done an attestation for a collection',
-  // })
-  // @Post('/reportAttest')
-  // async reportAttestations(
-  //   @Req() { userId }: AuthedReq,
-  //   @Body() { cid }: FinishCollectionBody,
-  // ) {
-  //   const isFinished = await this.flowService.isCollectionFinished(userId, cid);
-
-  //   if (!isFinished)
-  //     throw new ForbiddenException(
-  //       'You can not attest a collection which is yet to be finished',
-  //     );
-
-  //   await this.prismaService.userAttestation.upsert({
-  //     where: {
-  //       userId_collectionId: {
-  //         userId: userId,
-  //         collectionId: cid,
-  //       },
-  //     },
-  //     create: {
-  //       userId: userId,
-  //       collectionId: cid,
-  //     },
-  //     update: {
-  //       userId: userId,
-  //       collectionId: cid,
-  //     },
-  //   });
-  //   return 'Success';
-  // }
-
-  // @UseGuards(AuthGuard)
-  // @ApiOperation({
-  //   summary:
-  //     'Notifies the server that the user has completed filtering the projects in a collection',
-  // })
-  // @Post('/mark-filtered')
-  // async markFiltered(
-  //   @Req() { userId }: AuthedReq,
-  //   @Body() { cid }: FinishCollectionBody,
-  // ) {
-  //   await this.flowService.markCollectionsFiltered(userId, cid);
-  //   return 'Success';
-  // }
-
-  // @UseGuards(AuthGuard)
-  // @ApiOperation({
-  //   summary: 'Exclude a project from subsequent pairwise ranking',
-  // })
-  // @Post('/projects/set-inclusion')
-  // async excludeProjects(
-  //   @Req() { userId }: AuthedReq,
-  //   @Body() { id, state }: InclusionProjectBody,
-  // ) {
-  //   await this.flowService.setInclusionState(userId, id, state);
-  //   return 'Success';
-  // }
-
-  // @UseGuards(AuthGuard)
-  // @ApiOperation({
-  //   summary: 'Exclude a project from subsequent pairwise ranking',
-  // })
-  // @Post('/projects/set-inclusion-bulk')
-  // async setInclusionBulk(
-  //   @Req() { userId }: AuthedReq,
-  //   @Body() { ids, collectionId }: InclusionProjectsBulkBody,
-  // ) {
-  //   await this.flowService.setInclusionStateBulk(ids, userId, collectionId);
-  //   return 'Success';
-  // }
-
-  // @UseGuards(AuthGuard)
-  // @ApiOperation({
-  //   summary:
-  //     'Used to mark a collection status "finished". After a collection is finished, voting is not longer possible in it',
-  // })
-  // @Post('/finish')
-  // async finishCollections(
-  //   @Req() { userId }: AuthedReq,
-  //   @Body() { cid }: FinishCollectionBody,
-  // ) {
-  //   await this.flowService.finishCollection(userId, cid);
-
-  //   return 'Success';
-  // }
-
-  // @UseGuards(AuthGuard)
   @ApiOperation({
     summary:
       'Use it at your own risk for testing. It will remove all the data associated with your account',
@@ -428,14 +271,6 @@ export class FlowController {
       where: { userId: userId },
     });
 
-    // await this.prismaService.userCollectionFiltered.deleteMany({
-    //   where: { userId: userId },
-    // });
-
-    // await this.prismaService.projectInclusion.deleteMany({
-    //   where: { userId: userId },
-    // });
-
     await this.prismaService.vote.deleteMany({
       where: { userId: userId },
     });
@@ -444,25 +279,8 @@ export class FlowController {
       where: { userId: userId },
     });
 
-    // await this.prismaService.userAttestation.deleteMany({
-    //   where: { userId: userId },
-    // });
-
-    // await this.prismaService.otp.deleteMany({
-    //   where: { userId: userId },
-    // });
-
-    // await this.prismaService.user.update({
-    //   where: { id: userId },
-    //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //   // @ts-ignore
-    //   data: { identity: null, badges: null },
-    // });
-
     await this.prismaService.user.deleteMany({
       where: { id: userId },
     });
-
-    // }
   }
 }

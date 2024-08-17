@@ -30,4 +30,12 @@ export class VoteProjectsDTO {
   @Validate(IsNumberOrNull)
   @ApiProperty()
   pickedId: number | null;
+
+  @Validate(IsNumberOrNull)
+  @ApiProperty()
+  project1Stars: number | null;
+
+  @Validate(IsNumberOrNull)
+  @ApiProperty()
+  project2Stars: number | null;
 }
