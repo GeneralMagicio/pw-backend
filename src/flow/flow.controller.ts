@@ -98,10 +98,28 @@ export class FlowController {
   @Post('/projects/vote')
   async voteProjects(
     @Req() { userId }: AuthedReq,
-    @Body() { project1Id, project2Id, pickedId }: VoteProjectsDTO,
+    @Body()
+    {
+      project1Id,
+      project2Id,
+      pickedId,
+      project1Stars,
+      project2Stars,
+    }: VoteProjectsDTO,
   ) {
+    const promises = [];
     const [id1, id2] = sortProjectId(project1Id, project2Id);
-    return await this.flowService.voteForProjects(userId, id1, id2, pickedId);
+    if (project1Stars)
+      promises.push(
+        this.flowService.setRating(project1Id, userId, project1Stars),
+      );
+    if (project2Stars)
+      promises.push(
+        this.flowService.setRating(project2Id, userId, project2Stars),
+      );
+    promises.push(this.flowService.voteForProjects(userId, id1, id2, pickedId));
+
+    await Promise.all(promises);
   }
 
   @UseGuards(AuthGuard)

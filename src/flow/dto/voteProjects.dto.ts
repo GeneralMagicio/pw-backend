@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsInt,
+  Max,
+  Min,
   Validate,
   ValidationArguments,
   ValidatorConstraint,
@@ -10,13 +12,32 @@ import {
 @ValidatorConstraint()
 export class IsNumberOrNull implements ValidatorConstraintInterface {
   validate(value: any) {
-    return typeof value === 'number' || value === null;
+    return (
+      (typeof value === 'number' && Number.isInteger(value)) || value === null
+    );
   }
 
   defaultMessage(args: ValidationArguments) {
     return `Property ${args.property} must be a number or null`;
   }
 }
+
+@ValidatorConstraint()
+export class IsRating implements ValidatorConstraintInterface {
+  validate(value: any) {
+    if (typeof value === 'number') {
+      if (value >= 1 && value <= 5 && Number.isInteger(value)) return true;
+      return false;
+    }
+    return value === null;
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return `Property ${args.property} must be an integer (1 <= r <= 5) or null`;
+  }
+}
+
+export type Rating = 1 | 2 | 3 | 4 | 5 | null;
 
 export class VoteProjectsDTO {
   @IsInt()
@@ -31,11 +52,11 @@ export class VoteProjectsDTO {
   @ApiProperty()
   pickedId: number | null;
 
-  @Validate(IsNumberOrNull)
+  @Validate(IsRating)
   @ApiProperty()
-  project1Stars: number | null;
+  project1Stars: Rating;
 
-  @Validate(IsNumberOrNull)
+  @Validate(IsRating)
   @ApiProperty()
-  project2Stars: number | null;
+  project2Stars: Rating;
 }

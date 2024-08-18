@@ -22,6 +22,7 @@ import axios from 'axios';
 import * as fs from 'fs';
 import * as FormData from 'form-data';
 import { BadgeData } from 'src/utils/badges/readBadges';
+import { Rating } from './dto/voteProjects.dto';
 
 @Injectable()
 export class FlowService {
@@ -203,6 +204,29 @@ export class FlowService {
 
     await this.saveResultsFromVotes(userId, collectionId);
   }
+
+  setRating = async (
+    projectId: number,
+    userId: number,
+    rating: Exclude<Rating, null>,
+  ) => {
+    await this.prismaService.projectStar.upsert({
+      where: {
+        userId_projectId: {
+          projectId,
+          userId,
+        },
+      },
+      update: {
+        star: rating,
+      },
+      create: {
+        star: rating,
+        projectId,
+        userId,
+      },
+    });
+  };
 
   saveResultsFromVotes = async (
     userId: number,
