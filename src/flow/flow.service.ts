@@ -355,10 +355,11 @@ export class FlowService {
     const ranking = [
       ...resultProjectIdMapping
         .sort((a, b) => b.percentage - a.percentage)
-        .map(({ project }, index) => {
+        .map(({ project, percentage }, index) => {
           return {
             id: project!.id,
             rank: index + 1,
+            share: percentage,
             name: project!.name,
             type: project!.type,
             RPGF4Id: project!.RPGF4Id,
@@ -369,6 +370,7 @@ export class FlowService {
         return {
           id: project!.id,
           rank: result.length + index + 1,
+          share: 0,
           name: project!.name,
           type: project!.type,
           RPGF4Id: project!.RPGF4Id,
@@ -427,30 +429,21 @@ export class FlowService {
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
-    if (collectionId === null) return this.getRootRanking(userId);
+    const ranking = await this.getRankingFromVotes(userId, collectionId);
+    // if (collectionId === null) return this.getRootRanking(userId);
 
-    const [savedResults] = await Promise.all([
-      this.prismaService.rank.findMany({
-        where: {
-          project: { parentId: collectionId },
-          userId: userId,
-          rank: { not: null },
-        },
-        include: { project: true },
-      }),
-    ]);
+    // const [savedResults] = await Promise.all([
+    //   this.prismaService.rank.findMany({
+    //     where: {
+    //       project: { parentId: collectionId },
+    //       userId: userId,
+    //       rank: { not: null },
+    //     },
+    //     include: { project: true },
+    //   }),
+    // ]);
 
-    return savedResults
-      .map((item) => ({
-        id: item.projectId,
-        name: item.project.name,
-        rank: item.rank!,
-        image: item.project.image,
-        type: item.project.type,
-        RPGF4Id: item.project.RPGF4Id,
-        hasRanking: false,
-      }))
-      .sort((a, b) => a.rank - b.rank);
+    return ranking.sort((a, b) => a.rank - b.rank);
   };
 
   removeLastVote = async (userId: number, parentCollection: number | null) => {
@@ -474,36 +467,49 @@ export class FlowService {
   };
 
   getPairs = async (userId: number, parentCollection?: number, count = 1) => {
-    const [collection, allVotes, allChildren] = await Promise.all([
-      this.prismaService.project.findUnique({
-        where: {
-          id: parentCollection || -1,
-          type: {
-            in: [ProjectType.collection, ProjectType.compositeProject],
+    const [collection, allVotes, allProjects, projectStars] = await Promise.all(
+      [
+        this.prismaService.project.findUnique({
+          where: {
+            id: parentCollection || -1,
+            type: {
+              in: [ProjectType.collection, ProjectType.compositeProject],
+            },
           },
-        },
-        select: { name: true, id: true },
-      }),
-      this.prismaService.vote.findMany({
-        where: {
-          userId: userId,
-          project1: { parentId: parentCollection },
-          project2: { parentId: parentCollection },
-        },
-      }),
-      this.prismaService.project.findMany({
-        where: {
-          parentId: parentCollection || -1,
-        },
-      }),
-    ]);
+          select: { name: true, id: true },
+        }),
+        this.prismaService.vote.findMany({
+          where: {
+            userId: userId,
+            project1: { parentId: parentCollection },
+            project2: { parentId: parentCollection },
+          },
+        }),
+        this.prismaService.project.findMany({
+          where: {
+            parentId: parentCollection || -1,
+          },
+        }),
+        this.prismaService.projectStar.findMany({
+          where: {
+            userId,
+            project: {
+              parentId: parentCollection || -1,
+            },
+          },
+        }),
+      ],
+    );
+
+    const getStarsById = (id: number) =>
+      projectStars.find((el) => el.projectId === id)?.star || null;
 
     const votedIds = allVotes.reduce(
       (acc, vote) => [...acc, vote.project1Id, vote.project2Id],
       [] as number[],
     );
 
-    const allIds = allChildren.map((child) => child.id);
+    const allIds = allProjects.map((child) => child.id);
 
     const votedCollectionsRanking = this.determineIdRanking(votedIds);
 
@@ -545,6 +551,10 @@ export class FlowService {
       const combination = sortedCombinations[i];
       const px = combination[0];
       const py = combination[1];
+      if (getStarsById(px) !== getStarsById(py)) {
+        i++;
+        continue;
+      }
       const index = allVotes.findIndex(
         (vote) =>
           (vote.project1Id === px && vote.project2Id === py) ||

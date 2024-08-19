@@ -217,21 +217,21 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Query('cid') collectionId?: number,
   ) {
-    const isLastLayerCollection = await this.flowService.isLastLayerCollection(
-      collectionId || null,
-    );
+    // const isLastLayerCollection = await this.flowService.isLastLayerCollection(
+    //   collectionId || null,
+    // );
 
-    if (collectionId && isLastLayerCollection) {
-      const item = await this.flowService.isCollectionFinished(
-        userId,
-        collectionId,
-      );
+    // if (collectionId && isLastLayerCollection) {
+    //   const item = await this.flowService.isCollectionFinished(
+    //     userId,
+    //     collectionId,
+    //   );
 
-      if (!item)
-        throw new ForbiddenException(
-          'There is no ranking for un-finished collections',
-        );
-    }
+    //   if (!item)
+    //     throw new ForbiddenException(
+    //       'There is no ranking for un-finished collections',
+    //     );
+    // }
 
     const [ranking, rank, collection, progress] = await Promise.all([
       this.flowService.getRanking(userId, collectionId || null),
