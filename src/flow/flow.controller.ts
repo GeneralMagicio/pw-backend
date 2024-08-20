@@ -258,6 +258,36 @@ export class FlowController {
     };
   }
 
+  @UseGuards(AuthGuard)
+  @Post('/reset')
+  async resetVotes(@Req() { userId }: AuthedReq, @Body('cid') cid: number) {
+    await this.prismaService.vote.deleteMany({
+      where: {
+        userId: userId,
+        OR: [
+          {
+            project1: {
+              parentId: cid,
+            },
+          },
+          {
+            project2: {
+              parentId: cid,
+            },
+          },
+        ],
+      },
+    });
+    await this.prismaService.projectStar.deleteMany({
+      where: {
+        userId: userId,
+        project: {
+          parentId: cid,
+        },
+      },
+    });
+  }
+
   // @UseGuards(AuthGuard)
   @ApiOperation({
     summary:

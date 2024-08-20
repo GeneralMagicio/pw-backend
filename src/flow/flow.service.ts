@@ -285,97 +285,146 @@ export class FlowService {
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
-    const [allVotes, allProjectChildren, allCollections] = await Promise.all([
-      this.prismaService.vote.findMany({
-        where: {
-          userId: userId,
-          project1: { parentId: collectionId },
-          project2: { parentId: collectionId },
-        },
-      }),
-      this.prismaService.project.findMany({
-        where: {
-          parentId: collectionId,
-        },
-      }),
-      this.prismaService.project.findMany({
-        where: {
-          parentId: null,
-          type: 'collection',
-        },
-      }),
-    ]);
+    const [allVotes, allProjectChildren, allCollections, ratings] =
+      await Promise.all([
+        this.prismaService.vote.findMany({
+          where: {
+            userId: userId,
+            project1: { parentId: collectionId },
+            project2: { parentId: collectionId },
+          },
+        }),
+        this.prismaService.project.findMany({
+          where: {
+            parentId: collectionId,
+          },
+        }),
+        this.prismaService.project.findMany({
+          where: {
+            parentId: null,
+            type: 'collection',
+          },
+        }),
+        this.prismaService.projectStar.findMany({
+          where: {
+            project: {
+              parentId: collectionId,
+            },
+          },
+        }),
+      ]);
 
     const allChildren =
       collectionId === null ? allCollections : allProjectChildren;
 
-    const winningProjects = allChildren.filter(
-      (project) =>
-        allVotes.some((vote) => vote.pickedId === project.id) === true,
-    );
+    // const winningProjects = allChildren.filter(
+    //   (project) =>
+    //     allVotes.some((vote) => vote.pickedId === project.id) === true,
+    // );
 
-    const winningProjectsIds = winningProjects.map((el) => el.id);
-    const nonWinningProjectsIds = allChildren
-      .filter((project) => !winningProjectsIds.includes(project.id))
-      .map((el) => el.id);
+    // const winningProjectsIds = winningProjects.map((el) => el.id);
+    // const nonWinningProjectsIds = allChildren
+    //   .filter((project) => !winningProjectsIds.includes(project.id))
+    //   .map((el) => el.id);
 
-    const votesForWinningProjects = allVotes.filter(
-      (vote) =>
-        winningProjectsIds.includes(vote.project1Id) &&
-        winningProjectsIds.includes(vote.project2Id),
-    );
+    // const votesForWinningProjects = allVotes.filter(
+    //   (vote) =>
+    //     winningProjectsIds.includes(vote.project1Id) &&
+    //     winningProjectsIds.includes(vote.project2Id),
+    // );
 
-    const mappingObject: Record<number, number> = winningProjects.reduce(
+    const mappingObject: Record<number, number> = allChildren.reduce(
       (acc, project, index) => ({ ...acc, [index]: project.id }),
       {},
     );
 
     const zeroBasedMappingFunction = (index: number) => mappingObject[index];
 
+    const votes: { id1: number; id2: number; pickedId: number | null }[] = [];
+
+    for (let i = 0; i < ratings.length; i++) {
+      const rating = ratings[i];
+      for (let j = i; j < ratings.length; j++) {
+        const comparingRating = ratings[j];
+        if (rating.star > comparingRating.star) {
+          votes.push({
+            id1: rating.projectId,
+            id2: comparingRating.projectId,
+            pickedId: rating.projectId,
+          });
+        }
+        if (rating.star < comparingRating.star) {
+          votes.push({
+            id1: rating.projectId,
+            id2: comparingRating.projectId,
+            pickedId: comparingRating.projectId,
+          });
+        }
+      }
+    }
+
+    for (const vote of allVotes) {
+      if (
+        votes.findIndex(
+          (el) =>
+            (vote.project1Id === el.id1 && vote.project2Id === el.id2) ||
+            (vote.project1Id === el.id2 && vote.project2Id === el.id1),
+        ) !== -1
+      )
+        continue;
+
+      votes.push({
+        id1: vote.project1Id,
+        id2: vote.project2Id,
+        pickedId: vote.pickedId,
+      });
+    }
+
     const matrix = this.buildVotesMatrix(
-      votesForWinningProjects.map(({ project1Id, project2Id, pickedId }) => ({
-        id1: project1Id,
-        id2: project2Id,
-        pickedId: pickedId,
-      })),
-      winningProjects.map(({ id }) => ({ id })),
+      votes,
+      allChildren.map(({ id }) => ({ id })),
       zeroBasedMappingFunction,
     );
 
     const result = getRankingForSetOfDampingFactors(matrix);
 
-    const resultProjectIdMapping = result.map((percentage, index) => {
-      const project = winningProjects.find(
-        (el) => el.id === zeroBasedMappingFunction(index),
-      );
+    const resultProjectIdMapping = await Promise.all(
+      result.map(async (percentage, index) => {
+        const project = allChildren.find(
+          (el) => el.id === zeroBasedMappingFunction(index),
+        );
 
-      return { project: project!, percentage };
-    });
+        const star = await this.getProjectStars(project!.id, userId);
+
+        return { project: project!, percentage, star };
+      }),
+    );
 
     const ranking = [
       ...resultProjectIdMapping
         .sort((a, b) => b.percentage - a.percentage)
-        .map(({ project, percentage }, index) => {
+        .map(({ project, percentage, star }, index) => {
           return {
             id: project!.id,
             rank: index + 1,
+            star,
             share: percentage,
             name: project!.name,
             type: project!.type,
             RPGF4Id: project!.RPGF4Id,
           };
         }),
-      ...nonWinningProjectsIds.map((id, index) => {
-        const project = allChildren.find((el) => el.id === id);
-        return {
-          id: project!.id,
-          rank: result.length + index + 1,
-          share: 0,
-          name: project!.name,
-          type: project!.type,
-          RPGF4Id: project!.RPGF4Id,
-        };
-      }),
+      // ...nonWinningProjectsIds.map((id, index) => {
+      //   const project = allChildren.find((el) => el.id === id);
+      //   return {
+      //     id: project!.id,
+      //     rank: result.length + index + 1,
+      //     share: 0,
+      //     name: project!.name,
+      //     type: project!.type,
+      //     RPGF4Id: project!.RPGF4Id,
+      //   };
+      // }),
     ];
 
     return ranking.sort((a, b) => a.rank - b.rank);
