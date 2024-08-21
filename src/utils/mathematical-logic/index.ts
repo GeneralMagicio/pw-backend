@@ -211,5 +211,5 @@ const divideBySmallest = (numbers: number[]): number[] => {
 const divideBySum = (numbers: number[]) => {
   const sum = numbers.reduce((acc, curr) => (acc += curr), 0);
 
-  return numbers.map((item) => toFixedNumber(item / sum, 2));
+  return numbers.map((item) => toFixedNumber(item / sum, 4));
 };
