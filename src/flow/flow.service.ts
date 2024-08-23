@@ -307,6 +307,7 @@ export class FlowService {
         }),
         this.prismaService.projectStar.findMany({
           where: {
+            userId,
             project: {
               parentId: collectionId,
             },
