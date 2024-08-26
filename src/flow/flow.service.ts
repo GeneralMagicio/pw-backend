@@ -23,6 +23,7 @@ import * as fs from 'fs';
 import * as FormData from 'form-data';
 import { BadgeData } from 'src/utils/badges/readBadges';
 import { Rating } from './dto/voteProjects.dto';
+import { combinations } from 'mathjs';
 
 @Injectable()
 export class FlowService {
@@ -516,6 +517,44 @@ export class FlowService {
     });
   };
 
+  private calculateProgress = (
+    allVotes: { project1Id: number; project2Id: number }[],
+    projectStars: { projectId: number; star: number }[],
+    allProjects: { id: number }[],
+  ) => {
+    const getStarsById = (id: number) =>
+      projectStars.find((el) => el.projectId === id)?.star || null;
+
+    const starSubcategories = projectStars.reduce(
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      (acc, project) => ({ ...acc, [project.star]: acc[project.star] + 1 }),
+      { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, null: 0 },
+    );
+
+    const nullProjects = allProjects.filter(
+      (el) => !projectStars.find((item) => item.projectId === el.id),
+    );
+
+    starSubcategories.null = nullProjects.length;
+
+    let total = 0;
+    for (const key in starSubcategories) {
+      if (key === '1') continue;
+      const count = starSubcategories[key as keyof typeof starSubcategories];
+      if (count < 2) continue;
+      total += combinations(count, 2);
+    }
+
+    const effectiveVotes = allVotes.filter(
+      (vote) =>
+        getStarsById(vote.project1Id) === getStarsById(vote.project2Id) &&
+        getStarsById(vote.project1Id) !== 1,
+    );
+
+    return effectiveVotes.length / total;
+  };
+
   getPairs = async (userId: number, parentCollection?: number, count = 1) => {
     const [collection, allVotes, allProjects, projectStars] = await Promise.all(
       [
@@ -551,6 +590,28 @@ export class FlowService {
       ],
     );
 
+    const progress = this.calculateProgress(
+      allVotes,
+      projectStars,
+      allProjects,
+    );
+
+    if (progress === 1) {
+      // if (collection) {
+      //   // There's no other pairs to vote from so finishing the collection automatically
+      //   await this.finishCollection(userId, collection.id);
+      // }
+
+      return {
+        pairs: [],
+        totalPairs: 100,
+        votedPairs: allVotes.length,
+        progress,
+        name: collection?.name || 'Root',
+        threshold: 1,
+      };
+    }
+
     const getStarsById = (id: number) =>
       projectStars.find((el) => el.projectId === id)?.star || null;
 
@@ -575,24 +636,6 @@ export class FlowService {
 
     const combinations = getPairwiseCombinations(allIds);
 
-    if (allVotes.length === combinations.length) {
-      if (collection) {
-        // There's no other pairs to vote from so finishing the collection automatically
-        await this.finishCollection(userId, collection.id);
-      }
-
-      return {
-        pairs: [],
-        totalPairs: combinations.length,
-        votedPairs: allVotes.length,
-        name: collection?.name || 'Root',
-        threshold: this.calculateThreshold(
-          allIds.length,
-          collection?.id || null,
-        ),
-      };
-    }
-
     const sortedCombinations = sortCombinations(combinations, idRanking);
 
     const result = [];
@@ -601,7 +644,7 @@ export class FlowService {
       const combination = sortedCombinations[i];
       const px = combination[0];
       const py = combination[1];
-      if (getStarsById(px) !== getStarsById(py)) {
+      if (getStarsById(px) !== getStarsById(py) || getStarsById(px) === 1) {
         i++;
         continue;
       }
@@ -649,6 +692,7 @@ export class FlowService {
       pairs,
       totalPairs: combinations.length,
       votedPairs: allVotes.length,
+      progress,
       name: collection?.name || 'Root',
       threshold: this.calculateThreshold(allIds.length, collection?.id || null),
     };
