@@ -335,7 +335,24 @@ export class FlowService {
     //     winningProjectsIds.includes(vote.project2Id),
     // );
 
-    const mappingObject: Record<number, number> = allChildren.reduce(
+    const noRatingProjects = allChildren
+      .filter((el) => !ratings.find((item) => item.projectId === el.id))
+      .map((el) => ({ projectId: el.id, star: 3 }));
+
+    const oneRatingProjects = allChildren.filter(
+      (el) => ratings.find((item) => item.projectId === el.id)?.star === 1,
+    );
+
+    const nonOneRatingProjects = allChildren.filter(
+      (el) => !oneRatingProjects.find((item) => item.id === el.id),
+    );
+
+    const nonOneRatings = ratings
+      .filter((el) => el.star !== 1)
+      .map(({ projectId, star }) => ({ projectId, star }))
+      .concat(noRatingProjects);
+
+    const mappingObject: Record<number, number> = nonOneRatingProjects.reduce(
       (acc, project, index) => ({ ...acc, [index]: project.id }),
       {},
     );
@@ -344,10 +361,10 @@ export class FlowService {
 
     const votes: { id1: number; id2: number; pickedId: number | null }[] = [];
 
-    for (let i = 0; i < ratings.length; i++) {
-      const rating = ratings[i];
-      for (let j = i; j < ratings.length; j++) {
-        const comparingRating = ratings[j];
+    for (let i = 0; i < nonOneRatings.length; i++) {
+      const rating = nonOneRatings[i];
+      for (let j = i; j < nonOneRatings.length; j++) {
+        const comparingRating = nonOneRatings[j];
         if (rating.star > comparingRating.star) {
           votes.push({
             id1: rating.projectId,
@@ -375,6 +392,13 @@ export class FlowService {
       )
         continue;
 
+      if (
+        oneRatingProjects.find(
+          (el) => el.id === vote.project1Id || el.id === vote.project2Id,
+        )
+      )
+        continue;
+
       votes.push({
         id1: vote.project1Id,
         id2: vote.project2Id,
@@ -384,7 +408,7 @@ export class FlowService {
 
     const matrix = this.buildVotesMatrix(
       votes,
-      allChildren.map(({ id }) => ({ id })),
+      nonOneRatingProjects.map(({ id }) => ({ id })),
       zeroBasedMappingFunction,
     );
 
@@ -392,7 +416,7 @@ export class FlowService {
 
     const resultProjectIdMapping = await Promise.all(
       result.map(async (percentage, index) => {
-        const project = allChildren.find(
+        const project = nonOneRatingProjects.find(
           (el) => el.id === zeroBasedMappingFunction(index),
         );
 
@@ -416,17 +440,15 @@ export class FlowService {
             RPGF4Id: project!.RPGF4Id,
           };
         }),
-      // ...nonWinningProjectsIds.map((id, index) => {
-      //   const project = allChildren.find((el) => el.id === id);
-      //   return {
-      //     id: project!.id,
-      //     rank: result.length + index + 1,
-      //     share: 0,
-      //     name: project!.name,
-      //     type: project!.type,
-      //     RPGF4Id: project!.RPGF4Id,
-      //   };
-      // }),
+      ...oneRatingProjects.map((project, index) => ({
+        id: project!.id,
+        rank: result.length + index + 1,
+        star: 1,
+        share: 0,
+        name: project!.name,
+        type: project!.type,
+        RPGF4Id: project!.RPGF4Id,
+      })),
     ];
 
     return ranking.sort((a, b) => a.rank - b.rank);
