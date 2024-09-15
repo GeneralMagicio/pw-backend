@@ -206,22 +206,22 @@ export class FlowService {
     await this.saveResultsFromVotes(userId, collectionId);
   }
 
+  setCoI = async (userId: number, projectId: number) => {
+    await this.prismaService.projectCoI.create({
+      data: {
+        userId,
+        projectId,
+      },
+    });
+  };
+
   setRating = async (
     projectId: number,
     userId: number,
     rating: Exclude<Rating, null>,
   ) => {
-    await this.prismaService.projectStar.upsert({
-      where: {
-        userId_projectId: {
-          projectId,
-          userId,
-        },
-      },
-      update: {
-        star: rating,
-      },
-      create: {
+    await this.prismaService.projectStar.create({
+      data: {
         star: rating,
         projectId,
         userId,
@@ -286,7 +286,7 @@ export class FlowService {
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
-    const [allVotes, allProjectChildren, allCollections, ratings] =
+    const [allVotes, allProjectChildren, allCollections, allCoIs, ratings] =
       await Promise.all([
         this.prismaService.vote.findMany({
           where: {
@@ -306,6 +306,12 @@ export class FlowService {
             type: 'collection',
           },
         }),
+        this.prismaService.projectCoI.findMany({
+          where: {
+            project: { parentId: collectionId },
+            userId,
+          },
+        }),
         this.prismaService.projectStar.findMany({
           where: {
             userId,
@@ -317,7 +323,11 @@ export class FlowService {
       ]);
 
     const allChildren =
-      collectionId === null ? allCollections : allProjectChildren;
+      collectionId === null
+        ? allCollections
+        : allProjectChildren.filter(
+            (el) => !allCoIs.find((item) => item.projectId === el.id),
+          );
 
     // const winningProjects = allChildren.filter(
     //   (project) =>
@@ -437,7 +447,7 @@ export class FlowService {
             share: percentage,
             name: project!.name,
             type: project!.type,
-            RPGF4Id: project!.RPGF4Id,
+            RPGF5Id: project!.RPGF5Id,
           };
         }),
       ...oneRatingProjects.map((project, index) => ({
@@ -447,7 +457,7 @@ export class FlowService {
         share: 0,
         name: project!.name,
         type: project!.type,
-        RPGF4Id: project!.RPGF4Id,
+        RPGF5Id: project!.RPGF5Id,
       })),
     ];
 
@@ -478,14 +488,14 @@ export class FlowService {
     });
 
     return finishedCollections
-      .map(({ id, name, image, type, impactDescription, RPGF4Id }) => ({
+      .map(({ id, name, image, type, description, RPGF5Id }) => ({
         id,
         name,
         rank: rankedCollectionsRanking.find((el) => el.id === id)!.rank,
         image,
         type,
-        impactDescription,
-        RPGF4Id,
+        description,
+        RPGF5Id,
         hasRanking: false,
       }))
       .sort((a, b) => a.rank - b.rank);
@@ -531,6 +541,26 @@ export class FlowService {
 
     if (!lastVote)
       throw new NotFoundException('No earlier votes in this category');
+
+    const lastRatings = await this.prismaService.projectStar.findMany({
+      where: {
+        userId: userId,
+      },
+      take: 2,
+    });
+
+    for (const rating of lastRatings) {
+      if (
+        rating.projectId === lastVote.project1Id ||
+        rating.projectId === lastVote.project2Id
+      ) {
+        await this.prismaService.projectStar.delete({
+          where: {
+            id: rating.id,
+          },
+        });
+      }
+    }
 
     await this.prismaService.vote.delete({
       where: {
@@ -578,8 +608,8 @@ export class FlowService {
   };
 
   getPairs = async (userId: number, parentCollection?: number, count = 1) => {
-    const [collection, allVotes, allProjects, projectStars] = await Promise.all(
-      [
+    const [collection, allVotes, projects, projectStars, projectCoIs] =
+      await Promise.all([
         this.prismaService.project.findUnique({
           where: {
             id: parentCollection || -1,
@@ -609,7 +639,17 @@ export class FlowService {
             },
           },
         }),
-      ],
+        this.prismaService.projectCoI.findMany({
+          where: {
+            project: { parentId: parentCollection },
+            userId,
+          },
+        }),
+      ]);
+
+    // projects except those with conflict of interest
+    const allProjects = projects.filter(
+      (item) => !projectCoIs.find((el) => el.projectId === item.id),
     );
 
     const progress = this.calculateProgress(
@@ -704,6 +744,7 @@ export class FlowService {
           await Promise.all(
             pair.map(async (project) => ({
               ...project,
+              metadata: JSON.parse(project.metadata),
               rating: await this.getProjectStars(project.id, userId),
             })),
           ),
@@ -846,13 +887,12 @@ export class FlowService {
   // };
 
   private getProjectStars = async (projectId: number, userId: number) => {
-    const stars = await this.prismaService.projectStar.findUnique({
+    const stars = await this.prismaService.projectStar.findFirst({
       where: {
-        userId_projectId: {
-          projectId,
-          userId,
-        },
+        projectId,
+        userId,
       },
+      orderBy: { updatedAt: 'desc' },
     });
 
     return stars?.star || null;

@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsDefined, IsIn } from 'class-validator';
 
-export class FinishCollectionBody {
-  @ApiProperty({ description: 'Collection id' })
+export class SetCoIDto {
+  @ApiProperty({ description: 'project id' })
   @IsDefined()
-  cid: number;
+  pid: number;
 }
 
 export class DnDBody {

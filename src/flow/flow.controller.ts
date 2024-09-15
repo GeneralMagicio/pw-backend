@@ -19,7 +19,7 @@ import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
-import { RemoveLastVoteDto } from './dto/bodies';
+import { RemoveLastVoteDto, SetCoIDto } from './dto/bodies';
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -89,6 +89,13 @@ export class FlowController {
       userId,
     );
     return projects;
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('/mark-CoI')
+  async markCoI(@Req() { userId }: AuthedReq, @Body() { pid }: SetCoIDto) {
+    await this.flowService.setCoI(userId, pid);
+    return 'Success';
   }
 
   @UseGuards(AuthGuard)
