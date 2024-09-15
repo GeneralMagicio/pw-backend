@@ -46,7 +46,7 @@
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "siwe": "^2.3.2",
-    "thirdweb": "^5.15.0"
+    "viem": "^2.21.5"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

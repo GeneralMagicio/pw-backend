@@ -9,8 +9,6 @@ import {
   Req,
   UseGuards,
   UnprocessableEntityException,
-  BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
@@ -23,7 +21,6 @@ import { ApiResponse } from '@nestjs/swagger';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { STAGING_API, generateRandomString } from 'src/utils';
 import { FlowService } from 'src/flow/flow.service';
-import { OtpDTO } from './dto/otp.dto';
 
 @Controller({ path: 'auth' })
 export class AuthController {
@@ -63,12 +60,18 @@ export class AuthController {
 
   @ApiResponse({ status: 200, description: 'Sets an auth cookie' })
   @Post('/login')
-  async login(@Res() res: Response, @Body() { message, signature }: LoginDTO) {
+  async login(
+    @Res() res: Response,
+    @Body() { message, signature, address }: LoginDTO,
+  ) {
     let isNewUser = false;
-    const isAuthentic = await this.authService.verifyUser(message, signature);
+    const isAuthentic = await this.authService.verifyUser(
+      message,
+      signature as `0x${string}`,
+      address as `0x${string}`,
+    );
     if (!isAuthentic) throw new UnauthorizedException('Invalid signature');
 
-    const { address } = message;
     let user = await this.prismaService.user.findFirst({
       where: { address },
     });

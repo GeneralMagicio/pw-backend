@@ -77,9 +77,12 @@ export class SiweMessageClass {
 }
 
 export class LoginDTO {
-  @ApiProperty({ type: SiweMessageClass })
-  message: SiweMessage;
+  @ApiProperty()
+  message: string;
 
   @ApiProperty()
   signature: string;
+
+  @ApiProperty()
+  address: string;
 }

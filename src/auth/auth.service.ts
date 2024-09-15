@@ -1,14 +1,8 @@
-import {
-  ForbiddenException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
-import { verifySignature } from 'thirdweb/auth';
+import { Injectable, Logger } from '@nestjs/common';
 import { generateRandomString } from 'src/utils';
 import { PrismaService } from 'src/prisma.service';
-import { ethers } from 'ethers';
 import { SiweMessage } from 'siwe';
+import { verifyMessage } from 'viem';
 // import { chain, thirdwebClient } from 'src/thirdweb';
 
 @Injectable()
@@ -146,12 +140,19 @@ export class AuthService {
     return user;
   };
 
-  verifyUser = async (message: SiweMessage, signature: any) => {
-    const siweMessage = new SiweMessage(message);
+  verifyUser = async (
+    message: string,
+    signature: `0x${string}`,
+    address: `0x${string}`,
+  ) => {
     try {
       // await this.isNonceValid(message.nonce);
-      await siweMessage.verify({ signature });
-      return true;
+      const valid = await verifyMessage({
+        address,
+        message,
+        signature,
+      });
+      return valid;
     } catch (err) {
       return false;
     }

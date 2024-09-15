@@ -15,11 +15,12 @@ import {
   initializeWeightList,
   sortWeightedList,
 } from './utils';
-import { chain } from 'src/thirdweb';
+// import { chain } from 'src/thirdweb';
 import { getRankingDistribution } from './algo';
 import axios from 'axios';
 import { BadgeData } from 'src/utils/badges/readBadges';
 
+const chain = { id: 10 };
 const readAllAttestations = async () => {
   if (!SCHEMA_UID) throw Error('Please enter an schema UID');
   const attestations = await getAllAttestations(
