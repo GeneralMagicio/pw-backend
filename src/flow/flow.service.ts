@@ -312,14 +312,7 @@ export class FlowService {
             userId,
           },
         }),
-        this.prismaService.projectStar.findMany({
-          where: {
-            userId,
-            project: {
-              parentId: collectionId,
-            },
-          },
-        }),
+        this.getUserProjectStars(userId, collectionId || -1),
       ]);
 
     const allChildren =
@@ -574,6 +567,11 @@ export class FlowService {
     projectStars: { projectId: number; star: number }[],
     allProjects: { id: number }[],
   ) => {
+    console.log('IN PROGRESS');
+    console.log('All votes length', allVotes.length);
+    console.log('All projects length', allProjects.length);
+    console.log('All project stars', projectStars.length);
+
     const getStarsById = (id: number) =>
       projectStars.find((el) => el.projectId === id)?.star || null;
 
@@ -631,14 +629,7 @@ export class FlowService {
             parentId: parentCollection || -1,
           },
         }),
-        this.prismaService.projectStar.findMany({
-          where: {
-            userId,
-            project: {
-              parentId: parentCollection || -1,
-            },
-          },
-        }),
+        this.getUserProjectStars(userId, parentCollection || -1),
         this.prismaService.projectCoI.findMany({
           where: {
             project: { parentId: parentCollection },
@@ -767,6 +758,25 @@ export class FlowService {
       rank: el.rank,
       name: el.name,
     }));
+  };
+
+  getUserProjectStars = async (userId: number, cid: number) => {
+    const stars = await this.prismaService.projectStar.findMany({
+      where: {
+        userId,
+        project: { parentId: cid },
+      },
+    });
+
+    const withoutDuplicates = stars.filter(
+      (star) =>
+        !stars.find(
+          (el) =>
+            el.projectId === star.projectId && el.updatedAt > star.updatedAt,
+        ),
+    );
+
+    return withoutDuplicates;
   };
 
   getBadgesFromDb = async (address: string): Promise<BadgeData | undefined> => {
