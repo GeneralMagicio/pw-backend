@@ -183,6 +183,35 @@ export class FlowController {
     summary: 'Returns the next pair for a pairwise vote',
   })
   @UseGuards(AuthGuard)
+  @Get('/pairs-for-project')
+  async getPairsForProject(
+    @Req() { userId }: AuthedReq,
+    @Query('cid') collectionId?: number,
+    @Query('pid') projectId?: number,
+  ) {
+    if (!collectionId) throw new BadRequestException('Please provide a cid');
+    if (!projectId)
+      throw new BadRequestException('Please provide a project id');
+
+    const pairs: PairsResult = await this.flowService.getPairsWithOneProject(
+      userId,
+      projectId,
+      collectionId,
+    );
+
+    return pairs;
+  }
+
+  @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
+  @ApiResponse({
+    type: PairsResult,
+    status: 200,
+    description: 'Returns a pair of comparisons + progress data',
+  })
+  @ApiOperation({
+    summary: 'Returns the next pair for a pairwise vote',
+  })
+  @UseGuards(AuthGuard)
   @Get('/pairs')
   async getPairs(
     @Req() { userId }: AuthedReq,
