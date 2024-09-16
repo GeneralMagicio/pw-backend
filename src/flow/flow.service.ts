@@ -589,11 +589,6 @@ export class FlowService {
     projectStars: { projectId: number; star: number }[],
     allProjects: { id: number }[],
   ) => {
-    console.log('IN PROGRESS');
-    console.log('All votes length', allVotes.length);
-    console.log('All projects length', allProjects.length);
-    console.log('All project stars', projectStars.length);
-
     const getStarsById = (id: number) =>
       projectStars.find((el) => el.projectId === id)?.star || null;
 
@@ -633,7 +628,7 @@ export class FlowService {
     parentCollection?: number,
     count = 1,
   ) => {
-    const [collection, allVotes, projects, projectStars, projectCoIs] =
+    const [collection, votes, projects, allStars, projectCoIs] =
       await Promise.all([
         this.prismaService.project.findUnique({
           where: {
@@ -668,6 +663,19 @@ export class FlowService {
     // projects except those with conflict of interest
     const allProjects = projects.filter(
       (item) => !projectCoIs.find((el) => el.projectId === item.id),
+    );
+
+    const projectStars = allStars.filter(
+      (item) => !projectCoIs.find((el) => el.projectId === item.projectId),
+    );
+
+    const allVotes = votes.filter(
+      (item) =>
+        !projectCoIs.find(
+          (el) =>
+            el.projectId === item.project1Id ||
+            el.projectId === item.project2Id,
+        ),
     );
 
     const progress = this.calculateProgress(
@@ -784,7 +792,7 @@ export class FlowService {
   };
 
   getPairs = async (userId: number, parentCollection?: number, count = 1) => {
-    const [collection, allVotes, projects, projectStars, projectCoIs] =
+    const [collection, votes, projects, allStars, projectCoIs] =
       await Promise.all([
         this.prismaService.project.findUnique({
           where: {
@@ -819,6 +827,19 @@ export class FlowService {
     // projects except those with conflict of interest
     const allProjects = projects.filter(
       (item) => !projectCoIs.find((el) => el.projectId === item.id),
+    );
+
+    const projectStars = allStars.filter(
+      (item) => !projectCoIs.find((el) => el.projectId === item.projectId),
+    );
+
+    const allVotes = votes.filter(
+      (item) =>
+        !projectCoIs.find(
+          (el) =>
+            el.projectId === item.project1Id ||
+            el.projectId === item.project2Id,
+        ),
     );
 
     const progress = this.calculateProgress(
@@ -871,7 +892,7 @@ export class FlowService {
 
     const result = [];
     let i = 0;
-    while (result.length < count) {
+    while (result.length < count && i < sortedCombinations.length) {
       const combination = sortedCombinations[i];
       const px = combination[0];
       const py = combination[1];
