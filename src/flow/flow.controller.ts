@@ -156,8 +156,7 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Body() { collectionId }: RemoveLastVoteDto,
   ) {
-    if (collectionId === null)
-      return this.flowService.removeLastVote(userId, null);
+    if (collectionId === null) return this.flowService.undo(userId, null);
 
     const progressStatus = await this.flowService.getCollectionProgressStatus(
       userId,
@@ -169,7 +168,7 @@ export class FlowController {
         "You can only go back in a collection that's WIP or WIP-Threshold",
       );
 
-    await this.flowService.removeLastVote(userId, collectionId);
+    await this.flowService.undo(userId, collectionId);
 
     return 'Success';
   }

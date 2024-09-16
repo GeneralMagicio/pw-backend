@@ -522,7 +522,7 @@ export class FlowService {
     return ranking.sort((a, b) => a.rank - b.rank);
   };
 
-  removeLastVote = async (userId: number, parentCollection: number | null) => {
+  undo = async (userId: number, parentCollection: number | null) => {
     const lastVote = await this.prismaService.vote.findFirst({
       where: {
         userId,
@@ -531,6 +531,28 @@ export class FlowService {
       },
       orderBy: { updatedAt: 'desc' },
     });
+
+    const lastCoi = await this.prismaService.projectCoI.findFirst({
+      where: {
+        userId,
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (
+      (lastCoi && lastVote && lastCoi.updatedAt > lastVote.updatedAt) ||
+      (lastCoi && !lastVote)
+    ) {
+      await this.prismaService.projectCoI.delete({
+        where: {
+          userId_projectId: {
+            userId,
+            projectId: lastCoi.projectId,
+          },
+        },
+      });
+      return;
+    }
 
     if (!lastVote)
       throw new NotFoundException('No earlier votes in this category');
