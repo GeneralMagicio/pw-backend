@@ -589,6 +589,7 @@ export class FlowService {
         userId: userId,
       },
       take: 2,
+      orderBy: { updatedAt: 'desc' },
     });
 
     for (const rating of lastRatings) {
