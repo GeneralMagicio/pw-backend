@@ -33,7 +33,7 @@ import * as fs from 'fs';
 //   return allProjects;
 // }
 
-type AgoraBallotPost = {
+export type AgoraBallotPost = {
   projects: {
     project_id: string;
     allocation: string;

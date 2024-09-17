@@ -20,6 +20,23 @@ import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
 import { RemoveLastVoteDto, SetCoIDto } from './dto/bodies';
+import { AgoraBallotPost } from 'src/rpgf5-data-import/submit';
+import { projects as osradProjects } from 'src/rpgf5-data-import/osrad';
+import { projects as eccProjects } from 'src/rpgf5-data-import/ecc';
+import { projects as ostProjects } from 'src/rpgf5-data-import/ost';
+
+export const getAllProjects = (category: number) => {
+  switch (category) {
+    case 1:
+      return eccProjects;
+    case 2:
+      return ostProjects;
+    case 3:
+      return osradProjects;
+    default:
+      throw new Error(`Invalid category id ${category}`);
+  }
+};
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -127,6 +144,40 @@ export class FlowController {
     promises.push(this.flowService.voteForProjects(userId, id1, id2, pickedId));
 
     await Promise.all(promises);
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used for a pairwise vote between two collections',
+  })
+  @Get('/ballot')
+  async getBallot(
+    @Req() { userId }: AuthedReq,
+    @Query('cid') collectionId: number,
+  ) {
+    if (!collectionId)
+      throw new BadRequestException('You need to supply a collection id');
+    const ranking = await this.flowService.getRanking(userId, collectionId);
+
+    const ballot: AgoraBallotPost = { projects: [] };
+
+    ballot.projects = ranking.map((el) => ({
+      project_id: el.RPGF5Id!,
+      allocation: (el.share * 100).toFixed(3),
+      impact: el.star === null ? 3 : el.star,
+    }));
+
+    // Add spam projects for staging:
+
+    const spams = getAllProjects(collectionId)
+      .filter(
+        (el) => !ballot.projects.find((item) => item.project_id === el.id),
+      )
+      .map((item) => ({ project_id: item.id, allocation: `0`, impact: 3 }));
+
+    ballot.projects = [...ballot.projects, ...spams];
+
+    return ballot;
   }
 
   @UseGuards(AuthGuard)

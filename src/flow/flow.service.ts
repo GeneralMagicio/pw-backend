@@ -286,34 +286,40 @@ export class FlowService {
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
-    const [allVotes, allProjectChildren, allCollections, allCoIs, ratings] =
-      await Promise.all([
-        this.prismaService.vote.findMany({
-          where: {
-            userId: userId,
-            project1: { parentId: collectionId },
-            project2: { parentId: collectionId },
-          },
-        }),
-        this.prismaService.project.findMany({
-          where: {
-            parentId: collectionId,
-          },
-        }),
-        this.prismaService.project.findMany({
-          where: {
-            parentId: null,
-            type: 'collection',
-          },
-        }),
-        this.prismaService.projectCoI.findMany({
-          where: {
-            project: { parentId: collectionId },
-            userId,
-          },
-        }),
-        this.getUserProjectStars(userId, collectionId || -1),
-      ]);
+    const [
+      allVotesRaw,
+      allProjectChildren,
+      allCollections,
+      allCoIs,
+      ratingsRaw,
+    ] = await Promise.all([
+      this.prismaService.vote.findMany({
+        where: {
+          userId: userId,
+          project1: { parentId: collectionId },
+          project2: { parentId: collectionId },
+        },
+      }),
+      this.prismaService.project.findMany({
+        where: {
+          parentId: collectionId,
+        },
+      }),
+      this.prismaService.project.findMany({
+        where: {
+          parentId: null,
+          type: 'collection',
+        },
+      }),
+      this.prismaService.projectCoI.findMany({
+        where: {
+          project: { parentId: collectionId },
+          userId,
+        },
+        include: { project: true },
+      }),
+      this.getUserProjectStars(userId, collectionId || -1),
+    ]);
 
     const allChildren =
       collectionId === null
@@ -322,6 +328,18 @@ export class FlowService {
             (el) => !allCoIs.find((item) => item.projectId === el.id),
           );
 
+    const allVotes = allVotesRaw.filter(
+      (item) =>
+        !allCoIs.find(
+          (el) =>
+            item.project1Id === el.projectId ||
+            item.project2Id === el.projectId,
+        ),
+    );
+
+    const ratings = ratingsRaw.filter(
+      (item) => !allCoIs.find((el) => item.projectId === el.projectId),
+    );
     // const winningProjects = allChildren.filter(
     //   (project) =>
     //     allVotes.some((vote) => vote.pickedId === project.id) === true,
@@ -447,6 +465,15 @@ export class FlowService {
         id: project!.id,
         rank: result.length + index + 1,
         star: 1,
+        share: 0,
+        name: project!.name,
+        type: project!.type,
+        RPGF5Id: project!.RPGF5Id,
+      })),
+      ...allCoIs.map(({ project }, index) => ({
+        id: project!.id,
+        rank: result.length + oneRatingProjects.length + index + 1,
+        star: 0, // conflict of interest
         share: 0,
         name: project!.name,
         type: project!.type,
