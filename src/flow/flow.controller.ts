@@ -19,16 +19,24 @@ import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
-import {
-  DnDBody,
-  FinishCollectionBody,
-  InclusionProjectBody,
-  InclusionProjectsBulkBody,
-  RemoveLastVoteDto,
-} from './dto/bodies';
-import { calculateWeightedLists } from 'src/weighted-api/main';
-import { GetBadgesDTO } from 'src/user/dto/ConnectFlowDTOs';
-import { getRankingForUser } from 'src/weighted-api/user-based';
+import { RemoveLastVoteDto, SetCoIDto } from './dto/bodies';
+import { AgoraBallotPost } from 'src/rpgf5-data-import/submit';
+import { projects as osradProjects } from 'src/rpgf5-data-import/osrad';
+import { projects as eccProjects } from 'src/rpgf5-data-import/ecc';
+import { projects as ostProjects } from 'src/rpgf5-data-import/ost';
+
+export const getAllProjects = (category: number) => {
+  switch (category) {
+    case 1:
+      return eccProjects;
+    case 2:
+      return ostProjects;
+    case 3:
+      return osradProjects;
+    default:
+      throw new Error(`Invalid category id ${category}`);
+  }
+};
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -75,29 +83,7 @@ export class FlowController {
       parentId || null,
     );
 
-    const votes = await Promise.all(
-      collections.map((el) =>
-        this.prismaService.userAttestation.count({
-          where: {
-            collectionId: el.id,
-          },
-        }),
-      ),
-    );
-
-    const collectionVotes: Record<string, number> = collections.reduce(
-      (acc, curr, index) => {
-        return {
-          ...acc,
-          [curr.id]: votes[index],
-        };
-      },
-      {},
-    );
-
-    return collections.sort(
-      (a, b) => collectionVotes[a.id] - collectionVotes[b.id],
-    );
+    return collections;
   }
 
   @UseGuards(AuthGuard)
@@ -123,16 +109,75 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
+  @Post('/mark-CoI')
+  async markCoI(@Req() { userId }: AuthedReq, @Body() { pid }: SetCoIDto) {
+    await this.flowService.setCoI(userId, pid);
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
   @ApiOperation({
     summary: 'Used for a pairwise vote between two projects',
   })
   @Post('/projects/vote')
   async voteProjects(
     @Req() { userId }: AuthedReq,
-    @Body() { project1Id, project2Id, pickedId }: VoteProjectsDTO,
+    @Body()
+    {
+      project1Id,
+      project2Id,
+      pickedId,
+      project1Stars,
+      project2Stars,
+    }: VoteProjectsDTO,
   ) {
+    const promises = [];
     const [id1, id2] = sortProjectId(project1Id, project2Id);
-    return await this.flowService.voteForProjects(userId, id1, id2, pickedId);
+    if (project1Stars)
+      promises.push(
+        this.flowService.setRating(project1Id, userId, project1Stars),
+      );
+    if (project2Stars)
+      promises.push(
+        this.flowService.setRating(project2Id, userId, project2Stars),
+      );
+    promises.push(this.flowService.voteForProjects(userId, id1, id2, pickedId));
+
+    await Promise.all(promises);
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used for a pairwise vote between two collections',
+  })
+  @Get('/ballot')
+  async getBallot(
+    @Req() { userId }: AuthedReq,
+    @Query('cid') collectionId: number,
+  ) {
+    if (!collectionId)
+      throw new BadRequestException('You need to supply a collection id');
+    const ranking = await this.flowService.getRanking(userId, collectionId);
+
+    const ballot: AgoraBallotPost = { projects: [] };
+
+    ballot.projects = ranking.map((el) => ({
+      project_id: el.RPGF5Id!,
+      allocation: (el.share * 100).toFixed(3),
+      impact: el.star === null ? 3 : el.star,
+    }));
+
+    // Add spam projects for staging:
+
+    const spams = getAllProjects(collectionId)
+      .filter(
+        (el) => !ballot.projects.find((item) => item.project_id === el.id),
+      )
+      .map((item) => ({ project_id: item.id, allocation: `0`, impact: 3 }));
+
+    ballot.projects = [...ballot.projects, ...spams];
+
+    return ballot;
   }
 
   @UseGuards(AuthGuard)
@@ -153,33 +198,6 @@ export class FlowController {
     );
   }
 
-  // @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Used for a pairwise vote between two collections',
-  })
-  @Get('/temp/api')
-  async test4() {
-    const lists = await calculateWeightedLists(
-      this.flowService.getBadgesFromDb,
-    );
-
-    return lists;
-  }
-
-  // @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Used for a pairwise vote between two collections',
-  })
-  @Get('/api')
-  async getUserOverallRanking(@Query() { address }: GetBadgesDTO) {
-    const lists = await getRankingForUser(
-      this.flowService.getBadgesFromDb,
-      address,
-    );
-
-    return lists;
-  }
-
   @ApiOperation({
     summary: 'Deletes the last vote by the user in a category',
   })
@@ -189,8 +207,7 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Body() { collectionId }: RemoveLastVoteDto,
   ) {
-    if (collectionId === null)
-      return this.flowService.removeLastVote(userId, null);
+    if (collectionId === null) return this.flowService.undo(userId, null);
 
     const progressStatus = await this.flowService.getCollectionProgressStatus(
       userId,
@@ -202,9 +219,38 @@ export class FlowController {
         "You can only go back in a collection that's WIP or WIP-Threshold",
       );
 
-    await this.flowService.removeLastVote(userId, collectionId);
+    await this.flowService.undo(userId, collectionId);
 
     return 'Success';
+  }
+
+  @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
+  @ApiResponse({
+    type: PairsResult,
+    status: 200,
+    description: 'Returns a pair of comparisons + progress data',
+  })
+  @ApiOperation({
+    summary: 'Returns the next pair for a pairwise vote',
+  })
+  @UseGuards(AuthGuard)
+  @Get('/pairs-for-project')
+  async getPairsForProject(
+    @Req() { userId }: AuthedReq,
+    @Query('cid') collectionId?: number,
+    @Query('pid') projectId?: number,
+  ) {
+    if (!collectionId) throw new BadRequestException('Please provide a cid');
+    if (!projectId)
+      throw new BadRequestException('Please provide a project id');
+
+    const pairs: PairsResult = await this.flowService.getPairsWithOneProject(
+      userId,
+      projectId,
+      collectionId,
+    );
+
+    return pairs;
   }
 
   @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
@@ -222,22 +268,7 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Query('cid') collectionId?: number,
   ) {
-    if (!collectionId)
-      return this.flowService.getAttestedCollectionPairs(userId);
-
-    const progressStatus = await this.flowService.getCollectionProgressStatus(
-      userId,
-      collectionId,
-    );
-
-    if (
-      progressStatus !== 'Filtered' &&
-      progressStatus !== 'WIP' &&
-      progressStatus !== 'WIP - Threshold'
-    )
-      throw new ForbiddenException(
-        "You can only vote for a collection that's Filtered, WIP or WIP-Threshold",
-      );
+    if (!collectionId) throw new BadRequestException('Please provide a cid');
 
     const pairs: PairsResult = await this.flowService.getPairs(
       userId,
@@ -272,21 +303,21 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Query('cid') collectionId?: number,
   ) {
-    const isLastLayerCollection = await this.flowService.isLastLayerCollection(
-      collectionId || null,
-    );
+    // const isLastLayerCollection = await this.flowService.isLastLayerCollection(
+    //   collectionId || null,
+    // );
 
-    if (collectionId && isLastLayerCollection) {
-      const item = await this.flowService.isCollectionFinished(
-        userId,
-        collectionId,
-      );
+    // if (collectionId && isLastLayerCollection) {
+    //   const item = await this.flowService.isCollectionFinished(
+    //     userId,
+    //     collectionId,
+    //   );
 
-      if (!item)
-        throw new ForbiddenException(
-          'There is no ranking for un-finished collections',
-        );
-    }
+    //   if (!item)
+    //     throw new ForbiddenException(
+    //       'There is no ranking for un-finished collections',
+    //     );
+    // }
 
     const [ranking, rank, collection, progress] = await Promise.all([
       this.flowService.getRanking(userId, collectionId || null),
@@ -314,117 +345,33 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
-  @Post('/dnd')
-  async dndBulk(
-    @Req() { userId }: AuthedReq,
-    @Body()
-    { projectIds, collectionId }: DnDBody,
-  ) {
-    await this.flowService.setInclusionStateBulk(
-      projectIds,
-      userId,
-      collectionId,
-    );
-
-    const promises = projectIds.map((projectId, index) =>
-      this.prismaService.rank.update({
-        where: { userId_projectId: { projectId, userId } },
-        data: { rank: index + 1 },
-      }),
-    );
-
-    await Promise.all(promises);
-  }
-
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary:
-      'Notifies the server that the user has done an attestation for a collection',
-  })
-  @Post('/reportAttest')
-  async reportAttestations(
-    @Req() { userId }: AuthedReq,
-    @Body() { cid }: FinishCollectionBody,
-  ) {
-    const isFinished = await this.flowService.isCollectionFinished(userId, cid);
-
-    if (!isFinished)
-      throw new ForbiddenException(
-        'You can not attest a collection which is yet to be finished',
-      );
-
-    await this.prismaService.userAttestation.upsert({
+  @Post('/reset')
+  async resetVotes(@Req() { userId }: AuthedReq, @Body('cid') cid: number) {
+    await this.prismaService.vote.deleteMany({
       where: {
-        userId_collectionId: {
-          userId: userId,
-          collectionId: cid,
-        },
-      },
-      create: {
         userId: userId,
-        collectionId: cid,
-      },
-      update: {
-        userId: userId,
-        collectionId: cid,
+        OR: [
+          {
+            project1: {
+              parentId: cid,
+            },
+          },
+          {
+            project2: {
+              parentId: cid,
+            },
+          },
+        ],
       },
     });
-    return 'Success';
-  }
-
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary:
-      'Notifies the server that the user has completed filtering the projects in a collection',
-  })
-  @Post('/mark-filtered')
-  async markFiltered(
-    @Req() { userId }: AuthedReq,
-    @Body() { cid }: FinishCollectionBody,
-  ) {
-    await this.flowService.markCollectionsFiltered(userId, cid);
-    return 'Success';
-  }
-
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Exclude a project from subsequent pairwise ranking',
-  })
-  @Post('/projects/set-inclusion')
-  async excludeProjects(
-    @Req() { userId }: AuthedReq,
-    @Body() { id, state }: InclusionProjectBody,
-  ) {
-    await this.flowService.setInclusionState(userId, id, state);
-    return 'Success';
-  }
-
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Exclude a project from subsequent pairwise ranking',
-  })
-  @Post('/projects/set-inclusion-bulk')
-  async setInclusionBulk(
-    @Req() { userId }: AuthedReq,
-    @Body() { ids, collectionId }: InclusionProjectsBulkBody,
-  ) {
-    await this.flowService.setInclusionStateBulk(ids, userId, collectionId);
-    return 'Success';
-  }
-
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary:
-      'Used to mark a collection status "finished". After a collection is finished, voting is not longer possible in it',
-  })
-  @Post('/finish')
-  async finishCollections(
-    @Req() { userId }: AuthedReq,
-    @Body() { cid }: FinishCollectionBody,
-  ) {
-    await this.flowService.finishCollection(userId, cid);
-
-    return 'Success';
+    await this.prismaService.projectStar.deleteMany({
+      where: {
+        userId: userId,
+        project: {
+          parentId: cid,
+        },
+      },
+    });
   }
 
   // @UseGuards(AuthGuard)
@@ -458,14 +405,6 @@ export class FlowController {
       where: { userId: userId },
     });
 
-    await this.prismaService.userCollectionFiltered.deleteMany({
-      where: { userId: userId },
-    });
-
-    await this.prismaService.projectInclusion.deleteMany({
-      where: { userId: userId },
-    });
-
     await this.prismaService.vote.deleteMany({
       where: { userId: userId },
     });
@@ -474,25 +413,8 @@ export class FlowController {
       where: { userId: userId },
     });
 
-    await this.prismaService.userAttestation.deleteMany({
-      where: { userId: userId },
-    });
-
-    await this.prismaService.otp.deleteMany({
-      where: { userId: userId },
-    });
-
-    // await this.prismaService.user.update({
-    //   where: { id: userId },
-    //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //   // @ts-ignore
-    //   data: { identity: null, badges: null },
-    // });
-
     await this.prismaService.user.deleteMany({
       where: { id: userId },
     });
-
-    // }
   }
 }

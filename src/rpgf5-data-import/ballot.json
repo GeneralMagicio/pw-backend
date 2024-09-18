@@ -1,0 +1,197 @@
+[
+  {
+    "project_id": "0x04d4b89e72e276bebc4bb4359145bc89e12f64a1edb1d85e97a5aa9c65660da5",
+    "allocation": "2.662",
+    "impact": 3
+  },
+  {
+    "project_id": "0x1547a722f7731b439b97428c31925100ef49ae443e32f5bba766268c296a3379",
+    "allocation": "4.474",
+    "impact": 2
+  },
+  {
+    "project_id": "0x29689510e5add50d929566fcbb78a8f85fac28545928859f97ce6c5ca3c97da1",
+    "allocation": "5.123",
+    "impact": 3
+  },
+  {
+    "project_id": "0x2b5b44d0e98599b5c877792367dcd0ed8f8f849fb267812a936897aa17baa6c4",
+    "allocation": "0.697",
+    "impact": 2
+  },
+  {
+    "project_id": "0x3142a5d468f9c6cd587619a0fccf73dc77835149f1ca31e579cb51501dcfd285",
+    "allocation": "2.575",
+    "impact": 3
+  },
+  {
+    "project_id": "0x37df31043d401a09c24ba1066e602ff34c2906ac92397040b5b90694d74eb8d7",
+    "allocation": "3.592",
+    "impact": 3
+  },
+  {
+    "project_id": "0x3d99c996bf2979b7ff827a4b2b2c56c65580bc75854ac41b30f034465801f301",
+    "allocation": "1.656",
+    "impact": 2
+  },
+  {
+    "project_id": "0x3fe005facaaa824b2fd2190be9a1fa124577580dbcdf91f85308725161a79990",
+    "allocation": "3.521",
+    "impact": 1
+  },
+  {
+    "project_id": "0x41275977def21cc80eaddabfc98c04cf02df9c92c918070437d9619a8151b9f5",
+    "allocation": "2.256",
+    "impact": 4
+  },
+  {
+    "project_id": "0x417e4e0fab598eee0958d618dfa22dc4ad60eaaa659b811c4780da1df7c7aad6",
+    "allocation": "0.162",
+    "impact": 3
+  },
+  {
+    "project_id": "0x41e9bd84d87b85a4190e4ce47865b14733f12e803cf97c0300d89b75c9bf0c32",
+    "allocation": "2.354",
+    "impact": 5
+  },
+  {
+    "project_id": "0x54d4b15fc19bb1d56a611e650d54847ee6fbc24cc19ed3ecb464a4269268270e",
+    "allocation": "1.526",
+    "impact": 4
+  },
+  {
+    "project_id": "0x5886472cf166ffa3671aa8c9bc303f8644e1ad90d67a53aec0f97eb6c9e6844d",
+    "allocation": "2.635",
+    "impact": 2
+  },
+  {
+    "project_id": "0x5a41dd6db9348adfcd8bb0bb0a391a44ac7797094183d536edc8d5677aa985fa",
+    "allocation": "3.595",
+    "impact": 3
+  },
+  {
+    "project_id": "0x6190ca70e5196f582a65d1f73236eff346b72cd922df3305da001bd34c17c348",
+    "allocation": "1.039",
+    "impact": 5
+  },
+  {
+    "project_id": "0x6272a864b7793e1a0ac1b8a2767366f56e8234cb969a7e9f3f21cd70d374a357",
+    "allocation": "0.838",
+    "impact": 5
+  },
+  {
+    "project_id": "0x6605b6f2cb8bad86dd1d82061b0fb7333a6b8d31b9f8c05a2f47cb7d76d0b14f",
+    "allocation": "2.202",
+    "impact": 2
+  },
+  {
+    "project_id": "0x78d76c8cd58f4334478c84da3080a9bd721c8463b1d3ff6d8f838821637419bb",
+    "allocation": "3.842",
+    "impact": 2
+  },
+  {
+    "project_id": "0x7ee54d5d8514a8be9172e4ce0dfb54cc3eba6cf57c88b85e76262dc307178832",
+    "allocation": "1.283",
+    "impact": 3
+  },
+  {
+    "project_id": "0x8f96355ae6573c6c606e2f5a71155344cc42afc853adc4f84933dc7cd00b2e9f",
+    "allocation": "1.292",
+    "impact": 1
+  },
+  {
+    "project_id": "0x902bf20692598d573b33cf7d5006c2c5e488ecc7fbe4b972d67846e9fde5e65a",
+    "allocation": "4.311",
+    "impact": 4
+  },
+  {
+    "project_id": "0x907ab6a3f6b6e724797e52051ac04eb23025462f8d06866ee541c90681e0ec17",
+    "allocation": "5.359",
+    "impact": 5
+  },
+  {
+    "project_id": "0x94af5fe205fbdfd29913aa243514bb6d3e2e1fe121aa2bd984f5eadbedbad751",
+    "allocation": "3.461",
+    "impact": 4
+  },
+  {
+    "project_id": "0x95b0f6f25851da3d3ba17d4cd71e0925b7d234c1db32d5937c846d74ab62fb03",
+    "allocation": "1.183",
+    "impact": 4
+  },
+  {
+    "project_id": "0x9932b50339f36c2327df7eac42965014d561c7401e6fdf50550727ad228f56f2",
+    "allocation": "0.89",
+    "impact": 1
+  },
+  {
+    "project_id": "0x9b70e4a6f08471455d1d674f4e430da7b4fd43848002b47d1b6e1c1a1e0a36db",
+    "allocation": "5.606",
+    "impact": 2
+  },
+  {
+    "project_id": "0xa36ae760edb91ba8bfcc2b52b664fb4731ec09b78033b1bbec9d83d167d590e8",
+    "allocation": "4.761",
+    "impact": 3
+  },
+  {
+    "project_id": "0xa5446a9856ac6e5de47d9a75c9b5633f60a40c07fe23297863b794ca8842984c",
+    "allocation": "3.477",
+    "impact": 1
+  },
+  {
+    "project_id": "0xa61bcee8283f00abfca8890d602ea9542a75c925f43e05d85cb4e017c60f8017",
+    "allocation": "2.73",
+    "impact": 4
+  },
+  {
+    "project_id": "0xbbea5a9a59dc71358d4a4e687630a8a461efc17e56054f36e8c75246520a4199",
+    "allocation": "2.328",
+    "impact": 3
+  },
+  {
+    "project_id": "0xc8a03780dc632e8fad9356662e52723f5e6cff9ba457c0f29e15653c2d26fe7c",
+    "allocation": "0.511",
+    "impact": 1
+  },
+  {
+    "project_id": "0xd33479c5420a69c1ce3c8ba955593a63dcd454feeac43a4de417aa0bb793980a",
+    "allocation": "3.98",
+    "impact": 3
+  },
+  {
+    "project_id": "0xd42d5fa61ac3f9488e7b5c5fd24709d9d2b130750a9e06df868fe0bf3d14b849",
+    "allocation": "1.53",
+    "impact": 4
+  },
+  {
+    "project_id": "0xd890d5c2369e84688d196a6181ddfde1f1fc9d2d3f4e55ee93a3da851145f96f",
+    "allocation": "1.634",
+    "impact": 5
+  },
+  {
+    "project_id": "0xde61c4ad48fd0a8e1e783490aeab9e2d8aa05aaeba1c619e3d520f7e277e461e",
+    "allocation": "1.229",
+    "impact": 4
+  },
+  {
+    "project_id": "0xdfeced1045accaf24826bb678bc6c44624588c1d1b5a56d6b60ad2774fde4352",
+    "allocation": "3.657",
+    "impact": 2
+  },
+  {
+    "project_id": "0xe4ad25cfe18eccc531582634d03b78b03b7115d5fc77de001e735fe178f768f3",
+    "allocation": "5.127",
+    "impact": 2
+  },
+  {
+    "project_id": "0xf013cc101a13131dca5783bb915792e458cc8fc36bbecc3faaaa2aedff2e5f23",
+    "allocation": "0.012",
+    "impact": 4
+  },
+  {
+    "project_id": "0xfc00945848ac2ee9a42c64242e90d612cd16435b46082d4a363c087bd7e4c742",
+    "allocation": "0.889",
+    "impact": 2
+  }
+]

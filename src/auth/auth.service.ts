@@ -1,13 +1,9 @@
-import {
-  ForbiddenException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
-import { verifySignature } from 'thirdweb/auth';
+import { Injectable, Logger } from '@nestjs/common';
 import { generateRandomString } from 'src/utils';
 import { PrismaService } from 'src/prisma.service';
-import { chain, thirdwebClient } from 'src/thirdweb';
+import { SiweMessage } from 'siwe';
+import { verifyMessage } from 'viem';
+// import { chain, thirdwebClient } from 'src/thirdweb';
 
 @Injectable()
 export class AuthService {
@@ -43,62 +39,62 @@ export class AuthService {
     });
   };
 
-  assignOtp = async (userId: number) => {
-    const [record, user] = await Promise.all([
-      this.prismaService.otp.findFirst({
-        where: {
-          userId,
-          expiresAt: {
-            gte: `${Date.now()}`,
-          },
-        },
-        include: { user: true },
-      }),
-      this.prismaService.user.findUnique({
-        where: { id: userId },
-        select: { badges: true, identity: true },
-      }),
-    ]);
+  // assignOtp = async (userId: number) => {
+  //   const [record, user] = await Promise.all([
+  //     this.prismaService.otp.findFirst({
+  //       where: {
+  //         userId,
+  //         expiresAt: {
+  //           gte: `${Date.now()}`,
+  //         },
+  //       },
+  //       include: { user: true },
+  //     }),
+  //     this.prismaService.user.findUnique({
+  //       where: { id: userId },
+  //       select: { badges: true, identity: true },
+  //     }),
+  //   ]);
 
-    if (!user) throw new InternalServerErrorException("User doesn't exist");
+  //   if (!user) throw new InternalServerErrorException("User doesn't exist");
 
-    if (user.identity?.valueOf() || user.badges?.valueOf())
-      throw new ForbiddenException('User has already connected');
+  //   if (user.identity?.valueOf() || user.badges?.valueOf())
+  //     throw new ForbiddenException('User has already connected');
 
-    if (record) return record.otp;
+  //   if (record) return record.otp;
 
-    const otp = generateRandomString({ length: 6, numerical: true });
-    await this.prismaService.otp.deleteMany({
-      where: {
-        userId,
-      },
-    });
-    await this.prismaService.otp.create({
-      data: {
-        otp,
-        userId,
-        expiresAt: `${Date.now() + 4 * 60 * 60 * 1000}`, // 4 hours
-      },
-    });
+  //   const otp = generateRandomString({ length: 6, numerical: true });
+  //   await this.prismaService.otp.deleteMany({
+  //     where: {
+  //       userId,
+  //     },
+  //   });
+  //   await this.prismaService.otp.create({
+  //     data: {
+  //       otp,
+  //       userId,
+  //       expiresAt: `${Date.now() + 4 * 60 * 60 * 1000}`, // 4 hours
+  //     },
+  //   });
 
-    return otp;
-  };
+  //   return otp;
+  // };
 
-  checkOtpValidity = async (otp: string) => {
-    const record = await this.prismaService.otp.findFirst({
-      where: {
-        otp,
-        expiresAt: {
-          gte: `${Date.now()}`,
-        },
-      },
-      include: { user: true },
-    });
+  // checkOtpValidity = async (otp: string) => {
+  //   const record = await this.prismaService.otp.findFirst({
+  //     where: {
+  //       otp,
+  //       expiresAt: {
+  //         gte: `${Date.now()}`,
+  //       },
+  //     },
+  //     include: { user: true },
+  //   });
 
-    if (!record) return false;
+  //   if (!record) return false;
 
-    return record.user.id;
-  };
+  //   return record.user.id;
+  // };
 
   generateNonce = () => {
     const nonce = generateRandomString({
@@ -144,15 +140,21 @@ export class AuthService {
     return user;
   };
 
-  verifyUser = async (message: string, signature: string, address: string) => {
-    const isValid = await verifySignature({
-      message,
-      signature,
-      address,
-      client: thirdwebClient,
-      chain,
-    });
-
-    return isValid;
+  verifyUser = async (
+    message: string,
+    signature: `0x${string}`,
+    address: `0x${string}`,
+  ) => {
+    try {
+      // await this.isNonceValid(message.nonce);
+      const valid = await verifyMessage({
+        address,
+        message,
+        signature,
+      });
+      return valid;
+    } catch (err) {
+      return false;
+    }
   };
 }
