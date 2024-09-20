@@ -244,7 +244,7 @@ export class FlowController {
     if (!projectId)
       throw new BadRequestException('Please provide a project id');
 
-    const pairs: PairsResult = await this.flowService.getPairsWithOneProject(
+    const pairs: PairsResult = await this.flowService.getPairs(
       userId,
       projectId,
       collectionId,
@@ -272,6 +272,7 @@ export class FlowController {
 
     const pairs: PairsResult = await this.flowService.getPairs(
       userId,
+      undefined,
       collectionId,
     );
 
@@ -374,7 +375,7 @@ export class FlowController {
     });
   }
 
-  // @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard)
   @ApiOperation({
     summary:
       'Use it at your own risk for testing. It will remove all the data associated with your account',
@@ -383,38 +384,28 @@ export class FlowController {
   @Get('/dangerouslyRemoveData')
   async removeMydata(@Req() { userId }: AuthedReq) {
     // for (let i = 2; i < 9; i++) {
-    const user = await this.prismaService.user.findFirst({
-      select: { id: true },
-      where: { address: '0x9cb5129b4c710dB85F1dcd4071CB5f777e5B7612' },
-    });
+    // const user = await this.prismaService.user.findFirst({
+    //   select: { id: true },
+    //   where: { address: '0x9cb5129b4c710dB85F1dcd4071CB5f777e5B7612' },
+    // });
 
-    // console.log(user?.id);
+    // // console.log(user?.id);
 
-    if (user && !userId) {
-      userId = user?.id;
-      console.log(user.id);
-    } else if (!user && !userId) return;
+    // if (user && !userId) {
+    //   userId = user?.id;
+    //   console.log(user.id);
+    // } else if (!user && !userId) return;
 
     // userId = 448;
-
-    await this.prismaService.nonce.deleteMany({
-      where: { userId: userId },
-    });
-
-    await this.prismaService.rank.deleteMany({
-      where: { userId: userId },
-    });
 
     await this.prismaService.vote.deleteMany({
       where: { userId: userId },
     });
-
-    await this.prismaService.userCollectionFinish.deleteMany({
+    await this.prismaService.projectStar.deleteMany({
       where: { userId: userId },
     });
-
-    await this.prismaService.user.deleteMany({
-      where: { id: userId },
+    await this.prismaService.projectCoI.deleteMany({
+      where: { userId: userId },
     });
   }
 }

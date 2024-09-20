@@ -7,7 +7,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import { getPairwiseCombinations, sortCombinations } from 'src/utils';
+import {
+  getPairwiseCombinations,
+  sortCombinationsByImplicitCategory,
+} from 'src/utils';
 import {
   generateZeroMatrix,
   getRankingForSetOfDampingFactors,
@@ -650,9 +653,10 @@ export class FlowService {
     return effectiveVotes.length / total;
   };
 
-  getPairsWithOneProject = async (
+  // if projectId is provided, the returend pair must include that project if possible
+  getPairs = async (
     userId: number,
-    projectId: number,
+    projectId?: number,
     parentCollection?: number,
     count = 1,
   ) => {
@@ -689,173 +693,13 @@ export class FlowService {
       ]);
 
     // projects except those with conflict of interest
-    const allProjects = projects.filter(
-      (item) => !projectCoIs.find((el) => el.projectId === item.id),
-    );
-
-    const projectStars = allStars.filter(
-      (item) => !projectCoIs.find((el) => el.projectId === item.projectId),
-    );
-
-    const allVotes = votes.filter(
-      (item) =>
-        !projectCoIs.find(
-          (el) =>
-            el.projectId === item.project1Id ||
-            el.projectId === item.project2Id,
-        ),
-    );
-
-    const progress = this.calculateProgress(
-      allVotes,
-      projectStars,
-      allProjects,
-    );
-
-    if (progress === 1) {
-      // if (collection) {
-      //   // There's no other pairs to vote from so finishing the collection automatically
-      //   await this.finishCollection(userId, collection.id);
-      // }
-
-      return {
-        pairs: [],
-        totalPairs: 100,
-        votedPairs: allVotes.length,
-        progress,
-        name: collection?.name || 'Root',
-        threshold: 1,
-      };
-    }
-
-    const getStarsById = (id: number) =>
-      projectStars.find((el) => el.projectId === id)?.star || null;
-
-    const votedIds = allVotes.reduce(
-      (acc, vote) => [...acc, vote.project1Id, vote.project2Id],
-      [] as number[],
-    );
-
-    const allIds = allProjects.map((child) => child.id);
-
-    const votedCollectionsRanking = this.determineIdRanking(votedIds);
-
-    // ascending id rankings (i.e., the last element has been voted the most)
-    let idRanking: number[] = [];
-
-    for (let i = 0; i < allIds.length; i++) {
-      const value = allIds[i];
-      if (!votedCollectionsRanking.includes(value)) idRanking.push(value);
-    }
-
-    idRanking = [...idRanking, ...votedCollectionsRanking];
-
-    const combinations = getPairwiseCombinations(allIds);
-
-    const sortedCombinations = sortCombinations(combinations, idRanking);
-
-    const result = [];
-    let i = 0;
-    while (result.length < count) {
-      const combination = sortedCombinations[i];
-      const px = combination[0];
-      const py = combination[1];
-      if (
-        getStarsById(px) !== getStarsById(py) ||
-        getStarsById(px) === 1 ||
-        (px !== projectId && py !== projectId)
-      ) {
-        i++;
-        continue;
-      }
-      const index = allVotes.findIndex(
-        (vote) =>
-          (vote.project1Id === px && vote.project2Id === py) ||
-          (vote.project1Id === py && vote.project2Id === px),
+    const allProjects = projects
+      .filter((item) => !projectCoIs.find((el) => el.projectId === item.id))
+      .sort((a, b) =>
+        (a.implicitCategory || '').localeCompare(b.implicitCategory || ''),
       );
 
-      if (index === -1) result.push(combination);
-
-      i++;
-    }
-
-    const res = await Promise.all(
-      result.map((pair) =>
-        this.prismaService.project.findMany({
-          where: {
-            OR: [
-              {
-                id: pair[0],
-              },
-              {
-                id: pair[1],
-              },
-            ],
-          },
-        }),
-      ),
-    );
-
-    const pairs = await Promise.all(
-      res.map(
-        async (pair) =>
-          await Promise.all(
-            pair.map(async (project) => ({
-              ...project,
-              metadata: JSON.parse(project.metadata),
-              rating: await this.getProjectStars(project.id, userId),
-            })),
-          ),
-      ),
-    );
-
-    return {
-      pairs,
-      totalPairs: combinations.length,
-      votedPairs: allVotes.length,
-      progress,
-      name: collection?.name || 'Root',
-      threshold: this.calculateThreshold(allIds.length, collection?.id || null),
-    };
-  };
-
-  getPairs = async (userId: number, parentCollection?: number, count = 1) => {
-    const [collection, votes, projects, allStars, projectCoIs] =
-      await Promise.all([
-        this.prismaService.project.findUnique({
-          where: {
-            id: parentCollection || -1,
-            type: {
-              in: [ProjectType.collection, ProjectType.compositeProject],
-            },
-          },
-          select: { name: true, id: true },
-        }),
-        this.prismaService.vote.findMany({
-          where: {
-            userId: userId,
-            project1: { parentId: parentCollection },
-            project2: { parentId: parentCollection },
-          },
-        }),
-        this.prismaService.project.findMany({
-          where: {
-            parentId: parentCollection || -1,
-          },
-        }),
-        this.getUserProjectStars(userId, parentCollection || -1),
-        this.prismaService.projectCoI.findMany({
-          where: {
-            project: { parentId: parentCollection },
-            userId,
-          },
-        }),
-      ]);
-
-    // projects except those with conflict of interest
-    const allProjects = projects.filter(
-      (item) => !projectCoIs.find((el) => el.projectId === item.id),
-    );
+    console.log(allProjects.slice(0, 10).map((item) => item.implicitCategory));
 
     const projectStars = allStars.filter(
       (item) => !projectCoIs.find((el) => el.projectId === item.projectId),
@@ -895,28 +739,34 @@ export class FlowService {
     const getStarsById = (id: number) =>
       projectStars.find((el) => el.projectId === id)?.star || null;
 
-    const votedIds = allVotes.reduce(
-      (acc, vote) => [...acc, vote.project1Id, vote.project2Id],
-      [] as number[],
-    );
+    const getProjectImplicitCatById = (id: number) =>
+      allProjects.find((el) => el.id === id)?.implicitCategory || '';
+
+    // const votedIds = allVotes.reduce(
+    //   (acc, vote) => [...acc, vote.project1Id, vote.project2Id],
+    //   [] as number[],
+    // );
 
     const allIds = allProjects.map((child) => child.id);
 
-    const votedCollectionsRanking = this.determineIdRanking(votedIds);
+    // const projectIdOccurencesRanking = this.determineIdRanking(votedIds);
 
     // ascending id rankings (i.e., the last element has been voted the most)
-    let idRanking: number[] = [];
+    // let idRanking: number[] = [];
 
-    for (let i = 0; i < allIds.length; i++) {
-      const value = allIds[i];
-      if (!votedCollectionsRanking.includes(value)) idRanking.push(value);
-    }
+    // for (let i = 0; i < allIds.length; i++) {
+    //   const value = allIds[i];
+    //   if (!projectIdOccurencesRanking.includes(value)) idRanking.push(value);
+    // }
 
-    idRanking = [...idRanking, ...votedCollectionsRanking];
+    // idRanking = [...idRanking, ...projectIdOccurencesRanking];
 
     const combinations = getPairwiseCombinations(allIds);
 
-    const sortedCombinations = sortCombinations(combinations, idRanking);
+    const sortedCombinations = sortCombinationsByImplicitCategory(
+      combinations,
+      getProjectImplicitCatById,
+    );
 
     const result = [];
     let i = 0;
@@ -924,7 +774,11 @@ export class FlowService {
       const combination = sortedCombinations[i];
       const px = combination[0];
       const py = combination[1];
-      if (getStarsById(px) !== getStarsById(py) || getStarsById(px) === 1) {
+      if (
+        getStarsById(px) !== getStarsById(py) ||
+        getStarsById(px) === 1 ||
+        (projectId && px !== projectId && py !== projectId)
+      ) {
         i++;
         continue;
       }

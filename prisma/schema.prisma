@@ -62,6 +62,7 @@ model Project {
   pollId              Int                    @map("poll_id")
   url                 String?
   description         String
+  implicitCategory    String?                 @map("implicit-category")
   shortDescription    String?                @map("short_description")
   RPGF5Id             String?                @map("rpgf4_id")
   parentId            Int?                   @map("parent_id")
@@ -78,8 +79,7 @@ model Project {
   ranks               Rank[]
   finishedCollections UserCollectionFinish[]
   stars               ProjectStar[]
-  cois               ProjectCoI[]
-
+  cois                ProjectCoI[]
 }
 
 model Vote {
@@ -154,12 +154,12 @@ model ProjectStar {
 }
 
 model ProjectCoI {
-  userId       Int      @map("user_id")
-  projectId    Int      @map("project_id")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
-  user         User     @relation(fields: [userId], references: [id])
-  project      Project  @relation(fields: [projectId], references: [id])
+  userId    Int      @map("user_id")
+  projectId Int      @map("project_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id])
 
   @@id([userId, projectId])
 }
