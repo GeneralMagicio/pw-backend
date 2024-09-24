@@ -1,3 +1,17 @@
-{$PW_BACKEND_URL} {
-  reverse_proxy pw-backend:7070
+{$BACKEND_URL} {
+  route {
+      @allowed {
+          path /*
+          remote_ip {$IP_WHITELIST}
+      }
+      reverse_proxy @allowed {
+        to pw-backend1:7070 pw-backend2:7070
+        lb_policy round_robin
+        health_uri /
+        health_interval 5s
+        health_timeout 2s
+        health_status 200
+      }
+      respond 403
+  }
 }
