@@ -1,0 +1,28 @@
+name: rpgf5-staging-deploy-pipeline
+
+on:
+  workflow_dispatch:
+#  push:
+#    branches:
+#      - rpgf5-prototype
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and Redeploy Staging
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.RPGF5_STAGING_HOST }}
+          username: ${{ secrets.RPGF5_STAGING_USERNAME }}
+          key: ${{ secrets.RPGF5_STAGING_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd rpgf4-pw-backend
+            docker-compose down -v
+            docker image prune -a --force
+            git checkout staging
+            git reset --hard origin/staging
+            git pull origin staging
+            docker-compose build --no-cache
+            docker-compose up -d
