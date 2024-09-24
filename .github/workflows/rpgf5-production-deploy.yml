@@ -2,9 +2,9 @@ name: rpgf5-prod-deploy-pipeline
 
 on:
   workflow_dispatch:
-#  push:
-#    branches:
-#      - master
+  push:
+    branches:
+      - master
 
 jobs:
   publish:
@@ -43,8 +43,8 @@ jobs:
           script: |
             cd pw-backend
             git reset --hard HEAD~1
-            git checkout rpgf5
-            git pull origin rpgf5
+            git checkout master
+            git pull origin master
             docker image prune -a --force
             docker compose -f docker-compose-prod.yml pull
 

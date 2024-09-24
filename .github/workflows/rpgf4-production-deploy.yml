@@ -1,0 +1,27 @@
+name: production-deploy-pipeline
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and Redeploy Production
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd rpgf4-pw-backend
+            docker-compose down -v
+            docker image prune -a --force
+            git checkout master
+            git reset --hard origin/master
+            git pull origin master
+            docker-compose build --no-cache
+            docker-compose up -d
