@@ -2,9 +2,9 @@ name: rpgf5-prod-deploy-pipeline
 
 on:
   workflow_dispatch:
-#  push:
-#    branches:
-#      - master
+  push:
+    branches:
+      - rpgf5
 
 jobs:
   publish:
