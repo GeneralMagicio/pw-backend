@@ -1,9 +1,10 @@
 name: rpgf5-prod-deploy-pipeline
 
 on:
-  push:
-    branches:
-      - rpgf5
+  workflow_dispatch:
+#  push:
+#    branches:
+#      - master
 
 jobs:
   publish:
@@ -45,19 +46,19 @@ jobs:
             git checkout rpgf5
             git pull origin rpgf5
             docker image prune -a --force
-            docker compose pull
+            docker compose -f docker-compose-prod.yml pull
 
             ## Update each backend service one by one
-            docker compose up -d --no-deps --scale pw-backend1=0 --scale pw-backend2=1
-            docker compose up -d
+            docker compose -f docker-compose-prod.yml up -d --no-deps --scale pw-backend1=0 --scale pw-backend2=1
+            docker compose -f docker-compose-prod.yml up -d
             # Check the health of pw-backend1
             if [ "$(docker inspect --format='{{json .State.Status}}' pw-backend1)" != "\"running\"" ]; then
               echo "pw-backend1 is not running, stopping deployment"
               exit 1
             fi
 
-            docker compose up -d --no-deps --scale pw-backend1=1 --scale pw-backend2=0
-            docker compose up -d
+            docker compose -f docker-compose-prod.yml up -d --no-deps --scale pw-backend1=1 --scale pw-backend2=0
+            docker compose -f docker-compose-prod.yml up -d
             # Check the health of pw-backend2
             if [ "$(docker inspect --format='{{json .State.Status}}' pw-backend2)" != "\"running\"" ]; then
               echo "pw-backend2 is not running, stopping deployment"

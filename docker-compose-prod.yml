@@ -1,0 +1,50 @@
+version: '3'
+
+services:
+  pw-backend1:
+    image: ghcr.io/generalmagicio/rpgf5-be:main
+    container_name: pw-backend1
+    restart: always
+    ports:
+      - 7070
+    env_file:
+      - .env
+    networks:
+      - pw-backend
+
+  pw-backend2:
+    image: ghcr.io/generalmagicio/rpgf5-be:main
+    container_name: pw-backend2
+    restart: always
+    ports:
+      - 7070
+    env_file:
+      - .env
+    networks:
+      - pw-backend
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    networks:
+      - pw-backend
+    ports:
+      - 80:80
+      - 443:443
+    env_file:
+      - .env
+    environment:
+      - BACKEND_URL=${BACKEND_URL:-}
+      - IP_WHITELIST=${IP_WHITELIST:-0.0.0.0/0}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile
+
+volumes:
+  caddy_config:
+  caddy_data:
+
+networks:
+  pw-backend:

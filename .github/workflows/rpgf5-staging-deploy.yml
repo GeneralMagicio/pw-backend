@@ -1,16 +1,38 @@
 name: rpgf5-staging-deploy-pipeline
 
 on:
-  workflow_dispatch:
-#  push:
-#    branches:
-#      - rpgf5-prototype
+  push:
+    branches:
+      - staging
 
 jobs:
-  deploy:
+  publish:
     runs-on: ubuntu-latest
     steps:
-      - name: SSH and Redeploy Staging
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/generalmagicio/rpgf5-be:staging
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: publish
+    steps:
+      - name: SSH and Redeploy Production
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.RPGF5_STAGING_HOST }}
@@ -18,11 +40,26 @@ jobs:
           key: ${{ secrets.RPGF5_STAGING_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd rpgf4-pw-backend
-            docker-compose down -v
-            docker image prune -a --force
+            cd pw-backend
+            git reset --hard HEAD~1
             git checkout staging
-            git reset --hard origin/staging
             git pull origin staging
-            docker-compose build --no-cache
-            docker-compose up -d
+            docker image prune -a --force
+            docker compose -f docker-compose-staging.yml pull
+
+            ## Update each backend service one by one
+            docker compose -f docker-compose-staging.yml up -d --no-deps --scale pw-backend1=0 --scale pw-backend2=1
+            docker compose -f docker-compose-staging.yml up -d
+            # Check the health of pw-backend1
+            if [ "$(docker inspect --format='{{json .State.Status}}' pw-backend1)" != "\"running\"" ]; then
+              echo "pw-backend1 is not running, stopping deployment"
+              exit 1
+            fi
+
+            docker compose -f docker-compose-staging.yml up -d --no-deps --scale pw-backend1=1 --scale pw-backend2=0
+            docker compose -f docker-compose-staging.yml up -d
+            # Check the health of pw-backend2
+            if [ "$(docker inspect --format='{{json .State.Status}}' pw-backend2)" != "\"running\"" ]; then
+              echo "pw-backend2 is not running, stopping deployment"
+              exit 1
+            fi
