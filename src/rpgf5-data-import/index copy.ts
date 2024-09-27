@@ -1,6 +1,3 @@
-import axios from 'axios';
-import { AgoraApiResponse, Project } from './types';
-import * as fs from 'fs';
 import { projects } from './all-projects';
 import { projects as gProjects } from './gsheet';
 
