@@ -21,18 +21,23 @@ import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
 import { RemoveLastVoteDto, SetCoIDto } from './dto/bodies';
 import { AgoraBallotPost } from 'src/rpgf5-data-import/submit';
-import { projects as osradProjects } from 'src/rpgf5-data-import/osrad';
-import { projects as eccProjects } from 'src/rpgf5-data-import/ecc';
-import { projects as ostProjects } from 'src/rpgf5-data-import/ost';
+import { projects } from 'src/rpgf5-data-import/all-projects';
 
 export const getAllProjects = (category: number) => {
   switch (category) {
-    case 1:
-      return eccProjects;
     case 2:
-      return ostProjects;
+      return projects.filter(
+        (el) => el['applicationCategory'] === 'ETHEREUM_CORE_CONTRIBUTIONS',
+      );
     case 3:
-      return osradProjects;
+      return projects.filter(
+        (el) => el['applicationCategory'] === 'OP_STACK_TOOLING',
+      );
+    case 1:
+      return projects.filter(
+        (el) =>
+          el['applicationCategory'] === 'OP_STACK_RESEARCH_AND_DEVELOPMENT',
+      );
     default:
       throw new Error(`Invalid category id ${category}`);
   }

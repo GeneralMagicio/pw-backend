@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { projects } from './icats';
+import { projects } from './gsheet';
 
 const implicitCatDist = async (prisma: PrismaClient) => {
   const projects = await prisma.project.findMany({
@@ -41,16 +41,17 @@ export const main = async () => {
 
   console.log('Connected!');
 
-  // const nullPs = await prisma.project.findMany({
-  //   select: { name: true },
-  //   where: { type: 'project', implicitCategory: null },
-  // });
+  const nullPs = await prisma.project.findMany({
+    select: { name: true },
+    where: { type: 'project', implicitCategory: null },
+  });
 
-  // console.log(nullPs);
+  console.log(nullPs);
 
   // for (let i = 0; i < projects.length; i++) {
-  //   console.log('Project', i);
   //   const project = projects[i];
+  //   if (project.isSelected !== 'Approved') continue;
+  //   console.log('Project', i);
   //   const exists = await prisma.project.findFirst({
   //     where: { name: project.name, implicitCategory: null },
   //   });

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { AgoraApiResponse, Project } from './types';
 import { Prisma, PrismaClient } from '@prisma/client';
+import * as fs from 'fs';
 
 async function getAllProjects(): Promise<Project[]> {
   const baseUrl =
@@ -50,109 +51,117 @@ const getPoll = (): Prisma.PollUncheckedCreateInput => ({
 export const main = async () => {
   const categories: Record<string, number> = {};
 
-  const projects = await getAllProjects();
+  const nonSpamProjects = await getAllProjects();
 
-  console.log('projects length', projects.length);
+  console.log('projects length', nonSpamProjects.length);
 
-  const nonSpamProjects = projects
-    .map((el) => ({
-      id: el.id,
-      length: JSON.stringify(el).length,
-    }))
-    .sort((a, b) => b.length - a.length)
-    .filter((el, i, self) => i < self.length * 0.7)
-    .map((el) => projects.find((item) => item.id === el.id)!);
+  // const nonSpamProjects = projects
+  //   .map((el) => ({
+  //     id: el.id,
+  //     length: JSON.stringify(el).length,
+  //   }))
+  //   .sort((a, b) => b.length - a.length)
+  //   .filter((el, i, self) => i < self.length * 0.7)
+  //   .map((el) => projects.find((item) => item.id === el.id)!);
 
-  console.log(nonSpamProjects[0]);
+  // console.log(nonSpamProjects[0]);
 
-  // for (let i = 0; i < nonSpamProjects.length; i++) {
-  //   const project = nonSpamProjects[i];
-  //   // if (project.CHECK !== '!PASS') continue;
-  //   // if (removed.findIndex((el) => el.Name === project.displayName) !== -1) {
-  //   //   console.log(project.displayName, 'Is spam');
-  //   //   continue;
-  //   // }
+  for (let i = 0; i < nonSpamProjects.length; i++) {
+    const project = nonSpamProjects[i];
+    // if (project.CHECK !== '!PASS') continue;
+    // if (removed.findIndex((el) => el.Name === project.displayName) !== -1) {
+    //   console.log(project.displayName, 'Is spam');
+    //   continue;
+    // }
 
-  //   if (!(project['applicationCategory'] in categories)) {
-  //     categories[project['applicationCategory']] = 1;
+    if (!(project['applicationCategory'] in categories)) {
+      categories[project['applicationCategory']] = 1;
+    } else {
+      categories[project['applicationCategory']] =
+        categories[project['applicationCategory']] + 1;
+    }
+  }
+
+  console.log(categories);
+
+  // fs.writeFile('all-projects.json', JSON.stringify(nonSpamProjects), (err) => {
+  //   if (err) {
+  //     console.error('Error writing file', err);
   //   } else {
-  //     categories[project['applicationCategory']] =
-  //       categories[project['applicationCategory']] + 1;
+  //     console.log('JSON file saved successfully');
   //   }
-  // }
-
-  // console.log(categories);
-
-  // const prisma = new PrismaClient({
-  //   datasources: {
-  //     db: {
-  //       url: process.env.POSTGRES_PRISMA_URL,
-  //     },
-  //   },
   // });
 
-  // await prisma.$connect();
+  const prisma = new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.POSTGRES_PRISMA_URL,
+      },
+    },
+  });
 
-  // console.log('Connected!');
+  await prisma.$connect();
 
-  // const space = getSpace();
-  // await prisma.space.create({
-  //   data: space,
-  // });
+  console.log('Connected!');
 
-  // // add poll
-  // const poll = getPoll();
-  // await prisma.poll.create({
-  //   data: poll,
-  // });
+  const space = getSpace();
+  await prisma.space.create({
+    data: space,
+  });
+
+  // add poll
+  const poll = getPoll();
+  await prisma.poll.create({
+    data: poll,
+  });
 
   // // add categories
 
-  // await prisma.project.createMany({
-  //   data: Object.keys(categories).map((category) => ({
-  //     type: 'collection',
-  //     pollId: 1,
-  //     name: category,
-  //     description: `Description for ${category}`,
-  //     metadata: '',
-  //   })),
-  // });
+  await prisma.project.createMany({
+    data: Object.keys(categories).map((category) => ({
+      type: 'collection',
+      pollId: 1,
+      name: category,
+      description: `Description for ${category}`,
+      metadata: '',
+    })),
+  });
 
-  // for (let i = 0; i < Object.keys(categories).length; i++) {
-  //   console.log('Now doing category #', i);
-  //   const catName = Object.keys(categories)[i];
-  //   const category = await prisma.project.findFirst({
-  //     select: { id: true },
-  //     where: {
-  //       name: catName,
-  //       type: 'collection',
-  //     },
-  //   });
+  for (let i = 0; i < Object.keys(categories).length; i++) {
+    console.log('Now doing category #', i);
+    const catName = Object.keys(categories)[i];
+    const category = await prisma.project.findFirst({
+      select: { id: true },
+      where: {
+        name: catName,
+        type: 'collection',
+      },
+    });
 
-  //   if (!category)
-  //     throw new Error(
-  //       `No category available for this category name ${catName}`,
-  //     );
+    if (!category)
+      throw new Error(
+        `No category available for this category name ${catName}`,
+      );
 
-  //   const categoryProjects = nonSpamProjects.filter(
-  //     (el) => el['applicationCategory'] === catName,
-  //   );
+    const categoryProjects = nonSpamProjects.filter(
+      (el) => el['applicationCategory'] === catName,
+    );
 
-  //   await prisma.project.createMany({
-  //     data: categoryProjects.map((project) => ({
-  //       type: 'project',
-  //       parentId: category.id,
-  //       pollId: 1,
-  //       image: project.profileAvatarUrl,
-  //       name: `${project.name}`.trim(),
-  //       description: project.description,
-  //       // contributionDescription: project.contributionDescription,
-  //       // shortDescription: project['Short description'],
-  //       RPGF5Id: project.id,
-  //       metadata: JSON.stringify(project),
-  //     })),
-  //   });
-  // }
+    await prisma.project.createMany({
+      data: categoryProjects.map((project) => ({
+        type: 'project',
+        parentId: category.id,
+        pollId: 1,
+        image: project.profileAvatarUrl,
+        name: `${project.name}`.trim(),
+        description: project.description,
+        // contributionDescription: project.contributionDescription,
+        // shortDescription: project['Short description'],
+        RPGF5Id: project.id,
+        metadata: JSON.stringify(project),
+      })),
+    });
+  }
 
   // await addRpgf4IdToCollections(prisma);
 
@@ -171,7 +180,7 @@ export const main = async () => {
   // // findErigonI();
   // // printCategories();
 
-  // await prisma.$disconnect();
+  await prisma.$disconnect();
 };
 
 void main();
