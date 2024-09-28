@@ -817,6 +817,7 @@ export class FlowService {
             pair.map(async (project) => ({
               ...project,
               metadata: JSON.parse(project.metadata),
+              aiSummary: JSON.parse(project.aiSummary!),
               rating: await this.getProjectStars(project.id, userId),
             })),
           ),
