@@ -714,11 +714,13 @@ export class FlowService {
         ),
     );
 
-    const progress = this.calculateProgress(
+    const realProgress = this.calculateProgress(
       allVotes,
       projectStars,
       allProjects,
     );
+
+    const progress = Math.min(1, realProgress * 3);
 
     if (progress === 1) {
       // if (collection) {
