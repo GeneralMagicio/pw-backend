@@ -5,7 +5,6 @@ import {
   ForbiddenException,
   Get,
   Logger,
-  Param,
   Post,
   Query,
   Req,
@@ -19,16 +18,30 @@ import { VoteProjectsDTO } from './dto/voteProjects.dto';
 import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
-import { areEqualNumberArrays, sortProjectId } from 'src/utils';
-import {
-  DnDBody,
-  FinishCollectionBody,
-  InclusionProjectBody,
-  InclusionProjectsBulkBody,
-} from './dto/bodies';
-import { calculateWeightedLists } from 'src/weighted-api/main';
-import { GetBadgesDTO } from 'src/user/dto/ConnectFlowDTOs';
-import { getRankingForUser } from 'src/weighted-api/user-based';
+import { sortProjectId } from 'src/utils';
+import { RemoveLastVoteDto, SetCoIDto } from './dto/bodies';
+import { AgoraBallotPost } from 'src/rpgf5-data-import/submit';
+import { projects } from 'src/rpgf5-data-import/all-projects';
+
+export const getAllProjects = (category: number) => {
+  switch (category) {
+    case 2:
+      return projects.filter(
+        (el) => el['applicationCategory'] === 'ETHEREUM_CORE_CONTRIBUTIONS',
+      );
+    case 3:
+      return projects.filter(
+        (el) => el['applicationCategory'] === 'OP_STACK_TOOLING',
+      );
+    case 1:
+      return projects.filter(
+        (el) =>
+          el['applicationCategory'] === 'OP_STACK_RESEARCH_AND_DEVELOPMENT',
+      );
+    default:
+      throw new Error(`Invalid category id ${category}`);
+  }
+};
 
 @Controller({ path: 'flow' })
 export class FlowController {
@@ -75,25 +88,7 @@ export class FlowController {
       parentId || null,
     );
 
-    const tempOrder = [
-      'NFT Collectibles',
-      'NFTverse',
-      'User & Development experience',
-      'Lending & Asset Management',
-      'DEXs & Perps',
-      'Social Networks & Platforms',
-      'DeFi UX',
-      'DeFi Ecosystems',
-      'Governance & Gov tooling',
-      'Web3 Onboarding & Engagement',
-      'Cross chain',
-    ];
-
-    return collections.sort(
-      (a, b) =>
-        tempOrder.findIndex((el) => el === a.name) -
-        tempOrder.findIndex((el) => el === b.name),
-    );
+    return collections;
   }
 
   @UseGuards(AuthGuard)
@@ -119,16 +114,75 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
+  @Post('/mark-CoI')
+  async markCoI(@Req() { userId }: AuthedReq, @Body() { pid }: SetCoIDto) {
+    await this.flowService.setCoI(userId, pid);
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
   @ApiOperation({
     summary: 'Used for a pairwise vote between two projects',
   })
   @Post('/projects/vote')
   async voteProjects(
     @Req() { userId }: AuthedReq,
-    @Body() { project1Id, project2Id, pickedId }: VoteProjectsDTO,
+    @Body()
+    {
+      project1Id,
+      project2Id,
+      pickedId,
+      project1Stars,
+      project2Stars,
+    }: VoteProjectsDTO,
   ) {
+    const promises = [];
     const [id1, id2] = sortProjectId(project1Id, project2Id);
-    return await this.flowService.voteForProjects(userId, id1, id2, pickedId);
+    if (project1Stars)
+      promises.push(
+        this.flowService.setRating(project1Id, userId, project1Stars),
+      );
+    if (project2Stars)
+      promises.push(
+        this.flowService.setRating(project2Id, userId, project2Stars),
+      );
+    promises.push(this.flowService.voteForProjects(userId, id1, id2, pickedId));
+
+    await Promise.all(promises);
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used for a pairwise vote between two collections',
+  })
+  @Get('/ballot')
+  async getBallot(
+    @Req() { userId }: AuthedReq,
+    @Query('cid') collectionId: number,
+  ) {
+    if (!collectionId)
+      throw new BadRequestException('You need to supply a collection id');
+    const ranking = await this.flowService.getRanking(userId, collectionId);
+
+    const ballot: AgoraBallotPost = { projects: [] };
+
+    ballot.projects = ranking.map((el) => ({
+      project_id: el.RPGF5Id!,
+      allocation: (el.share * 100).toFixed(3),
+      impact: el.star === null ? 3 : el.star,
+    }));
+
+    // Add spam projects for staging:
+
+    const spams = getAllProjects(collectionId)
+      .filter(
+        (el) => !ballot.projects.find((item) => item.project_id === el.id),
+      )
+      .map((item) => ({ project_id: item.id, allocation: `0`, impact: 3 }));
+
+    ballot.projects = [...ballot.projects, ...spams];
+
+    return ballot;
   }
 
   @UseGuards(AuthGuard)
@@ -149,81 +203,60 @@ export class FlowController {
     );
   }
 
+  @ApiOperation({
+    summary: 'Deletes the last vote by the user in a category',
+  })
   @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Used for a pairwise vote between two collections',
-  })
-  @Get('/temp/test')
-  async test() {
-    return await this.flowService.justTesting();
-  }
+  @Post('/pairs/back')
+  async removeLastVote(
+    @Req() { userId }: AuthedReq,
+    @Body() { collectionId }: RemoveLastVoteDto,
+  ) {
+    if (collectionId === null) return this.flowService.undo(userId, null);
 
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Used for a pairwise vote between two collections',
-  })
-  @Get('/temp/test3')
-  async test3() {
-    return await this.flowService.populateInitialRanking(1);
-  }
-
-  // @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Used for a pairwise vote between two collections',
-  })
-  @Get('/temp/api')
-  async test4() {
-    const lists = await calculateWeightedLists(
-      this.flowService.getBadgesFromDb,
+    const progressStatus = await this.flowService.getCollectionProgressStatus(
+      userId,
+      collectionId,
     );
 
-    return lists;
+    if (progressStatus !== 'WIP' && progressStatus !== 'WIP - Threshold')
+      throw new ForbiddenException(
+        "You can only go back in a collection that's WIP or WIP-Threshold",
+      );
+
+    await this.flowService.undo(userId, collectionId);
+
+    return 'Success';
   }
 
-  // @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Used for a pairwise vote between two collections',
+  @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
+  @ApiResponse({
+    type: PairsResult,
+    status: 200,
+    description: 'Returns a pair of comparisons + progress data',
   })
-  @Get('/api')
-  async getUserOverallRanking(@Query() { address }: GetBadgesDTO) {
-    const lists = await getRankingForUser(
-      this.flowService.getBadgesFromDb,
-      address,
+  @ApiOperation({
+    summary: 'Returns the next pair for a pairwise vote',
+  })
+  @UseGuards(AuthGuard)
+  @Get('/pairs-for-project')
+  async getPairsForProject(
+    @Req() { userId }: AuthedReq,
+    @Query('cid') collectionId?: number,
+    @Query('pid') projectId?: number,
+  ) {
+    if (!collectionId) throw new BadRequestException('Please provide a cid');
+    if (!projectId)
+      throw new BadRequestException('Please provide a project id');
+
+    const pairs: PairsResult = await this.flowService.getPairs(
+      userId,
+      projectId,
+      collectionId,
     );
 
-    return lists;
+    return pairs;
   }
-
-  // @Get('/temp/ranking')
-  // async test5() {
-  //   const ranking = await this.flowService.saveResultsFromVotes(21, 178);
-
-  //   return ranking;
-  // }
-
-  // @Get('/temp/finish')
-  // async test6() {
-  //   const ranking = await this.flowService.finis(21, 178);
-
-  //   return ranking;
-  // }
-
-  // @UseGuards(AuthGuard)
-  // @ApiOperation({
-  //   summary: 'Used for a pairwise vote between two collections',
-  // })
-  // @Get('/temp/test2')
-  // async test2() {
-  //   const votes = await this.prismaService.vote.findMany({
-  //     where: {
-  //       project1: {
-  //         parentId: 174,
-  //       },
-  //     },
-  //   });
-
-  //   return votes;
-  // }
 
   @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
   @ApiResponse({
@@ -240,25 +273,11 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Query('cid') collectionId?: number,
   ) {
-    if (!collectionId)
-      return this.flowService.getAttestedCollectionPairs(userId);
-
-    const progressStatus = await this.flowService.getCollectionProgressStatus(
-      userId,
-      collectionId,
-    );
-
-    if (
-      progressStatus !== 'Filtered' &&
-      progressStatus !== 'WIP' &&
-      progressStatus !== 'WIP - Threshold'
-    )
-      throw new ForbiddenException(
-        "You can only vote for a collection that's Filtered, WIP or WIP-Threshold",
-      );
+    if (!collectionId) throw new BadRequestException('Please provide a cid');
 
     const pairs: PairsResult = await this.flowService.getPairs(
       userId,
+      undefined,
       collectionId,
     );
 
@@ -290,56 +309,20 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Query('cid') collectionId?: number,
   ) {
-    const isLastLayerCollection = await this.flowService.isLastLayerCollection(
-      collectionId || null,
-    );
+    // const isLastLayerCollection = await this.flowService.isLastLayerCollection(
+    //   collectionId || null,
+    // );
 
-    // if (collectionId && status) {
-    //   const hasThresholdVotes = await this.flowService.hasThresholdVotes(
-    //     collectionId,
+    // if (collectionId && isLastLayerCollection) {
+    //   const item = await this.flowService.isCollectionFinished(
     //     userId,
+    //     collectionId,
     //   );
 
-    //   if (
-    //     !hasThresholdVotes &&
-    //     isLastLayerCollection &&
-    //     (status === "")
-    //   )
-    //     throw new ForbiddenException('Threshold votes missing');
-    // }
-
-    // let isSaved = true;
-    if (collectionId && isLastLayerCollection) {
-      const item = await this.flowService.isCollectionFinished(
-        userId,
-        collectionId,
-      );
-
-      if (!item)
-        throw new ForbiddenException(
-          'There is no ranking for un-finished collections',
-        );
-    }
-
-    // if (!isSaved) {
-    //   await Promise.all([
-    //     this.flowService.saveResultsFromVotes(userId, collectionId || null),
-    //     // this.prismaService.userCollectionFinish.create({
-    //     //   data: { userId: userId, collectionId: collectionId! },
-    //     // }),
-    //   ]);
-    // }
-
-    // if (!collectionId && collectionId !== 0) {
-    //   const alreadySaved = await this.prismaService.share.findFirst({
-    //     where: {
-    //       project: {
-    //         parentId: null,
-    //       },
-    //     },
-    // });
-    // if (alreadySaved === null)
-    //   await this.flowService.saveResultsFromVotes(userId, null);
+    //   if (!item)
+    //     throw new ForbiddenException(
+    //       'There is no ranking for un-finished collections',
+    //     );
     // }
 
     const [ranking, rank, collection, progress] = await Promise.all([
@@ -355,19 +338,6 @@ export class FlowController {
       this.flowService.getCollectionProgressStatus(userId, collectionId || 1),
     ]);
 
-    // if (collectionId) {
-    //   await this.prismaService.userCollectionFinish.upsert({
-    //     create: { userId: userId, collectionId: collectionId },
-    //     update: { userId: userId, collectionId: collectionId },
-    //     where: {
-    //       userId_collectionId: {
-    //         userId: userId,
-    //         collectionId: collectionId,
-    //       },
-    //     },
-    //   });
-    // }
-
     return {
       ranking,
       hasRanking: true,
@@ -380,333 +350,37 @@ export class FlowController {
     };
   }
 
-  // @UseGuards(AuthGuard)
-  // @ApiOperation({
-  //   summary: 'Returns the ranking among all the projects',
-  // })
-  // @ApiResponse({ status: 200, description: 'Overall ranking' })
-  // @Get('/ranking/overall')
-  // async getOverallRanking(@Req() { userId }: AuthedReq) {
-  //   const result = await this.flowService.getOverallRanking(userId);
-  //   return result;
-  // }
-
-  // @UseGuards(AuthGuard)
-  // @ApiResponse({ status: 200, description: 'Overall ranking' })
-  // @Post('/custom/projects')
-  // async getProjectsFromUIDs(
-  //   // @Req() { userId }: AuthedReq,
-  //   @Body('uids') uids: string[],
-  // ) {
-  //   if (!uids) throw new BadRequestException('You need to supplu a uids array');
-  //   const projects = await this.prismaService.project.findMany({
-  //     where: {
-  //       RPGF4Id: {
-  //         in: uids,
-  //       },
-  //       type: 'project',
-  //     },
-  //   });
-  //   return projects;
-  // }
-
-  // @UseGuards(AuthGuard)
-  // @ApiResponse({ status: 200, description: 'Overall ranking' })
-  // @Get('/ranking/overall/excel')
-  // async getOverallRankingExcelSheet(@Req() { userId }: AuthedReq) {
-  //   const temp = await this.flowService.getOverallRanking(userId);
-
-  //   const payload = this.flowService.flattenForExcel(
-  //     {
-  //       ranking: temp,
-  //     } as CollectionRanking,
-  //     {
-  //       ranking: temp,
-  //     } as CollectionRanking,
-  //   );
-
-  //   // Convert data to worksheet
-  //   const worksheet = XLSX.utils.json_to_sheet(payload);
-
-  //   // Create a new Workbook
-  //   const workbook = XLSX.utils.book_new();
-
-  //   // Append the worksheet to the workbook
-  //   XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet 1');
-
-  //   // Write the workbook to an Excel file
-  //   const fileName = `${Date.now()}-${userId}-output.xlsx`;
-
-  //   XLSX.writeFile(workbook, fileName);
-
-  //   const pinataUrl = await this.flowService.uploadFileToPinata(fileName);
-
-  //   // remove the excel file
-  //   fs.unlink(fileName, (err) => {
-  //     if (err) {
-  //       console.error('An error occurred:', err);
-  //     } else {
-  //       console.log('File was deleted successfully');
-  //     }
-  //   });
-
-  //   return pinataUrl;
-  // }
-
-  // @UseGuards(AuthGuard)
-  // // @ApiResponse({ status: 200, description: 'Overall ranking' })
-  // @Post('/dnd')
-  // async submitEditedRanking(
-  //   @Req() { userId }: AuthedReq,
-  //   @Body()
-  //   { collectionId, projectIds }: DnDBody,
-  // ) {
-  //   // userId = 5;
-  //   const [includedProjects, shares] = await Promise.all([
-  //     this.flowService.getIncludedProjectIds(userId, collectionId),
-  //     this.prismaService.share.findMany({
-  //       select: {
-  //         share: true,
-  //         projectId: true,
-  //       },
-  //       where: {
-  //         userId,
-  //         project: { parentId: collectionId },
-  //       },
-  //       orderBy: {
-  //         share: 'desc',
-  //       },
-  //     }),
-  //   ]);
-
-  //   const includedProjectsShares = shares.filter((item) =>
-  //     includedProjects.includes(item.projectId),
-  //   );
-
-  //   console.log('pids:', projectIds);
-  //   console.log('included project shares', includedProjectsShares);
-
-  //   if (
-  //     !areEqualNumberArrays(
-  //       projectIds,
-  //       includedProjectsShares.map((item) => item.projectId),
-  //     )
-  //   ) {
-  //     throw new BadRequestException(
-  //       'All included projects should be in the input',
-  //     );
-  //   }
-
-  //   const promises = includedProjectsShares.map(async (item, index) =>
-  //     this.prismaService.share.update({
-  //       where: {
-  //         userId_projectId: {
-  //           userId,
-  //           projectId: projectIds[index],
-  //         },
-  //       },
-  //       data: {
-  //         share: item.share,
-  //       },
-  //     }),
-  //   );
-
-  //   await Promise.all(promises);
-
-  //   return 'success';
-  // }
-
   @UseGuards(AuthGuard)
-  @Post('/dnd')
-  async dndBulk(
-    @Req() { userId }: AuthedReq,
-    @Body()
-    { projectIds, collectionId }: DnDBody,
-  ) {
-    await this.flowService.setInclusionStateBulk(
-      projectIds,
-      userId,
-      collectionId,
-    );
-
-    const promises = projectIds.map((projectId, index) =>
-      this.prismaService.rank.update({
-        where: { userId_projectId: { projectId, userId } },
-        data: { rank: index + 1 },
-      }),
-    );
-
-    await Promise.all(promises);
-  }
-
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary:
-      'Notifies the server that the user has done an attestation for a collection',
-  })
-  @Post('/reportAttest')
-  async reportAttestations(
-    @Req() { userId }: AuthedReq,
-    @Body() { cid }: FinishCollectionBody,
-  ) {
-    const isFinished = await this.flowService.isCollectionFinished(userId, cid);
-
-    if (!isFinished)
-      throw new ForbiddenException(
-        'You can not attest a collection which is yet to be finished',
-      );
-
-    await this.prismaService.userAttestation.upsert({
+  @Post('/reset')
+  async resetVotes(@Req() { userId }: AuthedReq, @Body('cid') cid: number) {
+    await this.prismaService.vote.deleteMany({
       where: {
-        userId_collectionId: {
-          userId: userId,
-          collectionId: cid,
+        userId: userId,
+        OR: [
+          {
+            project1: {
+              parentId: cid,
+            },
+          },
+          {
+            project2: {
+              parentId: cid,
+            },
+          },
+        ],
+      },
+    });
+    await this.prismaService.projectStar.deleteMany({
+      where: {
+        userId: userId,
+        project: {
+          parentId: cid,
         },
       },
-      create: {
-        userId: userId,
-        collectionId: cid,
-      },
-      update: {
-        userId: userId,
-        collectionId: cid,
-      },
-    });
-    return 'Success';
-  }
-
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary:
-      'Notifies the server that the user has completed filtering the projects in a collection',
-  })
-  @Post('/mark-filtered')
-  async markFiltered(
-    @Req() { userId }: AuthedReq,
-    @Body() { cid }: FinishCollectionBody,
-  ) {
-    await this.flowService.markCollectionsFiltered(userId, cid);
-    return 'Success';
-  }
-
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Exclude a project from subsequent pairwise ranking',
-  })
-  @Post('/projects/set-inclusion')
-  async excludeProjects(
-    @Req() { userId }: AuthedReq,
-    @Body() { id, state }: InclusionProjectBody,
-  ) {
-    await this.flowService.setInclusionState(userId, id, state);
-    return 'Success';
-  }
-
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Exclude a project from subsequent pairwise ranking',
-  })
-  @Post('/projects/set-inclusion-bulk')
-  async setInclusionBulk(
-    @Req() { userId }: AuthedReq,
-    @Body() { ids, collectionId }: InclusionProjectsBulkBody,
-  ) {
-    await this.flowService.setInclusionStateBulk(ids, userId, collectionId);
-    return 'Success';
-  }
-
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary:
-      'Used to mark a collection status "finished". After a collection is finished, voting is not longer possible in it',
-  })
-  @Post('/finish')
-  async finishCollections(
-    @Req() { userId }: AuthedReq,
-    @Body() { cid }: FinishCollectionBody,
-  ) {
-    await this.flowService.finishCollection(userId, cid);
-
-    return 'Success';
-  }
-
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary:
-      'Use it at your own risk for testing. It will remove all the inclusions associated with your account',
-  })
-  // @ApiResponse({ status: 200, description: 'All your voting data is removed' })
-  @Get('/temp-reset-inclusions')
-  async resetInclusions(@Req() { userId }: AuthedReq) {
-    await this.prismaService.projectInclusion.deleteMany({
-      where: {
-        userId,
-      },
-    });
-
-    await this.prismaService.userCollectionFiltered.deleteMany({
-      where: {
-        userId,
-      },
     });
   }
 
-  // @UseGuards(AuthGuard)
-  // @ApiResponse({ status: 200, description: 'All your voting data is removed' })
-  // @Get('/test/pa2')
-  // async testtest2() {
-  //   const userId = 48;
-  //   const collectionId = 170;
-
-  //   const [variable1, variable2, variable3, variable4, variable5, variable6] =
-  //     await Promise.all([
-  //       this.flowService.isCollectionAttested(userId, collectionId),
-  //       this.flowService.isCollectionFinished(userId, collectionId),
-  //       this.flowService.hasThresholdVotes(collectionId, userId),
-  //       this.flowService.isCollectionStarted(userId, collectionId),
-  //       this.flowService.isCollectionFiltered(userId, collectionId),
-  //       this.prismaService.projectInclusion.findFirst({
-  //         where: { userId, project: { parentId: collectionId } },
-  //       }),
-  //     ]);
-  //   return { variable1, variable2, variable3, variable4, variable5, variable6 };
-  // }
-
-  // // @UseGuards(AuthGuard)
-  // @ApiResponse({ status: 200, description: 'All your voting data is removed' })
-  // @Get('/test/pa')
-  // async testtest() {
-  //   const userId = 48;
-  //   const collectionId = 170;
-
-  //   const variable1 = await this.flowService.isCollectionAttested(
-  //     userId,
-  //     collectionId,
-  //   );
-  //   const variable2 = await this.flowService.isCollectionFinished(
-  //     userId,
-  //     collectionId,
-  //   );
-  //   const variable3 = await this.flowService.hasThresholdVotes(
-  //     collectionId,
-  //     userId,
-  //   );
-  //   const variable4 = await this.flowService.isCollectionStarted(
-  //     userId,
-  //     collectionId,
-  //   );
-  //   const variable5 = await this.flowService.isCollectionFiltered(
-  //     userId,
-  //     collectionId,
-  //   );
-  //   const variable6 = await this.prismaService.projectInclusion.findFirst({
-  //     where: { userId, project: { parentId: collectionId } },
-  //   });
-
-  //   return { variable1, variable2, variable3, variable4, variable5, variable6 };
-  // }
-
-  // @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard)
   @ApiOperation({
     summary:
       'Use it at your own risk for testing. It will remove all the data associated with your account',
@@ -715,63 +389,28 @@ export class FlowController {
   @Get('/dangerouslyRemoveData')
   async removeMydata(@Req() { userId }: AuthedReq) {
     // for (let i = 2; i < 9; i++) {
-    const user = await this.prismaService.user.findFirst({
-      select: { id: true },
-      where: { address: '0x9cb5129b4c710dB85F1dcd4071CB5f777e5B7612' },
-    });
+    // const user = await this.prismaService.user.findFirst({
+    //   select: { id: true },
+    //   where: { address: '0x9cb5129b4c710dB85F1dcd4071CB5f777e5B7612' },
+    // });
 
-    // console.log(user?.id);
+    // // console.log(user?.id);
 
-    if (user && !userId) {
-      userId = user?.id;
-      console.log(user.id);
-    } else if (!user && !userId) return;
+    // if (user && !userId) {
+    //   userId = user?.id;
+    //   console.log(user.id);
+    // } else if (!user && !userId) return;
 
     // userId = 448;
-
-    await this.prismaService.nonce.deleteMany({
-      where: { userId: userId },
-    });
-
-    await this.prismaService.rank.deleteMany({
-      where: { userId: userId },
-    });
-
-    await this.prismaService.userCollectionFiltered.deleteMany({
-      where: { userId: userId },
-    });
-
-    await this.prismaService.projectInclusion.deleteMany({
-      where: { userId: userId },
-    });
 
     await this.prismaService.vote.deleteMany({
       where: { userId: userId },
     });
-
-    await this.prismaService.userCollectionFinish.deleteMany({
+    await this.prismaService.projectStar.deleteMany({
       where: { userId: userId },
     });
-
-    await this.prismaService.userAttestation.deleteMany({
+    await this.prismaService.projectCoI.deleteMany({
       where: { userId: userId },
     });
-
-    await this.prismaService.otp.deleteMany({
-      where: { userId: userId },
-    });
-
-    // await this.prismaService.user.update({
-    //   where: { id: userId },
-    //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //   // @ts-ignore
-    //   data: { identity: null, badges: null },
-    // });
-
-    await this.prismaService.user.deleteMany({
-      where: { id: userId },
-    });
-
-    // }
   }
 }

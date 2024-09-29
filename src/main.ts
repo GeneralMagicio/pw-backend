@@ -10,6 +10,8 @@ import { json, urlencoded } from 'express';
 // import { main } from './project-reading';
 
 const CorsWhitelist = [
+  'https://rpgf5-prototype.vercel.app/',
+  'https://rpgf5-prototype.vercel.app',
   'https://localhost:3001',
   'http://localhost:3000',
   'https://staging.pairwise.generalmagic.io',

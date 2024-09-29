@@ -82,6 +82,25 @@ export const sortCombinations = (combinations: number[][], order: number[]) => {
   return sorted;
 };
 
+export const sortCombinationsByImplicitCategory = (
+  combinations: number[][],
+  getImplicitCat: (id: number) => string,
+) => {
+  const getScore = (id1: number, id2: number) =>
+    getImplicitCat(id1) === getImplicitCat(id2) ? 1 : -1;
+
+  const sorted = [...combinations];
+
+  sorted.sort((c1, c2) => {
+    const c1Score = getScore(c1[0], c1[1]);
+    const c2Score = getScore(c2[0], c2[1]);
+
+    return c2Score - c1Score;
+  });
+
+  return sorted;
+};
+
 export const sortProjectId = (
   project1Id: number,
   project2Id: number,

@@ -43,7 +43,7 @@ const isRankingUseful = (ranking: number[]) => {
     (score) => toFixedNumber(score, 3) <= 0.001,
   ).length;
 
-  if (numOfZeros > 0) return false;
+  if (numOfZeros > Math.round(ranking.length / 10)) return false;
 
   const sortedRanking = [...ranking].sort();
 
@@ -54,7 +54,9 @@ const isRankingUseful = (ranking: number[]) => {
   }
   const max = sortedRanking[sortedRanking.length - 1];
 
-  if (max / median > 5) return false;
+  if (toFixedNumber(median, 3) <= 0.001) return false;
+
+  if (max / median > 10) return false;
 
   return true;
 };
@@ -66,10 +68,16 @@ function cloneArray<T extends unknown[]>(a: T): T {
 }
 
 export const getRankingForSetOfDampingFactors = (input: number[][]) => {
+  // const dampingFactors = [0.85];
   const dampingFactors = [
     1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35,
     0.3, 0.25, 0.2, 0.15, 0.1, 0.05, 0,
   ];
+  // const dampingFactors = [
+  //   0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65,
+  //   0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1,
+  // ];
+
   let isUseful = false;
   let i = 0;
   let ranking: number[] = [];
@@ -205,5 +213,5 @@ const divideBySmallest = (numbers: number[]): number[] => {
 const divideBySum = (numbers: number[]) => {
   const sum = numbers.reduce((acc, curr) => (acc += curr), 0);
 
-  return numbers.map((item) => toFixedNumber(item / sum, 2));
+  return numbers.map((item) => toFixedNumber(item / sum, 4));
 };

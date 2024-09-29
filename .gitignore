@@ -3,6 +3,8 @@
 /node_modules
 /certs
 /src/project-reading
+# /src/rpgf5-data-import
+/src/ai-summary
 
 # Envs
 
@@ -18,6 +20,9 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+
+# outputs
+/src/results
 
 # OS
 .DS_Store
