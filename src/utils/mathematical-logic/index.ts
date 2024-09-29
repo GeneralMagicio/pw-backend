@@ -43,7 +43,7 @@ const isRankingUseful = (ranking: number[]) => {
     (score) => toFixedNumber(score, 3) <= 0.001,
   ).length;
 
-  if (numOfZeros > 0) return false;
+  if (numOfZeros > Math.round(ranking.length / 10)) return false;
 
   const sortedRanking = [...ranking].sort();
 
@@ -53,6 +53,8 @@ const isRankingUseful = (ranking: number[]) => {
       (median + sortedRanking[Math.floor(sortedRanking.length / 2) - 1]) / 2;
   }
   const max = sortedRanking[sortedRanking.length - 1];
+
+  if (toFixedNumber(median, 3) <= 0.001) return false;
 
   if (max / median > 10) return false;
 
