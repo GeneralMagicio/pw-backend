@@ -105,32 +105,64 @@ export const sortCombinationsByImplicitCategory = (
 // and least occurance (same sub-category is the first differentiator though)
 export const sortCombinationsByImplicitCategoryAndOccurance = (
   combinations: number[][],
-  order: number[],
+  getProjectOccurances: (id: number) => number,
   getImplicitCat: (id: number) => string,
+  getImplicitCatScore: (cat: string) => number,
 ) => {
-  const getImplicitCatScore = (id1: number, id2: number) =>
-    getImplicitCat(id1) === getImplicitCat(id2) ? 3 : -3;
-
-  const getOccuranceScore = (item: number) =>
-    order.findIndex((el) => el === item);
+  const compareImplicitCat = (id1: number, id2: number) =>
+    getImplicitCat(id1) === getImplicitCat(id2) ? 1 : -1;
 
   const sorted = [...combinations];
 
   sorted.sort((c1, c2) => {
     const c1Score =
-      getImplicitCatScore(c1[0], c1[1]) -
-      getOccuranceScore(c1[0]) -
-      getOccuranceScore(c1[1]);
+      getImplicitCatScore(getImplicitCat(c1[0])) +
+      getImplicitCatScore(getImplicitCat(c1[1])) +
+      compareImplicitCat(c1[0], c1[1]) -
+      getProjectOccurances(c1[0]) -
+      getProjectOccurances(c1[1]);
     const c2Score =
-      getImplicitCatScore(c2[0], c2[1]) -
-      getOccuranceScore(c2[0]) -
-      getOccuranceScore(c2[1]);
+      getImplicitCatScore(getImplicitCat(c2[0])) +
+      getImplicitCatScore(getImplicitCat(c2[1])) +
+      compareImplicitCat(c2[0], c2[1]) -
+      getProjectOccurances(c2[0]) -
+      getProjectOccurances(c2[1]);
 
+    console.log('score of', c1, '=', c1Score);
+    console.log('score of', c2, '=', c2Score);
     return c2Score - c1Score;
   });
 
   return sorted;
 };
+
+// Seeded random number generator
+class SeededRandom {
+  private seed: number;
+
+  constructor(seed: number) {
+    this.seed = seed;
+  }
+
+  // Generate a random number between 0 and 1
+  random(): number {
+    const x = Math.sin(this.seed++) * 10000;
+    return x - Math.floor(x);
+  }
+}
+
+// Fisher-Yates shuffle algorithm
+export function shuffleArraySeeded<T>(array: T[], seed: number): T[] {
+  const shuffled = [...array];
+  const random = new SeededRandom(seed);
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled;
+}
 
 export const sortProjectId = (
   project1Id: number,

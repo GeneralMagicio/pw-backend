@@ -9,6 +9,7 @@ import {
 import { PrismaService } from 'src/prisma.service';
 import {
   getPairwiseCombinations,
+  shuffleArraySeeded,
   sortCombinationsByImplicitCategoryAndOccurance,
 } from 'src/utils';
 import {
@@ -699,8 +700,6 @@ export class FlowService {
         (a.implicitCategory || '').localeCompare(b.implicitCategory || ''),
       );
 
-    console.log(allProjects.slice(0, 10).map((item) => item.implicitCategory));
-
     const projectStars = allStars.filter(
       (item) => !projectCoIs.find((el) => el.projectId === item.projectId),
     );
@@ -751,24 +750,36 @@ export class FlowService {
 
     const allIds = allProjects.map((child) => child.id);
 
-    const projectIdOccurencesRanking = this.determineIdRanking(votedIds);
-
-    // ascending id rankings (i.e., the last element has been voted the most)
-    let idRanking: number[] = [];
+    let idRanking = this.determineIdRanking(votedIds);
 
     for (let i = 0; i < allIds.length; i++) {
       const value = allIds[i];
-      if (!projectIdOccurencesRanking.includes(value)) idRanking.push(value);
+      if (!(value in idRanking)) idRanking = { ...idRanking, [value]: 0 };
     }
 
-    idRanking = [...idRanking, ...projectIdOccurencesRanking];
+    const getProjectOccurances = (id: number) =>
+      id in idRanking ? idRanking[id] : 0;
+
+    // idRanking = [...idRanking, ...projectIdOccurencesRanking];
 
     const combinations = getPairwiseCombinations(allIds);
 
+    const implicitCategoryPriorities = Array.from(
+      new Set(allProjects.map((item) => item.implicitCategory)),
+    ).map((cat, index) => ({ name: cat, priority: index * 2 }));
+
+    console.log(shuffleArraySeeded(implicitCategoryPriorities, userId));
+
+    const getImplicitCatScore = (cat: string) =>
+      shuffleArraySeeded(implicitCategoryPriorities, userId).find(
+        (el) => el.name === cat,
+      )?.priority || 0;
+
     const sortedCombinations = sortCombinationsByImplicitCategoryAndOccurance(
       combinations,
-      idRanking,
+      getProjectOccurances,
       getProjectImplicitCatById,
+      getImplicitCatScore,
     );
 
     const result = [];
@@ -1090,7 +1101,7 @@ export class FlowService {
 
   private determineIdRanking = (
     ids: number[],
-    order: 'ASC' | 'DSC' = 'ASC',
+    // order: 'ASC' | 'DSC' = 'ASC',
   ) => {
     // Function to count the occurrences of an element in an array
     const countOccurrences = (arr: number[], val: number) =>
@@ -1100,17 +1111,19 @@ export class FlowService {
     const frequencyMap: Record<number, number> = {};
     ids.forEach((i) => (frequencyMap[i] = countOccurrences(ids, i)));
 
-    // Create an array of unique elements
-    const uniqueElements = [...new Set(ids)];
+    return frequencyMap;
 
-    // Sort the unique elements array based on the frequency of each element
-    uniqueElements.sort((a, b) =>
-      order === 'ASC'
-        ? frequencyMap[a] - frequencyMap[b]
-        : frequencyMap[b] - frequencyMap[a],
-    );
+    // // Create an array of unique elements
+    // const uniqueElements = [...new Set(ids)];
 
-    return uniqueElements;
+    // // Sort the unique elements array based on the frequency of each element
+    // uniqueElements.sort((a, b) =>
+    //   order === 'ASC'
+    //     ? frequencyMap[a] - frequencyMap[b]
+    //     : frequencyMap[b] - frequencyMap[a],
+    // );
+
+    // return uniqueElements;
   };
 
   private validateVote = async (
