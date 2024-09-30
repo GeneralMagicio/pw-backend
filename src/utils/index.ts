@@ -101,6 +101,37 @@ export const sortCombinationsByImplicitCategory = (
   return sorted;
 };
 
+// The highest priority is pairs with the same sub-category
+// and least occurance (same sub-category is the first differentiator though)
+export const sortCombinationsByImplicitCategoryAndOccurance = (
+  combinations: number[][],
+  order: number[],
+  getImplicitCat: (id: number) => string,
+) => {
+  const getImplicitCatScore = (id1: number, id2: number) =>
+    getImplicitCat(id1) === getImplicitCat(id2) ? 3 : -3;
+
+  const getOccuranceScore = (item: number) =>
+    order.findIndex((el) => el === item);
+
+  const sorted = [...combinations];
+
+  sorted.sort((c1, c2) => {
+    const c1Score =
+      getImplicitCatScore(c1[0], c1[1]) -
+      getOccuranceScore(c1[0]) -
+      getOccuranceScore(c1[1]);
+    const c2Score =
+      getImplicitCatScore(c2[0], c2[1]) -
+      getOccuranceScore(c2[0]) -
+      getOccuranceScore(c2[1]);
+
+    return c2Score - c1Score;
+  });
+
+  return sorted;
+};
+
 export const sortProjectId = (
   project1Id: number,
   project2Id: number,
