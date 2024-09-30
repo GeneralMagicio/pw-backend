@@ -9,7 +9,7 @@ import {
 import { PrismaService } from 'src/prisma.service';
 import {
   getPairwiseCombinations,
-  sortCombinationsByImplicitCategory,
+  sortCombinationsByImplicitCategoryAndOccurance,
 } from 'src/utils';
 import {
   generateZeroMatrix,
@@ -744,29 +744,30 @@ export class FlowService {
     const getProjectImplicitCatById = (id: number) =>
       allProjects.find((el) => el.id === id)?.implicitCategory || '';
 
-    // const votedIds = allVotes.reduce(
-    //   (acc, vote) => [...acc, vote.project1Id, vote.project2Id],
-    //   [] as number[],
-    // );
+    const votedIds = allVotes.reduce(
+      (acc, vote) => [...acc, vote.project1Id, vote.project2Id],
+      [] as number[],
+    );
 
     const allIds = allProjects.map((child) => child.id);
 
-    // const projectIdOccurencesRanking = this.determineIdRanking(votedIds);
+    const projectIdOccurencesRanking = this.determineIdRanking(votedIds);
 
     // ascending id rankings (i.e., the last element has been voted the most)
-    // let idRanking: number[] = [];
+    let idRanking: number[] = [];
 
-    // for (let i = 0; i < allIds.length; i++) {
-    //   const value = allIds[i];
-    //   if (!projectIdOccurencesRanking.includes(value)) idRanking.push(value);
-    // }
+    for (let i = 0; i < allIds.length; i++) {
+      const value = allIds[i];
+      if (!projectIdOccurencesRanking.includes(value)) idRanking.push(value);
+    }
 
-    // idRanking = [...idRanking, ...projectIdOccurencesRanking];
+    idRanking = [...idRanking, ...projectIdOccurencesRanking];
 
     const combinations = getPairwiseCombinations(allIds);
 
-    const sortedCombinations = sortCombinationsByImplicitCategory(
+    const sortedCombinations = sortCombinationsByImplicitCategoryAndOccurance(
       combinations,
+      idRanking,
       getProjectImplicitCatById,
     );
 
