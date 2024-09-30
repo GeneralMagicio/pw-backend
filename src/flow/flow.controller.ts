@@ -21,7 +21,7 @@ import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
 import { RemoveLastVoteDto, SetCoIDto } from './dto/bodies';
 import { AgoraBallotPost } from 'src/rpgf5-data-import/submit';
-import { projects } from 'src/rpgf5-data-import/all-projects';
+import { projects } from 'src/rpgf5-data-import/all-projects-930';
 
 export const getAllProjects = (category: number) => {
   switch (category) {
