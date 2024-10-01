@@ -109,8 +109,19 @@ export const sortCombinationsByImplicitCategoryAndOccurance = (
   getImplicitCat: (id: number) => string,
   getImplicitCatScore: (cat: string) => number,
 ) => {
-  const compareImplicitCat = (id1: number, id2: number) =>
-    getImplicitCat(id1) === getImplicitCat(id2) ? 1 : -1;
+  const compareImplicitCat = (id1: number, id2: number) => {
+    if (getProjectOccurances(id1) + getProjectOccurances(id2) > 2) {
+      return getImplicitCat(id1) === getImplicitCat(id2) ? -10 : 10;
+    }
+    return getImplicitCat(id1) === getImplicitCat(id2) ? 10 : -10;
+  };
+
+  const calculateProjectOccuranceScore = (id: number) => {
+    const occurance = getProjectOccurances(id);
+
+    if (occurance > 1) return occurance * 3;
+    return occurance;
+  };
 
   const sorted = [...combinations];
 
@@ -119,14 +130,14 @@ export const sortCombinationsByImplicitCategoryAndOccurance = (
       getImplicitCatScore(getImplicitCat(c1[0])) +
       getImplicitCatScore(getImplicitCat(c1[1])) +
       compareImplicitCat(c1[0], c1[1]) -
-      getProjectOccurances(c1[0]) -
-      getProjectOccurances(c1[1]);
+      calculateProjectOccuranceScore(c1[0]) -
+      calculateProjectOccuranceScore(c1[1]);
     const c2Score =
       getImplicitCatScore(getImplicitCat(c2[0])) +
       getImplicitCatScore(getImplicitCat(c2[1])) +
       compareImplicitCat(c2[0], c2[1]) -
-      getProjectOccurances(c2[0]) -
-      getProjectOccurances(c2[1]);
+      calculateProjectOccuranceScore(c2[0]) -
+      calculateProjectOccuranceScore(c2[1]);
 
     console.log('score of', c1, '=', c1Score);
     console.log('score of', c2, '=', c2Score);
