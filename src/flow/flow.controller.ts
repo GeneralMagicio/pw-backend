@@ -189,6 +189,24 @@ export class FlowController {
   @ApiOperation({
     summary: 'Used for a pairwise vote between two collections',
   })
+  @Get('/ballot/success')
+  async successBallot(@Req() { userId }: AuthedReq) {
+    await this.prismaService.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        ballotSuccess: 1,
+      },
+    });
+
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used for a pairwise vote between two collections',
+  })
   @Post('/collections/vote')
   async voteCollections(
     @Req() { userId }: AuthedReq,

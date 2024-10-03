@@ -11,6 +11,7 @@ generator client {
 model User {
   id                 Int                    @id @default(autoincrement())
   address            String                 @unique()
+  ballotSuccess      Int?                   @map("ballot_success")
   opAddress          String?                @unique() @map("op_address")
   isBadgeHolder      Int                    @map("is_badgeholder")
   createdAt          DateTime               @default(now()) @map("created_at")
