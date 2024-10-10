@@ -3,7 +3,7 @@
 /node_modules
 /certs
 /src/project-reading
-
+/src/ai-summary
 # Envs
 
 .env
