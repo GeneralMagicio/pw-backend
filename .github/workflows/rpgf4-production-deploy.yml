@@ -1,15 +1,15 @@
-name: production-deploy-pipeline
+name: rf4-deploy-pipeline
 
 on:
   push:
     branches:
-      - master
+      - rf4
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: SSH and Redeploy Production
+      - name: SSH and Redeploy rf4
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.PROD_HOST }}
@@ -20,8 +20,8 @@ jobs:
             cd rpgf4-pw-backend
             docker-compose down -v
             docker image prune -a --force
-            git checkout master
-            git reset --hard origin/master
-            git pull origin master
+            git checkout rf4
+            git reset --hard origin/rf4
+            git pull origin rf4
             docker-compose build --no-cache
             docker-compose up -d
