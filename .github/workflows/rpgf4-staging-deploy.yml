@@ -1,15 +1,15 @@
-name: staging-deploy-pipeline
+name: rf4-staging-deploy-pipeline
 
 on:
   push:
     branches:
-      - staging
+      - rf4-staging
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: SSH and Redeploy Staging
+      - name: SSH and Redeploy rf4-staging
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.STAGING_HOST }}
@@ -20,8 +20,8 @@ jobs:
             cd rpgf4-pw-backend
             docker-compose down -v
             docker image prune -a --force
-            git checkout staging
-            git reset --hard origin/staging
-            git pull origin staging
+            git checkout rf4-staging
+            git reset --hard origin/rf4-staging
+            git pull origin rf4-staging
             docker-compose build --no-cache
             docker-compose up -d
