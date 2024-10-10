@@ -41,34 +41,37 @@ export const main = async () => {
 
   console.log('Connected!');
 
-  const nullPs = await prisma.project.findMany({
-    select: { name: true },
-    where: { type: 'project', implicitCategory: null },
-  });
+  // // const nullPs = await prisma.project.findMany({
+  // //   select: { name: true },
+  // //   where: { type: 'project', implicitCategory: null },
+  // // });
 
-  console.log(nullPs);
+  // // console.log(nullPs);
 
   // for (let i = 0; i < projects.length; i++) {
   //   const project = projects[i];
   //   if (project.isSelected !== 'Approved') continue;
   //   console.log('Project', i);
   //   const exists = await prisma.project.findFirst({
-  //     where: { name: project.name, implicitCategory: null },
+  //     where: { name: project.name.trim() },
   //   });
 
-  //   if (exists) {
-  //     await prisma.project.update({
-  //       where: {
-  //         id: exists.id,
-  //       },
-  //       data: {
-  //         implicitCategory: project['PW subcategory'],
-  //       },
-  //     });
+  //   if (!exists) {
+  //     console.error(`${project.name} not in the db`);
+  //     continue;
   //   }
+
+  //   await prisma.project.update({
+  //     where: {
+  //       id: exists.id,
+  //     },
+  //     data: {
+  //       implicitCategory: project['PW subcategory'],
+  //     },
+  //   });
   // }
 
-  // console.log(await implicitCatDist(prisma));
+  console.log(await implicitCatDist(prisma));
 
   await prisma.$disconnect();
 };

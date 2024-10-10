@@ -1,4 +1,4 @@
-import { projects } from './all-projects';
+import { projects } from './all-projects-928';
 import { projects as gProjects } from './gsheet';
 
 // async function getAllProjects(): Promise<Project[]> {

@@ -616,7 +616,7 @@ export class FlowService {
     });
   };
 
-  private calculateProgress = (
+  calculateProgress = (
     allVotes: { project1Id: number; project2Id: number }[],
     projectStars: { projectId: number; star: number }[],
     allProjects: { id: number }[],
