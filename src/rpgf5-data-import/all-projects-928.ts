@@ -2842,7 +2842,7 @@ export const projects = [
       },
       team: ['230074', '292202'],
     },
-    name: 'Sedge ',
+    name: 'Sedge',
     description:
       'Sedge is a command-line tool that simplifies running nodes for the OP Stack, Ethereum mainnet, and other networks, including testnets.\nSedge makes it easy to set up nodes for OP Mainnet, Base Mainnet, OP Sepolia, and Base Sepolia. Sedge also supports various client implementations, not just Nethermind, allowing users to manage OP Stack and Ethereum nodes quickly and efficiently.',
     profileAvatarUrl:
@@ -11231,7 +11231,7 @@ export const projects = [
     category: 'Utility',
     applicationCategory: 'OP_STACK_TOOLING',
     organization: null,
-    name: 'Understanding-Optimism-Codebase ',
+    name: 'Understanding-Optimism-Codebase',
     description:
       'This document provides a comprehensive explanation of the Optimism codebase, aiming to help newcomers to Optimism quickly get started and truly understand how the code flow in the codebase works.\nWritten in two language versions right now, EN & CN.',
     profileAvatarUrl:

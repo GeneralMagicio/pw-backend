@@ -1,4 +1,4 @@
-const projects = [
+export const projects = [
   {
     id: '0x0403926badb0cd173b98ea187d30423bfbd1d8a7c9c6ba5e874d0ed3872b58c7',
     applicationId:

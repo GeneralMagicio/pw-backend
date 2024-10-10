@@ -22,6 +22,8 @@ import { sortProjectId } from 'src/utils';
 import { RemoveLastVoteDto, SetCoIDto } from './dto/bodies';
 import { AgoraBallotPost } from 'src/rpgf5-data-import/submit';
 import { projects } from 'src/rpgf5-data-import/all-projects-930';
+import { ProjectType } from '@prisma/client';
+import { badgeholders } from 'src/rpgf5-data-import/badgeholders';
 
 export const getAllProjects = (category: number) => {
   switch (category) {
@@ -201,6 +203,102 @@ export class FlowController {
     });
 
     return 'Success';
+  }
+
+  @ApiOperation({
+    summary: 'Used for a pairwise vote between two collections',
+  })
+  @Get('/temp/finishers')
+  async findFinishers() {
+    const allUsers = await this.prismaService.user.findMany();
+
+    let count = 0;
+
+    const progresses = [];
+
+    for (let i = 0; i < allUsers.length; i++) {
+      const user = allUsers[i];
+
+      const userId = user.id;
+      const res = await this.prismaService.vote.findFirst({
+        where: {
+          userId: userId,
+        },
+        include: { project1: true },
+      });
+      if (!res) progresses.push({ userAddress: user.address, progress: 0 });
+      const parentCollection = res?.project1.parentId;
+
+      const [collection, votes, projects, allStars, projectCoIs] =
+        await Promise.all([
+          this.prismaService.project.findUnique({
+            where: {
+              id: parentCollection || -1,
+              type: {
+                in: [ProjectType.collection, ProjectType.compositeProject],
+              },
+            },
+            select: { name: true, id: true },
+          }),
+          this.prismaService.vote.findMany({
+            where: {
+              userId: userId,
+              project1: { parentId: parentCollection },
+              project2: { parentId: parentCollection },
+            },
+          }),
+          this.prismaService.project.findMany({
+            where: {
+              parentId: parentCollection || -1,
+            },
+          }),
+          this.flowService.getUserProjectStars(userId, parentCollection || -1),
+          this.prismaService.projectCoI.findMany({
+            where: {
+              project: { parentId: parentCollection },
+              userId,
+            },
+          }),
+        ]);
+
+      // projects except those with conflict of interest
+      const allProjects = projects
+        .filter((item) => !projectCoIs.find((el) => el.projectId === item.id))
+        .sort((a, b) =>
+          (a.implicitCategory || '').localeCompare(b.implicitCategory || ''),
+        );
+
+      const projectStars = allStars.filter(
+        (item) => !projectCoIs.find((el) => el.projectId === item.projectId),
+      );
+
+      const allVotes = votes.filter(
+        (item) =>
+          !projectCoIs.find(
+            (el) =>
+              el.projectId === item.project1Id ||
+              el.projectId === item.project2Id,
+          ),
+      );
+
+      const realProgress = this.flowService.calculateProgress(
+        allVotes,
+        projectStars,
+        allProjects,
+      );
+
+      count++;
+      console.log('Done:', count / allUsers.length);
+      progresses.push({ userAddress: user.address, progress: realProgress });
+    }
+
+    return progresses
+      .filter((el) => el.progress * 3 >= 1)
+      .filter((el) =>
+        badgeholders
+          .map((item) => item.toLowerCase())
+          .includes(el.userAddress.toLowerCase()),
+      );
   }
 
   @UseGuards(AuthGuard)

@@ -55,24 +55,8 @@ export const main = async () => {
 
   console.log('projects length', nonSpamProjects.length);
 
-  // const nonSpamProjects = projects
-  //   .map((el) => ({
-  //     id: el.id,
-  //     length: JSON.stringify(el).length,
-  //   }))
-  //   .sort((a, b) => b.length - a.length)
-  //   .filter((el, i, self) => i < self.length * 0.7)
-  //   .map((el) => projects.find((item) => item.id === el.id)!);
-
-  // console.log(nonSpamProjects[0]);
-
   for (let i = 0; i < nonSpamProjects.length; i++) {
     const project = nonSpamProjects[i];
-    // if (project.CHECK !== '!PASS') continue;
-    // if (removed.findIndex((el) => el.Name === project.displayName) !== -1) {
-    //   console.log(project.displayName, 'Is spam');
-    //   continue;
-    // }
 
     if (!(project['applicationCategory'] in categories)) {
       categories[project['applicationCategory']] = 1;
@@ -84,13 +68,17 @@ export const main = async () => {
 
   console.log(categories);
 
-  // fs.writeFile('all-projects.json', JSON.stringify(nonSpamProjects), (err) => {
-  //   if (err) {
-  //     console.error('Error writing file', err);
-  //   } else {
-  //     console.log('JSON file saved successfully');
-  //   }
-  // });
+  // fs.writeFile(
+  //   'all-projects-930.json',
+  //   JSON.stringify(nonSpamProjects),
+  //   (err) => {
+  //     if (err) {
+  //       console.error('Error writing file', err);
+  //     } else {
+  //       console.log('JSON file saved successfully');
+  //     }
+  //   },
+  // );
 
   const prisma = new PrismaClient({
     datasources: {
