@@ -15,6 +15,7 @@ import {
 import {
   generateZeroMatrix,
   getRankingForSetOfDampingFactors,
+  toFixedNumber,
 } from 'src/utils/mathematical-logic';
 import {
   CollectionProgressStatus,
@@ -148,7 +149,7 @@ export class FlowService {
     const collections = await this.prismaService.project.findMany({
       where: {
         parentId: parentCollectionId,
-        type: { in: [ProjectType.compositeProject, ProjectType.collection] },
+        type: ProjectType.collection,
       },
     });
 
@@ -241,12 +242,12 @@ export class FlowService {
 
     await Promise.all(
       ranking.map((el) =>
-        this.prismaService.rank.upsert({
-          update: { rank: undefined },
+        this.prismaService.share.upsert({
+          update: { share: el.share },
           create: {
             userId: userId,
             projectId: el.id,
-            rank: null,
+            share: el.share,
           },
           where: {
             userId_projectId: {
@@ -256,26 +257,6 @@ export class FlowService {
           },
         }),
       ),
-    );
-
-    await Promise.all(
-      ranking.map((el, index) => {
-        const rank = index + 1;
-        return this.prismaService.rank.upsert({
-          update: { rank },
-          create: {
-            userId: userId,
-            projectId: el.id,
-            rank,
-          },
-          where: {
-            userId_projectId: {
-              userId: userId,
-              projectId: el.id,
-            },
-          },
-        });
-      }),
     );
   };
 
@@ -462,7 +443,7 @@ export class FlowService {
             share: percentage,
             name: project!.name,
             type: project!.type,
-            RPGF5Id: project!.RPGF5Id,
+            RF6Id: project!.RF6Id,
           };
         }),
       ...oneRatingProjects.map((project, index) => ({
@@ -472,7 +453,7 @@ export class FlowService {
         share: 0,
         name: project!.name,
         type: project!.type,
-        RPGF5Id: project!.RPGF5Id,
+        RF6Id: project!.RF6Id,
       })),
       ...allCoIs.map(({ project }, index) => ({
         id: project!.id,
@@ -481,7 +462,7 @@ export class FlowService {
         share: 0,
         name: project!.name,
         type: project!.type,
-        RPGF5Id: project!.RPGF5Id,
+        RF6Id: project!.RF6Id,
       })),
     ];
 
@@ -512,14 +493,14 @@ export class FlowService {
     });
 
     return finishedCollections
-      .map(({ id, name, image, type, description, RPGF5Id }) => ({
+      .map(({ id, name, image, type, description, RF6Id }) => ({
         id,
         name,
         rank: rankedCollectionsRanking.find((el) => el.id === id)!.rank,
         image,
         type,
         description,
-        RPGF5Id,
+        RF6Id,
         hasRanking: false,
       }))
       .sort((a, b) => a.rank - b.rank);
@@ -666,9 +647,7 @@ export class FlowService {
         this.prismaService.project.findUnique({
           where: {
             id: parentCollection || -1,
-            type: {
-              in: [ProjectType.collection, ProjectType.compositeProject],
-            },
+            type: ProjectType.collection,
           },
           select: { name: true, id: true },
         }),
@@ -897,9 +876,20 @@ export class FlowService {
 
     const collections = entities.filter((el) => el.type !== 'project');
 
-    await this.prismaService.rank.createMany({
+    const collectionPercentages = collections.map((el, index, self) =>
+      toFixedNumber(1 / self.length, 2),
+    );
+
+    collectionPercentages[0] =
+      1 -
+      collectionPercentages.reduce((acc, curr, i) => {
+        if (i > 0) acc += curr;
+        return acc;
+      }, 0);
+
+    await this.prismaService.share.createMany({
       data: collections.map((item, index) => ({
-        rank: null,
+        share: collectionPercentages[index],
         userId: userId,
         projectId: item.id,
       })),
@@ -911,9 +901,9 @@ export class FlowService {
         (project) => project.parentId === collection.id,
       );
 
-      await this.prismaService.rank.createMany({
-        data: siblings.map((item, index) => ({
-          rank: null,
+      await this.prismaService.share.createMany({
+        data: siblings.map((item, index, self) => ({
+          share: toFixedNumber(1 / self.length, 3),
           userId,
           projectId: item.id,
         })),
@@ -964,7 +954,7 @@ export class FlowService {
     const subCollections = await this.prismaService.project.count({
       where: {
         parentId: collectionId,
-        type: { in: [ProjectType.collection, ProjectType.compositeProject] },
+        type: ProjectType.collection,
       },
     });
 

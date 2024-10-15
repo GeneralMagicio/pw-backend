@@ -76,7 +76,7 @@ export class AuthController {
       where: { address },
     });
     if (!user) {
-      user = await this.usersService.create({ address, isBadgeHolder: true });
+      user = await this.usersService.create({ address });
       isNewUser = true;
     }
 
@@ -104,13 +104,13 @@ export class AuthController {
       },
     });
 
-    const hasRanks = await this.prismaService.rank.findFirst({
+    const hasShares = await this.prismaService.share.findFirst({
       where: { userId: user.id },
     });
 
-    const noRanks = hasRanks === null;
+    const noShares = hasShares === null;
 
-    if (isNewUser || noRanks)
+    if (isNewUser || noShares)
       await this.flowService.populateInitialRanking(user.id);
     // res.cookie('auth', nonce, {
     //   httpOnly: true,

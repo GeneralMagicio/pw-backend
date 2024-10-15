@@ -70,7 +70,7 @@ export const main = async () => {
     console.log('Project', i);
     const project = projects[i];
     const exists = await prisma.project.findFirst({
-      where: { OR: [{ name: project.name.trim(), RPGF5Id: project.id }] },
+      where: { OR: [{ name: project.name.trim(), RF6Id: project.id }] },
     });
 
     if (!exists) {

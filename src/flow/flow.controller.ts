@@ -169,7 +169,7 @@ export class FlowController {
     const ballot: AgoraBallotPost = { projects: [] };
 
     ballot.projects = ranking.map((el) => ({
-      project_id: el.RPGF5Id!,
+      project_id: el.RF6Id!,
       allocation: (el.share * 100).toFixed(3),
       impact: el.star === null ? 3 : el.star,
     }));
@@ -234,9 +234,7 @@ export class FlowController {
           this.prismaService.project.findUnique({
             where: {
               id: parentCollection || -1,
-              type: {
-                in: [ProjectType.collection, ProjectType.compositeProject],
-              },
+              type: ProjectType.collection,
             },
             select: { name: true, id: true },
           }),
@@ -441,10 +439,10 @@ export class FlowController {
     //     );
     // }
 
-    const [ranking, rank, collection, progress] = await Promise.all([
+    const [ranking, share, collection, progress] = await Promise.all([
       this.flowService.getRanking(userId, collectionId || null),
       collectionId
-        ? this.prismaService.rank.findUnique({
+        ? this.prismaService.share.findUnique({
             where: { userId_projectId: { userId, projectId: collectionId } },
           })
         : 1,
@@ -461,7 +459,7 @@ export class FlowController {
       progress,
       type: collection?.type || 'collection',
       name: collection?.name || 'root',
-      rank,
+      share,
       id: collection?.id || -1,
     };
   }
