@@ -469,42 +469,42 @@ export class FlowService {
     return ranking.sort((a, b) => a.rank - b.rank);
   };
 
-  getRootRanking = async (userId: number) => {
-    const [ranking, collectionIds] = await Promise.all([
-      this.getRankingFromVotes(userId, null),
-      this.prismaService.project.findMany({
-        select: { id: true },
-        where: {
-          type: 'collection',
-          parentId: null,
-        },
-      }),
-    ]);
+  // getRootRanking = async (userId: number) => {
+  //   const [ranking, collectionIds] = await Promise.all([
+  //     this.getRankingFromVotes(userId, null),
+  //     this.prismaService.project.findMany({
+  //       select: { id: true },
+  //       where: {
+  //         type: 'collection',
+  //         parentId: null,
+  //       },
+  //     }),
+  //   ]);
 
-    // filter just finished collections
-    const rankedCollectionsRanking = ranking.filter((item) =>
-      collectionIds.map((el) => el.id).includes(item.id),
-    );
+  //   // filter just finished collections
+  //   const rankedCollectionsRanking = ranking.filter((item) =>
+  //     collectionIds.map((el) => el.id).includes(item.id),
+  //   );
 
-    const finishedCollections = await this.prismaService.project.findMany({
-      where: {
-        id: { in: rankedCollectionsRanking.map((el) => el.id) },
-      },
-    });
+  //   const finishedCollections = await this.prismaService.project.findMany({
+  //     where: {
+  //       id: { in: rankedCollectionsRanking.map((el) => el.id) },
+  //     },
+  //   });
 
-    return finishedCollections
-      .map(({ id, name, image, type, description, RF6Id }) => ({
-        id,
-        name,
-        rank: rankedCollectionsRanking.find((el) => el.id === id)!.rank,
-        image,
-        type,
-        description,
-        RF6Id,
-        hasRanking: false,
-      }))
-      .sort((a, b) => a.rank - b.rank);
-  };
+  //   return finishedCollections
+  //     .map(({ id, name, image, type, description, RF6Id }) => ({
+  //       id,
+  //       name,
+  //       rank: rankedCollectionsRanking.find((el) => el.id === id)!.rank,
+  //       image,
+  //       type,
+  //       description,
+  //       RF6Id,
+  //       hasRanking: false,
+  //     }))
+  //     .sort((a, b) => a.rank - b.rank);
+  // };
 
   /**
    * This method calculates ranking in a collection/composite project either by votes or saved results
@@ -517,21 +517,25 @@ export class FlowService {
     // id of the collection or the composite project
     collectionId: number | null,
   ) => {
-    const ranking = await this.getRankingFromVotes(userId, collectionId);
+    // const ranking = await this.getRankingFromVotes(userId, collectionId);
     // if (collectionId === null) return this.getRootRanking(userId);
 
-    // const [savedResults] = await Promise.all([
-    //   this.prismaService.rank.findMany({
-    //     where: {
-    //       project: { parentId: collectionId },
-    //       userId: userId,
-    //       rank: { not: null },
-    //     },
-    //     include: { project: true },
-    //   }),
-    // ]);
+    const ranking = await this.prismaService.share.findMany({
+      where: {
+        project: { parentId: collectionId },
+        userId: userId,
+      },
+      include: { project: true },
+    });
 
-    return ranking.sort((a, b) => a.rank - b.rank);
+    const withStars = await Promise.all(
+      ranking.map(async (el) => ({
+        ...el,
+        stars: await this.getProjectStars(el.projectId, userId),
+      })),
+    );
+
+    return withStars.sort((a, b) => b.share - a.share);
   };
 
   undo = async (userId: number, parentCollection: number | null) => {
@@ -877,7 +881,7 @@ export class FlowService {
     const collections = entities.filter((el) => el.type !== 'project');
 
     const collectionPercentages = collections.map((el, index, self) =>
-      toFixedNumber(1 / self.length, 2),
+      toFixedNumber(1 / self.length, 4),
     );
 
     collectionPercentages[0] =
@@ -903,7 +907,7 @@ export class FlowService {
 
       await this.prismaService.share.createMany({
         data: siblings.map((item, index, self) => ({
-          share: toFixedNumber(1 / self.length, 3),
+          share: toFixedNumber(1 / self.length, 5),
           userId,
           projectId: item.id,
         })),

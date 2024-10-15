@@ -169,9 +169,9 @@ export class FlowController {
     const ballot: AgoraBallotPost = { projects: [] };
 
     ballot.projects = ranking.map((el) => ({
-      project_id: el.RF6Id!,
+      project_id: el.project.RF6Id!,
       allocation: (el.share * 100).toFixed(3),
-      impact: el.star === null ? 3 : el.star,
+      impact: el.stars === null ? 3 : el.stars,
     }));
 
     // Add spam projects for staging:
