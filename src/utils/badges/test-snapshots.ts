@@ -2,6 +2,17 @@ import { RawSnapshotPoint } from './type';
 
 export const testAddresses: RawSnapshotPoint[] = [
   {
+    User: '0x143c777F650aD8D00942D497EE66f4D774427195',
+    holderPoints: 1,
+    delegatePoints: 0,
+    recipientsPoints: 1,
+    badgeholderPoints: 0,
+    holderType: 'Bronze',
+    delegateType: null,
+    holderAmount: 7200,
+    delegateAmount: 0,
+  },
+  {
     User: '0x316131DC685A63B1dbC8E0Fc6B893ec51CF159DA',
     holderPoints: 0,
     delegatePoints: 0,
