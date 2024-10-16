@@ -9,25 +9,26 @@ generator client {
 }
 
 model User {
-  id                 Int                    @id @default(autoincrement())
-  budget             Int                    @default(2000000) // 2M In OP
-  address            String                 @unique()
-  smartaddress       String?                @unique()
-  ballotSuccess      Int?                   @map("ballot_success")
-  opAddress          String?                @unique() @map("op_address")
-  createdAt          DateTime               @default(now()) @map("created_at")
-  updatedAt          DateTime               @default(now()) @updatedAt @map("updated_at")
-  identity           Json? // Ideally should be unique except {} and null values but Prisma doesn't support partial
+  id                  Int                    @id @default(autoincrement())
+  budget              Int                    @default(2000000) // 2M In OP
+  address             String                 @unique()
+  smartaddress        String?                @unique()
+  ballotSuccess       Int?                   @map("ballot_success")
+  opAddress           String?                @unique() @map("op_address")
+  createdAt           DateTime               @default(now()) @map("created_at")
+  updatedAt           DateTime               @default(now()) @updatedAt @map("updated_at")
+  identity            Json? // Ideally should be unique except {} and null values but Prisma doesn't support partial
   // unique constraints
-  badges             Json?
+  badges              Json?
   farcasterConnection FarcasterConnection?
-  projectVotes       Vote[]
-  nonce              Nonce?
-  finishedCollection UserCollectionFinish[]
-  shares             Share[]
-  attestations       UserAttestation[]
-  projectStars       ProjectStar[]
-  cois               ProjectCoI[]
+  worldIdConnection   WorldIdConnection?
+  projectVotes        Vote[]
+  nonce               Nonce?
+  finishedCollection  UserCollectionFinish[]
+  shares              Share[]
+  attestations        UserAttestation[]
+  projectStars        ProjectStar[]
+  cois                ProjectCoI[]
 }
 
 model Space {
@@ -168,13 +169,21 @@ model ProjectCoI {
 
   @@id([userId, projectId])
 }
+
 model FarcasterConnection {
-  userId    Int      @map("user_id") @id
+  userId    Int      @id @map("user_id")
   metadata  Json
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
   user      User     @relation(fields: [userId], references: [id])
+}
 
+model WorldIdConnection {
+  userId    Int      @id @map("user_id")
+  metadata  Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model UserCollectionFinish {

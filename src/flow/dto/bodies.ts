@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsIn } from 'class-validator';
+import { ISuccessResult } from '@worldcoin/idkit/*';
+import {
+  IsDefined,
+  IsEthereumAddress,
+  IsJSON,
+  IsString,
+} from 'class-validator';
 
 export class SetCoIDto {
   @ApiProperty({ description: 'project id' })
@@ -28,17 +34,21 @@ export class RemoveLastVoteDto {
 }
 
 export class ConnectFarcasterDto {
+  @IsString()
   @IsDefined()
   signature: string;
 
+  @IsString()
   @IsDefined()
   message: string;
 
+  @IsEthereumAddress()
   @IsDefined()
   address: string;
 }
 
 export class ConnectWorldIdDto {
+  @IsJSON()
   @IsDefined()
-  proof: string;
+  proof: ISuccessResult;
 }

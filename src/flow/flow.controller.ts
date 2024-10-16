@@ -33,6 +33,7 @@ import { badgeholders } from 'src/rpgf5-data-import/badgeholders';
 import { verifySignature } from 'src/utils/badges';
 import axios from 'axios';
 import { FarcasterUserByFid } from './types';
+import { verifyCloudProof } from '@worldcoin/idkit/*';
 
 export const getAllProjects = (category: number) => {
   switch (category) {
@@ -259,16 +260,34 @@ export class FlowController {
   @Post('/connect/wid')
   async connectWorldId(
     @Req() { userId }: AuthedReq,
-    @Body() {}: ConnectWorldIdDto,
+    @Body() { proof }: ConnectWorldIdDto,
   ) {
-    // await this.prismaService.user.update({
-    //   where: {
-    //     id: userId,
-    //   },
-    //   data: {
-    //     ballotSuccess: 1,
-    //   },
-    // });
+    const appId = process.env.NEXT_PUBLIC_WORLD_APP_ID as `app_${string}`;
+    const actionId = process.env.NEXT_PUBLIC_WORLD_ACTION_ID;
+
+    if (!appId || !actionId)
+      throw new InternalServerErrorException(
+        'App id or Action id not available',
+      );
+
+    const response = await verifyCloudProof(proof, appId, actionId);
+
+    if (!response.success)
+      throw new ForbiddenException('Invalid World id proof');
+
+    await this.prismaService.worldIdConnection.upsert({
+      where: {
+        userId,
+      },
+      create: {
+        metadata: {},
+        userId: userId,
+      },
+      update: {
+        metadata: {},
+        userId: userId,
+      },
+    });
 
     return 'Success';
   }
