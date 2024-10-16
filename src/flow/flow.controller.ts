@@ -4,6 +4,7 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  InternalServerErrorException,
   Logger,
   Post,
   Query,
@@ -19,11 +20,19 @@ import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
-import { RemoveLastVoteDto, SetCoIDto } from './dto/bodies';
+import {
+  ConnectFarcasterDto,
+  ConnectWorldIdDto,
+  RemoveLastVoteDto,
+  SetCoIDto,
+} from './dto/bodies';
 import { AgoraBallotPost } from 'src/rpgf5-data-import/submit';
 import { projects } from 'src/rpgf5-data-import/all-projects-930';
 import { ProjectType } from '@prisma/client';
 import { badgeholders } from 'src/rpgf5-data-import/badgeholders';
+import { verifySignature } from 'src/utils/badges';
+import axios from 'axios';
+import { FarcasterUserByFid } from './types';
 
 export const getAllProjects = (category: number) => {
   switch (category) {
@@ -201,6 +210,65 @@ export class FlowController {
         ballotSuccess: 1,
       },
     });
+
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used to prove ownership of a farcaster account',
+  })
+  @Post('/connect/farcaster')
+  async connectFarcaster(
+    @Req() { userId }: AuthedReq,
+    @Body() { address, message, signature }: ConnectFarcasterDto,
+  ) {
+    const isValid = verifySignature(message, signature, address);
+    if (!isValid) throw new ForbiddenException('Invalid signature');
+
+    const fid = Number(message.split('fid')[1]);
+
+    if (isNaN(fid))
+      throw new InternalServerErrorException("Can't find the fid");
+
+    const { data } = await axios.get<FarcasterUserByFid>(
+      `https://client.warpcast.com/v2/user-by-fid?fid=${fid}`,
+    );
+
+    await this.prismaService.farcasterConnection.upsert({
+      where: {
+        userId,
+      },
+      create: {
+        metadata: data.result.user,
+        userId: userId,
+      },
+      update: {
+        metadata: data.result.user,
+        userId: userId,
+      },
+    });
+
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used to prove ownership of a world coin account',
+  })
+  @Post('/connect/wid')
+  async connectWorldId(
+    @Req() { userId }: AuthedReq,
+    @Body() {}: ConnectWorldIdDto,
+  ) {
+    // await this.prismaService.user.update({
+    //   where: {
+    //     id: userId,
+    //   },
+    //   data: {
+    //     ballotSuccess: 1,
+    //   },
+    // });
 
     return 'Success';
   }

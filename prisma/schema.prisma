@@ -20,6 +20,7 @@ model User {
   identity           Json? // Ideally should be unique except {} and null values but Prisma doesn't support partial
   // unique constraints
   badges             Json?
+  farcasterConnection FarcasterConnection?
   projectVotes       Vote[]
   nonce              Nonce?
   finishedCollection UserCollectionFinish[]
@@ -166,6 +167,14 @@ model ProjectCoI {
   project   Project  @relation(fields: [projectId], references: [id])
 
   @@id([userId, projectId])
+}
+model FarcasterConnection {
+  userId    Int      @map("user_id") @id
+  metadata  Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id])
+
 }
 
 model UserCollectionFinish {

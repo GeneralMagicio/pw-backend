@@ -26,3 +26,19 @@ export class RemoveLastVoteDto {
   @IsDefined()
   collectionId: number | null;
 }
+
+export class ConnectFarcasterDto {
+  @IsDefined()
+  signature: string;
+
+  @IsDefined()
+  message: string;
+
+  @IsDefined()
+  address: string;
+}
+
+export class ConnectWorldIdDto {
+  @IsDefined()
+  proof: string;
+}
