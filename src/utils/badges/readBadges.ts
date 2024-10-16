@@ -15,7 +15,7 @@ export type BadgeData = {
   delegatePoints?: number;
   holderAmount?: number;
   delegateAmount?: number;
-  recipientsPoints?: 1;
+  // recipientsPoints?: 1;
   badgeholderPoints?: 1;
   holderType?: (typeof medalTypes)[number];
   delegateType?: (typeof medalTypes)[number];
