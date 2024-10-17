@@ -227,7 +227,7 @@ export class FlowController {
     const isValid = verifySignature(message, signature, address);
     if (!isValid) throw new ForbiddenException('Invalid signature');
 
-    const fid = Number(message.split('fid')[1]);
+    const fid = Number(message.split('fid/')[1]);
 
     if (isNaN(fid))
       throw new InternalServerErrorException("Can't find the fid");
