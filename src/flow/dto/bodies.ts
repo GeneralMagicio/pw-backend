@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsDefined,
   IsEthereumAddress,
-  IsJSON,
+  IsObject,
   IsString,
 } from 'class-validator';
 import { ISuccessResult } from 'src/utils/world-coin';
@@ -48,7 +48,7 @@ export class ConnectFarcasterDto {
 }
 
 export class ConnectWorldIdDto {
-  @IsJSON()
+  @IsObject()
   @IsDefined()
   proof: ISuccessResult;
 }

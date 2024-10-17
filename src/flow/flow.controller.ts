@@ -265,12 +265,16 @@ export class FlowController {
     const appId = process.env.WORLD_APP_ID as `app_${string}`;
     const actionId = process.env.WORLD_ACTION_ID;
 
+    console.log('proof', proof);
+
     if (!appId || !actionId)
       throw new InternalServerErrorException(
         'App id or Action id not available',
       );
 
     const response = await verifyCloudProof(proof, appId, actionId);
+
+    console.log('response', response);
 
     if (!response.success)
       throw new ForbiddenException('Invalid World id proof');
