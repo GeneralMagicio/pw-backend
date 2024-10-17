@@ -1,12 +1,12 @@
 import { ethers } from 'ethers';
 import { RawSnapshotPoint } from './type';
 
-const medalTypes = [
+export const medalTypes = [
   'Bronze',
-  'Diamond',
-  'Platinum',
-  'Gold',
   'Silver',
+  'Gold',
+  'Platinum',
+  'Diamond',
   'Whale',
 ] as const;
 

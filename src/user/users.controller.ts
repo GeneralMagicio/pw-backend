@@ -22,13 +22,26 @@ import {
   StoreBadgesDTO,
   StoreIdentityDTO,
 } from './dto/ConnectFlowDTOs';
-import { getBadges } from 'src/utils/badges/readBadges';
+import { BadgeData, getBadges, medalTypes } from 'src/utils/badges/readBadges';
 import { verifySignature } from 'src/utils/badges';
 import { PrismaService } from 'src/prisma.service';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { Prisma } from '@prisma/client';
 import { snapshots } from 'src/utils/badges/snapshot';
 
+function getNextHolderType(
+  currentLevel: (typeof medalTypes)[number],
+): (typeof medalTypes)[number] {
+  const currentIndex = medalTypes.indexOf(currentLevel);
+
+  if (currentIndex === -1) {
+    throw new Error('Invalid level');
+  }
+
+  return currentIndex === medalTypes.length - 1
+    ? currentLevel
+    : medalTypes[currentIndex + 1];
+}
 @Controller({ path: 'user' })
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
@@ -141,13 +154,47 @@ export class UsersController {
 
   @UseGuards(AuthGuard)
   @Get('/badges')
-  async getBadges(@Req() { userId }: AuthedReq) {
-    const res = await this.prismaService.user.findUnique({
-      select: { badges: true },
-      where: { id: userId },
-    });
+  async getBadges(@Req() { userId }: AuthedReq): Promise<BadgeData | null> {
+    const [res, worldIdConnection] = await Promise.all([
+      this.prismaService.user.findUnique({
+        select: { badges: true },
+        where: { id: userId },
+      }),
+      this.prismaService.worldIdConnection.findUnique({
+        where: { userId },
+      }),
+    ]);
 
-    return res?.badges || null;
+    console.log('the object', res?.badges);
+
+    const badges =
+      res?.badges && typeof res.badges === 'string'
+        ? (JSON.parse(res.badges) as BadgeData)
+        : null;
+
+    if (worldIdConnection) {
+      if (!badges) {
+        return {
+          delegateAmount: 1,
+          delegatePoints: 1,
+          delegateType: 'Bronze',
+        };
+      } else if (badges.delegateType) {
+        return {
+          ...badges,
+          delegateType: getNextHolderType(badges.delegateType),
+        };
+      } else if (badges && !badges.delegateType) {
+        return {
+          ...badges,
+          delegateAmount: 1,
+          delegatePoints: 1,
+          delegateType: 'Bronze',
+        };
+      }
+    }
+
+    return badges;
   }
 
   @UseGuards(AuthGuard)

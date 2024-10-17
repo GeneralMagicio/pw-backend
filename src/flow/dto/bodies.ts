@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ISuccessResult } from '@worldcoin/idkit/*';
 import {
   IsDefined,
   IsEthereumAddress,
   IsJSON,
   IsString,
 } from 'class-validator';
+import { ISuccessResult } from 'src/utils/world-coin';
 
 export class SetCoIDto {
   @ApiProperty({ description: 'project id' })

@@ -33,7 +33,7 @@ import { badgeholders } from 'src/rpgf5-data-import/badgeholders';
 import { verifySignature } from 'src/utils/badges';
 import axios from 'axios';
 import { FarcasterUserByFid } from './types';
-import { verifyCloudProof } from '@worldcoin/idkit/*';
+import { verifyCloudProof } from 'src/utils/world-coin';
 
 // export const getAllProjects = (category: number) => {
 //   switch (category) {
