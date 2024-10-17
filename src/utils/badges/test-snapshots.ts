@@ -5,7 +5,6 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0x51984D6E0D11254DEE25CAf5Ba0987be0dD6F021',
     holderPoints: 2,
     delegatePoints: 0,
-
     badgeholderPoints: 1,
     holderType: 'Silver',
     delegateType: null,
