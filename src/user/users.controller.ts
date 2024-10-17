@@ -167,10 +167,9 @@ export class UsersController {
 
     console.log('the object', res?.badges);
 
-    const badges =
-      res?.badges && typeof res.badges === 'string'
-        ? (JSON.parse(res.badges) as BadgeData)
-        : null;
+    const badges = res?.badges ? (res?.badges as BadgeData) : null;
+
+    console.log('wic', worldIdConnection);
 
     if (worldIdConnection) {
       if (!badges) {
@@ -193,6 +192,8 @@ export class UsersController {
         };
       }
     }
+
+    console.log('Reached here?');
 
     return badges;
   }
