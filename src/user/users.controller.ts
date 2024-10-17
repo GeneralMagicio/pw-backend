@@ -174,7 +174,7 @@ export class UsersController {
     if (worldIdConnection) {
       if (!badges) {
         return {
-          delegateAmount: 1,
+          delegateAmount: 2500,
           delegatePoints: 1,
           delegateType: 'Bronze',
         };
@@ -186,7 +186,7 @@ export class UsersController {
       } else if (badges && !badges.delegateType) {
         return {
           ...badges,
-          delegateAmount: 1,
+          delegateAmount: 2500,
           delegatePoints: 1,
           delegateType: 'Bronze',
         };
