@@ -262,8 +262,8 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Body() { proof }: ConnectWorldIdDto,
   ) {
-    const appId = process.env.NEXT_PUBLIC_WORLD_APP_ID as `app_${string}`;
-    const actionId = process.env.NEXT_PUBLIC_WORLD_ACTION_ID;
+    const appId = process.env.WORLD_APP_ID as `app_${string}`;
+    const actionId = process.env.WORLD_ACTION_ID;
 
     if (!appId || !actionId)
       throw new InternalServerErrorException(
