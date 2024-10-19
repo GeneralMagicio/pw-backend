@@ -75,6 +75,11 @@ export class DelegateFarcasterDto {
   @IsDefined()
   collectionId: number;
 }
+export class RevokeDelegationDto {
+  @Validate(IsPositiveOrNegativeOneConstraint)
+  @IsDefined()
+  collectionId: number;
+}
 export class UserByUsernameDto {
   @IsString()
   @IsDefined()

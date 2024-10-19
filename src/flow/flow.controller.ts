@@ -26,11 +26,9 @@ import {
   ConnectWorldIdDto,
   DelegateFarcasterDto,
   RemoveLastVoteDto,
+  RevokeDelegationDto,
   SetCoIDto,
-  UserByUsernameDto,
 } from './dto/bodies';
-import { AgoraBallotPost } from 'src/rpgf5-data-import/submit';
-import { projects } from 'src/rpgf5-data-import/all-projects-930';
 import { Prisma, ProjectType } from '@prisma/client';
 import { badgeholders } from 'src/rpgf5-data-import/badgeholders';
 import { verifySignature } from 'src/utils/badges';
@@ -456,6 +454,28 @@ export class FlowController {
           'collection is already delegated for the user',
         );
       }
+    }
+
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Revoke a delegation',
+  })
+  @Post('/delegate/revoke')
+  async revokeDelegation(
+    @Req() { userId }: AuthedReq,
+    @Body() { collectionId }: RevokeDelegationDto,
+  ) {
+    if (collectionId === -1) {
+      await this.prismaService.budgetDelegation.delete({
+        where: { userId },
+      });
+    } else {
+      await this.prismaService.collectionDelegation.delete({
+        where: { userId_collectionId: { collectionId, userId } },
+      });
     }
 
     return 'Success';
