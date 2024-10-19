@@ -81,3 +81,5 @@ export type FarcasterUserByFid = {
     };
   };
 };
+
+export type FarcasterMetadata = FarcasterUserByFid['result']['user'];

@@ -21,6 +21,7 @@ import {
 import {
   CollectionProgressStatus,
   CollectionRanking,
+  FarcasterMetadata,
   ProjectRanking,
 } from './types';
 import { Prisma, ProjectType } from '@prisma/client';
@@ -859,13 +860,17 @@ export class FlowService {
     return withoutDuplicates;
   };
 
-  delegateBudgetFarcaster = async (userId: number, targetFid: number) => {
+  delegateBudgetFarcaster = async (
+    userId: number,
+    metadata: FarcasterMetadata,
+  ) => {
     try {
       await this.prismaService.budgetDelegation.create({
         data: {
           userId,
           platform: 'FARCASTER',
-          target: `${targetFid}`,
+          target: `${metadata.fid}`,
+          metadata,
         },
       });
     } catch (e: unknown) {

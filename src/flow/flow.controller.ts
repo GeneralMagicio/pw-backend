@@ -35,7 +35,7 @@ import { Prisma, ProjectType } from '@prisma/client';
 import { badgeholders } from 'src/rpgf5-data-import/badgeholders';
 import { verifySignature } from 'src/utils/badges';
 import axios from 'axios';
-import { FarcasterUserByFid } from './types';
+import { FarcasterMetadata, FarcasterUserByFid } from './types';
 import { verifyCloudProof } from 'src/utils/world-coin';
 
 // export const getAllProjects = (category: number) => {
@@ -282,6 +282,96 @@ export class FlowController {
 
   @UseGuards(AuthGuard)
   @ApiOperation({
+    summary: 'Status of incoming/outgoing delegations',
+  })
+  @Post('/delegate/status')
+  async delegateStatus(@Req() { userId }: AuthedReq) {
+    const [collectionDelegations, budgetDelegations] = await Promise.all([
+      this.prismaService.collectionDelegation.findMany({
+        select: { collectionId: true, metadata: true },
+        where: { userId },
+      }),
+      this.prismaService.budgetDelegation.findMany({
+        select: { metadata: true },
+        where: { userId },
+      }),
+    ]);
+
+    let result: any = {
+      fromYou: {
+        collections: collectionDelegations.map((el) => {
+          const metadata = el.metadata as FarcasterMetadata;
+          return {
+            ...el,
+            metadata: {
+              username: metadata.username,
+              profileUrl: metadata.pfp.url,
+            },
+          };
+        }),
+        budget: budgetDelegations.map((el) => {
+          const metadata = el.metadata as FarcasterMetadata;
+          return {
+            ...el,
+            metadata: {
+              username: metadata.username,
+              profileUrl: metadata.pfp.url,
+            },
+          };
+        }),
+      },
+    };
+
+    const res = await this.prismaService.farcasterConnection.findUnique({
+      select: { metadata: true },
+      where: { userId },
+    });
+
+    if (res) {
+      const fid = (res.metadata as FarcasterMetadata).fid;
+      const [res2, res3] = await Promise.all([
+        this.prismaService.collectionDelegation.findMany({
+          select: { metadata: true, collectionId: true },
+          where: { target: `${fid}` },
+        }),
+        this.prismaService.budgetDelegation.findMany({
+          select: { metadata: true },
+          where: { target: `${fid}` },
+        }),
+      ]);
+
+      result = {
+        ...result,
+        toYou: {
+          collections: res2.map((el) => {
+            const metadata = el.metadata as FarcasterMetadata;
+            return {
+              ...el,
+              metadata: {
+                username: metadata.username,
+                profileUrl: metadata.pfp.url,
+              },
+            };
+          }),
+          budget: res3.map((el) => {
+            const metadata = el.metadata as FarcasterMetadata;
+            return {
+              ...el,
+              metadata: {
+                username: metadata.username,
+                profileUrl: metadata.pfp.url,
+              },
+            };
+          }),
+        },
+      };
+    }
+
+    return result;
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
     summary: 'Used to prove ownership of a farcaster account',
   })
   @Post('/delegate/farcaster')
@@ -301,10 +391,7 @@ export class FlowController {
     }
 
     if (collectionId === -1) {
-      await this.flowService.delegateBudgetFarcaster(
-        userId,
-        data.result.user.fid,
-      );
+      await this.flowService.delegateBudgetFarcaster(userId, data.result.user);
     } else {
       try {
         await this.prismaService.collectionDelegation.create({
@@ -312,6 +399,7 @@ export class FlowController {
             userId,
             platform: 'FARCASTER',
             target: `${data.result.user.fid}`,
+            metadata: data.result.user,
             collectionId: collectionId,
           },
         });
@@ -356,6 +444,7 @@ export class FlowController {
           userId,
           platform: 'FARCASTER',
           target: `${data.result.user.fid}`,
+          metadata: data.result.user,
         },
       });
     } catch (e: unknown) {

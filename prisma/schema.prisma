@@ -221,6 +221,7 @@ model CollectionDelegation {
   collectionId Int                @map("collection_id")
   platform     DelegationPlatform
   target       String
+  metadata     Json
   createdAt    DateTime           @default(now()) @map("created_at")
   updatedAt    DateTime           @default(now()) @updatedAt @map("updated_at")
   user         User               @relation(fields: [userId], references: [id])
@@ -233,6 +234,7 @@ model BudgetDelegation {
   userId    Int                @map("user_id")
   platform  DelegationPlatform
   target    String
+  metadata  Json
   createdAt DateTime           @default(now()) @map("created_at")
   updatedAt DateTime           @default(now()) @updatedAt @map("updated_at")
   user      User               @relation(fields: [userId], references: [id])
