@@ -3,10 +3,29 @@ import {
   IsDefined,
   IsEthereumAddress,
   IsObject,
-  IsPositive,
   IsString,
+  Validate,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 import { ISuccessResult } from 'src/utils/world-coin';
+
+@ValidatorConstraint()
+export class IsPositiveOrNegativeOneConstraint
+  implements ValidatorConstraintInterface
+{
+  validate(value: any) {
+    if (typeof value !== 'number') {
+      return false;
+    }
+    return value > 0 || value === -1;
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return `${args.property} must be a positive number or -1`;
+  }
+}
 
 export class SetCoIDto {
   @ApiProperty({ description: 'project id' })
@@ -52,7 +71,7 @@ export class DelegateFarcasterDto {
   @IsDefined()
   targetUsername: string;
 
-  @IsPositive()
+  @Validate(IsPositiveOrNegativeOneConstraint)
   @IsDefined()
   collectionId: number;
 }

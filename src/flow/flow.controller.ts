@@ -300,23 +300,30 @@ export class FlowController {
       throw new ForbiddenException('Username invalid');
     }
 
-    try {
-      await this.prismaService.collectionDelegation.create({
-        data: {
-          userId,
-          platform: 'FARCASTER',
-          target: `${data.result.user.fid}`,
-          collectionId: collectionId,
-        },
-      });
-    } catch (e: unknown) {
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          'collection is already delegated for the user',
-        );
+    if (collectionId === -1) {
+      await this.flowService.delegateBudgetFarcaster(
+        userId,
+        data.result.user.fid,
+      );
+    } else {
+      try {
+        await this.prismaService.collectionDelegation.create({
+          data: {
+            userId,
+            platform: 'FARCASTER',
+            target: `${data.result.user.fid}`,
+            collectionId: collectionId,
+          },
+        });
+      } catch (e: unknown) {
+        if (
+          e instanceof Prisma.PrismaClientKnownRequestError &&
+          e.code === 'P2002'
+        ) {
+          throw new ConflictException(
+            'collection is already delegated for the user',
+          );
+        }
       }
     }
 

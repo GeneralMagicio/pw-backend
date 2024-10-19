@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
@@ -22,7 +23,7 @@ import {
   CollectionRanking,
   ProjectRanking,
 } from './types';
-import { ProjectType } from '@prisma/client';
+import { Prisma, ProjectType } from '@prisma/client';
 import axios from 'axios';
 import * as fs from 'fs';
 import * as FormData from 'form-data';
@@ -856,6 +857,27 @@ export class FlowService {
     );
 
     return withoutDuplicates;
+  };
+
+  delegateBudgetFarcaster = async (userId: number, targetFid: number) => {
+    try {
+      await this.prismaService.budgetDelegation.create({
+        data: {
+          userId,
+          platform: 'FARCASTER',
+          target: `${targetFid}`,
+        },
+      });
+    } catch (e: unknown) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'collection is already delegated for the user',
+        );
+      }
+    }
   };
 
   getBadgesFromDb = async (address: string): Promise<BadgeData | undefined> => {
