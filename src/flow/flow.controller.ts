@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
   ForbiddenException,
   Get,
@@ -23,12 +24,14 @@ import { sortProjectId } from 'src/utils';
 import {
   ConnectFarcasterDto,
   ConnectWorldIdDto,
+  DelegateFarcasterDto,
   RemoveLastVoteDto,
   SetCoIDto,
+  UserByUsernameDto,
 } from './dto/bodies';
 import { AgoraBallotPost } from 'src/rpgf5-data-import/submit';
 import { projects } from 'src/rpgf5-data-import/all-projects-930';
-import { ProjectType } from '@prisma/client';
+import { Prisma, ProjectType } from '@prisma/client';
 import { badgeholders } from 'src/rpgf5-data-import/badgeholders';
 import { verifySignature } from 'src/utils/badges';
 import axios from 'axios';
@@ -249,6 +252,115 @@ export class FlowController {
         userId: userId,
       },
     });
+
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Proxy to farcaster user by username endpoint',
+  })
+  @Get('/farcaster/user-by-username')
+  async farcasterUserByUsername(@Query('username') username: string) {
+    const res = await axios.get<FarcasterUserByFid>(
+      `https://client.warpcast.com/v2/user-by-username?username=${username}`,
+    );
+    return res.data;
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Proxy to farcaster user by fid endpoint',
+  })
+  @Get('/farcaster/user-by-fid')
+  async farcasterUserByFid(@Query('username') username: string) {
+    const res = await axios.get<FarcasterUserByFid>(
+      `https://client.warpcast.com/v2/user-by-fid?username=${username}`,
+    );
+    return res.data;
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used to prove ownership of a farcaster account',
+  })
+  @Post('/delegate/farcaster')
+  async delegateFarcaster(
+    @Req() { userId }: AuthedReq,
+    @Body() { collectionId, targetUsername }: DelegateFarcasterDto,
+  ) {
+    let data: FarcasterUserByFid;
+    try {
+      const res = await axios.get<FarcasterUserByFid>(
+        `https://client.warpcast.com/v2/user-by-username?username=${targetUsername}`,
+      );
+      data = res.data;
+    } catch (e) {
+      console.error(e);
+      throw new ForbiddenException('Username invalid');
+    }
+
+    try {
+      await this.prismaService.collectionDelegation.create({
+        data: {
+          userId,
+          platform: 'FARCASTER',
+          target: `${data.result.user.fid}`,
+          collectionId: collectionId,
+        },
+      });
+    } catch (e: unknown) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'collection is already delegated for the user',
+        );
+      }
+    }
+
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used to prove ownership of a farcaster account',
+  })
+  @Post('/delegate/budget/farcaster')
+  async delegateBudgetFarcaster(
+    @Req() { userId }: AuthedReq,
+    @Body() { targetUsername }: DelegateFarcasterDto,
+  ) {
+    let data: FarcasterUserByFid;
+    try {
+      const res = await axios.get<FarcasterUserByFid>(
+        `https://client.warpcast.com/v2/user-by-username?username=${targetUsername}`,
+      );
+      data = res.data;
+    } catch (e) {
+      console.error(e);
+      throw new ForbiddenException('Username invalid');
+    }
+
+    try {
+      await this.prismaService.budgetDelegation.create({
+        data: {
+          userId,
+          platform: 'FARCASTER',
+          target: `${data.result.user.fid}`,
+        },
+      });
+    } catch (e: unknown) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'collection is already delegated for the user',
+        );
+      }
+    }
 
     return 'Success';
   }

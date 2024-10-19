@@ -3,6 +3,7 @@ import {
   IsDefined,
   IsEthereumAddress,
   IsObject,
+  IsPositive,
   IsString,
 } from 'class-validator';
 import { ISuccessResult } from 'src/utils/world-coin';
@@ -45,6 +46,20 @@ export class ConnectFarcasterDto {
   @IsEthereumAddress()
   @IsDefined()
   address: string;
+}
+export class DelegateFarcasterDto {
+  @IsString()
+  @IsDefined()
+  targetUsername: string;
+
+  @IsPositive()
+  @IsDefined()
+  collectionId: number;
+}
+export class UserByUsernameDto {
+  @IsString()
+  @IsDefined()
+  username: string;
 }
 
 export class ConnectWorldIdDto {

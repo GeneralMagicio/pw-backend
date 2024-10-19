@@ -20,6 +20,8 @@ model User {
   identity            Json? // Ideally should be unique except {} and null values but Prisma doesn't support partial
   // unique constraints
   badges              Json?
+  delegations         CollectionDelegation[]
+  budgetDelegation    BudgetDelegation?
   farcasterConnection FarcasterConnection?
   worldIdConnection   WorldIdConnection?
   projectVotes        Vote[]
@@ -74,6 +76,7 @@ model Project {
   metadata            String
   aiSummary           String?                @map("ai_summary")
   createdAt           DateTime               @default(now()) @map("created_at")
+  delegations         CollectionDelegation[]
   parent              Project?               @relation("ParentRelation", fields: [parentId], references: [id])
   children            Project[]              @relation("ParentRelation")
   type                ProjectType
@@ -206,4 +209,33 @@ model UserAttestation {
   collection   Project  @relation(fields: [collectionId], references: [id])
 
   @@id([userId, collectionId])
+}
+
+enum DelegationPlatform {
+  FARCASTER
+  TWITTER
+}
+
+model CollectionDelegation {
+  userId       Int                @map("user_id")
+  collectionId Int                @map("collection_id")
+  platform     DelegationPlatform
+  target       String
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @default(now()) @updatedAt @map("updated_at")
+  user         User               @relation(fields: [userId], references: [id])
+  collection   Project            @relation(fields: [collectionId], references: [id])
+
+  @@id([userId, collectionId])
+}
+
+model BudgetDelegation {
+  userId    Int                @map("user_id")
+  platform  DelegationPlatform
+  target    String
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @default(now()) @updatedAt @map("updated_at")
+  user      User               @relation(fields: [userId], references: [id])
+
+  @@id([userId])
 }
