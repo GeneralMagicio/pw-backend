@@ -19,6 +19,7 @@ export type BadgeData = {
   badgeholderPoints?: 1;
   holderType?: (typeof medalTypes)[number];
   delegateType?: (typeof medalTypes)[number];
+  worldCoinVerified?: true;
 };
 
 // Import the ethers library

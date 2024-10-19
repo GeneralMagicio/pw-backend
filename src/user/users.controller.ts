@@ -174,21 +174,24 @@ export class UsersController {
     if (worldIdConnection) {
       if (!badges) {
         return {
-          delegateAmount: 2500,
-          delegatePoints: 1,
-          delegateType: 'Bronze',
+          holderAmount: 2500,
+          holderPoints: 1,
+          holderType: 'Bronze',
+          worldCoinVerified: true,
         };
-      } else if (badges.delegateType) {
+      } else if (badges.holderType) {
         return {
           ...badges,
-          delegateType: getNextHolderType(badges.delegateType),
+          holderType: getNextHolderType(badges.holderType),
+          worldCoinVerified: true,
         };
-      } else if (badges && !badges.delegateType) {
+      } else if (badges && !badges.holderType) {
         return {
           ...badges,
-          delegateAmount: 2500,
-          delegatePoints: 1,
-          delegateType: 'Bronze',
+          holderAmount: 2500,
+          holderPoints: 1,
+          holderType: 'Bronze',
+          worldCoinVerified: true,
         };
       }
     }
