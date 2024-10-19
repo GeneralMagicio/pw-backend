@@ -157,14 +157,16 @@ export class FlowService {
 
     const withAdditionalFields = await Promise.all(
       collections.map(async (collection) => {
-        const [hasSubcollections, progress] = await Promise.all([
+        const [hasSubcollections, progress, projectCount] = await Promise.all([
           this.hasSubcollections(collection.id),
           this.getCollectionProgressStatus(userId, collection.id),
+          this.countNumOfProjects(collection.id),
         ]);
         return {
           ...collection,
           hasSubcollections,
           progress,
+          projectCount,
         };
       }),
     );
@@ -1025,19 +1027,19 @@ export class FlowService {
     return stars?.star || null;
   };
 
-  // private countNumOfProjects = async (collectionId: number) => {
-  //   let count = 0;
-  //   const children = await this.prismaService.project.findMany({
-  //     select: { id: true, type: true },
-  //     where: { parentId: collectionId },
-  //   });
-  //   for (const child of children) {
-  //     if (child.type === 'project') count += 1;
-  //     else count += await this.countNumOfProjects(child.id);
-  //   }
+  private countNumOfProjects = async (collectionId: number) => {
+    let count = 0;
+    const children = await this.prismaService.project.findMany({
+      select: { id: true, type: true },
+      where: { parentId: collectionId },
+    });
+    for (const child of children) {
+      if (child.type === 'project') count += 1;
+      else count += await this.countNumOfProjects(child.id);
+    }
 
-  //   return count;
-  // };
+    return count;
+  };
 
   private buildVotesMatrix = (
     votes: {
