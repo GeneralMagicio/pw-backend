@@ -22,6 +22,7 @@ import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
 import {
+  BudgetDto,
   ConnectFarcasterDto,
   ConnectWorldIdDto,
   DelegateFarcasterDto,
@@ -456,6 +457,32 @@ export class FlowController {
       }
     }
 
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Set total budget',
+  })
+  @Post('/budget')
+  async setTotalBudget(
+    @Req() { userId }: AuthedReq,
+    @Body() { budget }: BudgetDto,
+  ) {
+    const budgetDelegation =
+      await this.prismaService.budgetDelegation.findUnique({
+        where: { userId },
+      });
+
+    if (budgetDelegation)
+      throw new ForbiddenException('Budget decision already delegated');
+
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: {
+        budget,
+      },
+    });
     return 'Success';
   }
 

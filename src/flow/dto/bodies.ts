@@ -3,7 +3,10 @@ import {
   IsDefined,
   IsEthereumAddress,
   IsObject,
+  IsPositive,
   IsString,
+  Max,
+  Min,
   Validate,
   ValidationArguments,
   ValidatorConstraint,
@@ -74,6 +77,14 @@ export class DelegateFarcasterDto {
   @Validate(IsPositiveOrNegativeOneConstraint)
   @IsDefined()
   collectionId: number;
+}
+
+export class BudgetDto {
+  @IsPositive()
+  @Min(2_000_000)
+  @Max(8_000_000)
+  @IsDefined()
+  budget: number;
 }
 export class RevokeDelegationDto {
   @Validate(IsPositiveOrNegativeOneConstraint)
