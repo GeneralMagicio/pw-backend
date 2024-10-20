@@ -2,7 +2,7 @@ import { Controller, Get, Logger, Param, Req, UseGuards } from '@nestjs/common';
 
 import { CollectionService } from './collection.service';
 import { PrismaService } from 'src/prisma.service';
-import { ApiQuery } from '@nestjs/swagger';
+import { ApiOperation } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 
@@ -15,10 +15,8 @@ export class CollectionController {
   ) {}
 
   @UseGuards(AuthGuard)
-  @ApiQuery({
-    name: 'cid',
-    description: 'id of the collection',
-    required: false,
+  @ApiOperation({
+    summary: 'Individual collection details',
   })
   @Get(':id')
   async getCollections(@Param('id') id: number, @Req() { userId }: AuthedReq) {

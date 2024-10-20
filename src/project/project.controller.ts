@@ -1,7 +1,7 @@
 import { Controller, Get, Logger, Param, UseGuards } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import { PrismaService } from 'src/prisma.service';
-import { ApiQuery } from '@nestjs/swagger';
+import { ApiOperation } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller({ path: 'project' })
@@ -13,10 +13,8 @@ export class ProjectController {
   ) {}
 
   @UseGuards(AuthGuard)
-  @ApiQuery({
-    name: 'cid',
-    description: 'id of the project',
-    required: false,
+  @ApiOperation({
+    summary: 'Individual project details',
   })
   @Get(':id')
   async getProjects(@Param('id') id: number) {

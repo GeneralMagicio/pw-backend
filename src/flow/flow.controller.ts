@@ -675,13 +675,31 @@ export class FlowController {
   @ApiOperation({
     summary: 'status of to which platforms user is connected',
   })
+  @ApiResponse({
+    description: 'No account has been connected thus far',
+    status: 200,
+    example: {
+      farcaster: null,
+      worldId: null,
+    },
+  })
+  @ApiResponse({
+    description: 'Has connected to both farcaster and world id',
+    status: 2001,
+    example: {
+      farcaster: { metadata: exampleFarcasterUserByFid.result.user },
+      worldId: { metadata: {} },
+    },
+  })
   @Get('/connect/status')
   async getConnectStatus(@Req() { userId }: AuthedReq) {
     const [farcasterConnection, worldCoinConnection] = await Promise.all([
       this.prismaService.farcasterConnection.findUnique({
+        select: { metadata: true },
         where: { userId },
       }),
       this.prismaService.worldIdConnection.findUnique({
+        select: { metadata: true },
         where: { userId },
       }),
     ]);
@@ -820,7 +838,7 @@ export class FlowController {
       collectionId,
     );
 
-    if (progressStatus !== 'WIP' && progressStatus !== 'WIP - Threshold')
+    if (progressStatus !== 'WIP')
       throw new ForbiddenException(
         "You can only go back in a collection that's WIP or WIP-Threshold",
       );
@@ -831,6 +849,10 @@ export class FlowController {
   }
 
   @ApiQuery({ name: 'cid', description: 'collection id of the pairs' })
+  @ApiQuery({
+    name: 'pid',
+    description: 'project id of the project that you want it in the pair',
+  })
   @ApiResponse({
     type: PairsResult,
     status: 200,
@@ -852,8 +874,8 @@ export class FlowController {
 
     const pairs: PairsResult = await this.flowService.getPairs(
       userId,
-      projectId,
       collectionId,
+      projectId,
     );
 
     return pairs;
@@ -876,10 +898,10 @@ export class FlowController {
   ) {
     if (!collectionId) throw new BadRequestException('Please provide a cid');
 
-    const pairs: PairsResult = await this.flowService.getPairs(
+    const pairs = await this.flowService.getPairs(
       userId,
-      undefined,
       collectionId,
+      undefined,
     );
 
     return pairs;
@@ -897,12 +919,51 @@ export class FlowController {
   })
   @ApiResponse({
     status: 200,
-    description: `There are 5 progress statuses:\n
+    description: `There are 6 progress statuses:\n
                   1- Pending: No votes has been cast in the collection\n
                   2- WIP: some votes has been cast in the collection\n
-                  3- WIP-Threshold: The number of votes cast has exceeded the threshold number\n
-                  4- Finished: The collection has been marked "Finished" by the User\n
-                  5- The collection has been attested to the EAS`,
+                  4- Finished: The collection has passed the threshold and automatically marked finished\n
+                  5- Attested: The collection has been attested to the EAS\n
+                  6- Delegated: The collection is delegated to another user`,
+    example: {
+      progress: 'Pending',
+      name: 'root',
+      share: 1,
+      id: -1,
+      budget: 5000000,
+      ranking: [
+        {
+          userId: 2,
+          projectId: 1,
+          share: 0.34,
+          project: {
+            id: 1,
+            name: 'Governance Infrastructure & Tooling 2',
+          },
+          stars: null,
+        },
+        {
+          userId: 2,
+          projectId: 2,
+          share: 0.33,
+          project: {
+            id: 2,
+            name: 'Governance Analytics',
+          },
+          stars: null,
+        },
+        {
+          userId: 2,
+          projectId: 3,
+          share: 0.33,
+          project: {
+            id: 3,
+            name: 'Governance Leadership',
+          },
+          stars: null,
+        },
+      ],
+    },
   })
   @UseGuards(AuthGuard)
   @Get('/ranking')
@@ -926,29 +987,38 @@ export class FlowController {
     //     );
     // }
 
-    const [ranking, share, collection, progress] = await Promise.all([
-      this.flowService.getRanking(userId, collectionId || null),
-      collectionId
-        ? this.prismaService.share.findUnique({
-            where: { userId_projectId: { userId, projectId: collectionId } },
-          })
-        : 1,
-      this.prismaService.project.findFirst({
-        where: { id: collectionId || -1 },
-      }),
-      this.flowService.getCollectionProgressStatus(userId, collectionId || 1),
-    ]);
+    const [ranking, share, collection, progress, budgetRes] = await Promise.all(
+      [
+        this.flowService.getRanking(userId, collectionId || null),
+        collectionId
+          ? this.prismaService.share.findUnique({
+              where: { userId_projectId: { userId, projectId: collectionId } },
+            })
+          : 1,
+        this.prismaService.project.findFirst({
+          where: { id: collectionId || -1 },
+        }),
+        this.flowService.getCollectionProgressStatus(
+          userId,
+          collectionId || -1,
+        ),
+        this.prismaService.user.findUnique({
+          where: { id: userId },
+          select: { budget: true },
+        }),
+      ],
+    );
 
-    return {
+    const result = {
       ranking,
-      hasRanking: true,
-      isFinished: true,
       progress,
-      type: collection?.type || 'collection',
       name: collection?.name || 'root',
       share,
       id: collection?.id || -1,
     };
+
+    if (collectionId) return result;
+    else return { ...result, budget: budgetRes?.budget };
   }
 
   // @UseGuards(AuthGuard)

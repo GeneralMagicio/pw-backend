@@ -67,33 +67,53 @@ export class FlowService {
     );
 
     if (isLastLayerCollection) {
-      const [isFinished, hasVotes] = await Promise.all([
-        this.isCollectionFinished(userId, collectionId),
-        this.isCollectionStarted(userId, collectionId),
-      ]);
-
-      return isFinished ? 'Finished' : hasVotes ? 'WIP' : 'Pending';
-    } else {
-      const children = await this.prismaService.project.findMany({
-        select: { id: true },
-        where: {
-          type: 'collection',
-          parentId: collectionId,
-        },
-      });
-
-      const childrenFinishStatus = await Promise.all(
-        children.map(async (child) =>
-          this.getCollectionProgressStatus(userId, child.id),
-        ),
+      const [isFinished, hasVotes, isDelegated, isAttested] = await Promise.all(
+        [
+          this.isCollectionFinished(userId, collectionId),
+          this.isCollectionStarted(userId, collectionId),
+          this.prismaService.collectionDelegation.findUnique({
+            where: { userId_collectionId: { collectionId, userId } },
+          }),
+          this.prismaService.userAttestation.findUnique({
+            where: { userId_collectionId: { collectionId, userId } },
+          }),
+        ],
       );
 
-      if (childrenFinishStatus.every((child) => child === 'Finished'))
-        return 'Finished';
-      if (childrenFinishStatus.some((child) => child === 'Finished'))
-        return 'WIP';
-      return 'Pending';
+      return isDelegated
+        ? 'Delegated'
+        : isAttested
+        ? 'Attested'
+        : isFinished
+        ? 'Finished'
+        : hasVotes
+        ? 'WIP'
+        : 'Pending';
     }
+
+    throw new ForbiddenException('Collection id must be top level');
+    // RF6 collections are all top-level shouldn't reach here at all
+    // else {
+    //   const children = await this.prismaService.project.findMany({
+    //     select: { id: true },
+    //     where: {
+    //       type: 'collection',
+    //       parentId: collectionId,
+    //     },
+    //   });
+
+    //   const childrenFinishStatus = await Promise.all(
+    //     children.map(async (child) =>
+    //       this.getCollectionProgressStatus(userId, child.id),
+    //     ),
+    //   );
+
+    //   if (childrenFinishStatus.every((child) => child === 'Finished'))
+    //     return 'Finished';
+    //   if (childrenFinishStatus.some((child) => child === 'Finished'))
+    //     return 'WIP';
+    //   return 'Pending';
+    // }
   };
 
   private vote = async (
@@ -647,8 +667,8 @@ export class FlowService {
   // if projectId is provided, the returend pair must include that project if possible
   getPairs = async (
     userId: number,
+    parentCollection: number,
     projectId?: number,
-    parentCollection?: number,
     count = 1,
   ) => {
     const [collection, votes, projects, allStars, projectCoIs] =
@@ -710,10 +730,10 @@ export class FlowService {
     const progress = Math.min(1, realProgress * 3);
 
     if (progress === 1) {
-      // if (collection) {
-      //   // There's no other pairs to vote from so finishing the collection automatically
-      //   await this.finishCollection(userId, collection.id);
-      // }
+      if (collection) {
+        // Finishing the collection automatically
+        await this.finishCollection(userId, collection.id);
+      }
 
       return {
         pairs: [],
@@ -1111,17 +1131,17 @@ export class FlowService {
     }
   };
 
-  private getMinimumIncludedProjects = async (cid: number) => {
-    const numOfProjects = await this.prismaService.project.count({
-      where: {
-        parentId: cid,
-      },
-    });
+  // private getMinimumIncludedProjects = async (cid: number) => {
+  //   const numOfProjects = await this.prismaService.project.count({
+  //     where: {
+  //       parentId: cid,
+  //     },
+  //   });
 
-    if (numOfProjects < 7) return 6;
+  //   if (numOfProjects < 7) return 6;
 
-    return Math.ceil(0.21 * numOfProjects);
-  };
+  //   return Math.ceil(0.21 * numOfProjects);
+  // };
 
   private determineIdRanking = (
     ids: number[],
@@ -1223,11 +1243,7 @@ export class FlowService {
       project1.parentId,
     );
 
-    if (
-      progressStatus !== 'Pending' &&
-      progressStatus !== 'WIP' &&
-      progressStatus !== 'WIP - Threshold'
-    )
+    if (progressStatus !== 'Pending' && progressStatus !== 'WIP')
       throw new ForbiddenException(
         "You can only get pairs for a collection that's Filtered, WIP or WIP-Threshold",
       );
