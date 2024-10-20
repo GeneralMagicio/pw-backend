@@ -149,6 +149,7 @@ export class FlowService {
     parentCollectionId: number | null,
   ) => {
     const collections = await this.prismaService.project.findMany({
+      select: { description: true, id: true, image: true, name: true },
       where: {
         parentId: parentCollectionId,
         type: ProjectType.collection,
@@ -157,14 +158,14 @@ export class FlowService {
 
     const withAdditionalFields = await Promise.all(
       collections.map(async (collection) => {
-        const [hasSubcollections, progress, projectCount] = await Promise.all([
-          this.hasSubcollections(collection.id),
+        const [progress, projectCount] = await Promise.all([
+          // this.hasSubcollections(collection.id),
           this.getCollectionProgressStatus(userId, collection.id),
           this.countNumOfProjects(collection.id),
         ]);
         return {
           ...collection,
-          hasSubcollections,
+          // hasSubcollections,
           progress,
           projectCount,
         };

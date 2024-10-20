@@ -32,19 +32,19 @@ export class AuthController {
     private readonly flowService: FlowService,
   ) {}
 
-  // @UseGuards(AuthGuard)
-  // @ApiResponse({
-  //   status: 401,
-  //   description: "You're not logged in",
-  // })
-  // @ApiResponse({
-  //   status: 200,
-  //   description: "You're logged in and the user object is returned",
-  // })
-  // @Get('/isLoggedIn')
-  // async isLoggedIn(@Req() req: AuthedReq) {
-  //   return req.userId;
-  // }
+  @UseGuards(AuthGuard)
+  @ApiResponse({
+    status: 401,
+    description: "You're not logged in",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "You're logged in and the user object is returned",
+  })
+  @Get('/isLoggedIn')
+  async isLoggedIn(@Req() req: AuthedReq) {
+    return req.userId;
+  }
 
   // @Post('/logout')
   // async logout(@Res() res: Response) {

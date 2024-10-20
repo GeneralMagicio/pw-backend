@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { FlowService } from './flow.service';
 import { PrismaService } from 'src/prisma.service';
-import { ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { VoteProjectsDTO } from './dto/voteProjects.dto';
 import { VoteCollectionsDTO } from './dto/voteCollections.dto';
@@ -36,6 +36,7 @@ import { verifySignature } from 'src/utils/badges';
 import axios from 'axios';
 import { FarcasterMetadata, FarcasterUserByFid } from './types';
 import { verifyCloudProof } from 'src/utils/world-coin';
+import { CollectionResponse, ProjectResponse } from './dto/responses';
 
 // export const getAllProjects = (category: number) => {
 //   switch (category) {
@@ -69,6 +70,14 @@ export class FlowController {
   @ApiOperation({
     summary: 'Used for pinning an JSON object to IPFS (used in attestations)',
   })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      title: 'json',
+      example: { json: { name: 'John' } },
+    },
+    description: 'json object that you want to pin to IPFS',
+  })
   @Post('/pinJSONToIPFS')
   async pinJSONToIPFS(@Body('json') json: object) {
     const hash = await this.flowService.pinJSONToIPFS(json);
@@ -82,25 +91,19 @@ export class FlowController {
   // }
 
   @UseGuards(AuthGuard)
-  @ApiQuery({
-    name: 'cid',
-    description:
-      'Parent id of the collections (skip if you want the top level collections)',
-    required: false,
-  })
   @ApiOperation({
-    summary:
-      'Returns the children collections of a collection with their progress status',
+    summary: 'Returns the list of categories',
+  })
+  @ApiResponse({
+    type: [CollectionResponse],
+    status: 200,
+    description: 'List of categories',
   })
   @Get('/collections')
   async getCollections(
-    @Req() { userId }: AuthedReq,
-    @Query('cid') parentId?: number,
+    @Req() { userId }: AuthedReq, // @Query('cid') parentId?: number,
   ) {
-    const collections = await this.flowService.getCollections(
-      userId,
-      parentId || null,
-    );
+    const collections = await this.flowService.getCollections(userId, null);
 
     return collections;
   }
@@ -113,6 +116,11 @@ export class FlowController {
   })
   @ApiOperation({
     summary: 'Returns the projects in a collection',
+  })
+  @ApiResponse({
+    type: [ProjectResponse],
+    status: 200,
+    description: 'List of projects',
   })
   @Get('/projects')
   async getProjects(
@@ -128,6 +136,14 @@ export class FlowController {
   }
 
   @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used to mark a project as Conflict of Interest',
+  })
+  @ApiBody({
+    type: SetCoIDto,
+    description: 'Project id',
+  })
+  @UseGuards(AuthGuard)
   @Post('/mark-CoI')
   async markCoI(@Req() { userId }: AuthedReq, @Body() { pid }: SetCoIDto) {
     await this.flowService.setCoI(userId, pid);
@@ -137,6 +153,21 @@ export class FlowController {
   @UseGuards(AuthGuard)
   @ApiOperation({
     summary: 'Used for a pairwise vote between two projects',
+  })
+  @ApiBody({
+    type: VoteProjectsDTO,
+    examples: {
+      example1: {
+        summary: 'Sample Post Body',
+        value: {
+          project1Id: 10,
+          project2Id: 20,
+          pickedId: 10,
+          project1Stars: 4,
+          project2Stars: 2,
+        },
+      },
+    },
   })
   @Post('/projects/vote')
   async voteProjects(
