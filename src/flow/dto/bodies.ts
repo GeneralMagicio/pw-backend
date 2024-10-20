@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  ArrayMinSize,
+  IsArray,
   IsDefined,
   IsEthereumAddress,
   IsObject,
@@ -79,12 +81,32 @@ export class DelegateFarcasterDto {
   collectionId: number;
 }
 
+@ValidatorConstraint()
+export class IsPositiveNumberArray implements ValidatorConstraintInterface {
+  validate(array: unknown[]) {
+    if (!Array.isArray(array)) {
+      return false;
+    }
+    return array.every((element) => typeof element === 'number' && element > 0);
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return 'All elements in the array must be positive numbers';
+  }
+}
+
 export class BudgetDto {
   @IsPositive()
   @Min(2_000_000)
   @Max(8_000_000)
   @IsDefined()
   budget: number;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsDefined()
+  @Validate(IsPositiveNumberArray)
+  allocationPercentages: number[];
 }
 export class RevokeDelegationDto {
   @Validate(IsPositiveOrNegativeOneConstraint)

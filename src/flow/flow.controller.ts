@@ -467,22 +467,47 @@ export class FlowController {
   @Post('/budget')
   async setTotalBudget(
     @Req() { userId }: AuthedReq,
-    @Body() { budget }: BudgetDto,
+    @Body() { budget, allocationPercentages }: BudgetDto,
   ) {
-    const budgetDelegation =
-      await this.prismaService.budgetDelegation.findUnique({
+    const [budgetDelegation, topCollections] = await Promise.all([
+      this.prismaService.budgetDelegation.findUnique({
         where: { userId },
-      });
+      }),
+      this.prismaService.project.findMany({
+        where: { parentId: null, type: 'collection' },
+      }),
+    ]);
 
     if (budgetDelegation)
       throw new ForbiddenException('Budget decision already delegated');
 
-    await this.prismaService.user.update({
-      where: { id: userId },
-      data: {
-        budget,
-      },
-    });
+    if (topCollections.length !== allocationPercentages.length)
+      throw new ForbiddenException(
+        'You must specify a percentage for exactly each category',
+      );
+
+    if (allocationPercentages.reduce((acc, curr) => (acc += curr), 0) !== 1)
+      throw new ForbiddenException('Summation of percentages must equal 1');
+
+    await Promise.all([
+      this.prismaService.user.update({
+        where: { id: userId },
+        data: {
+          budget,
+        },
+      }),
+      ...topCollections.map((c, i) =>
+        this.prismaService.share.update({
+          where: {
+            userId_projectId: {
+              userId,
+              projectId: c.id,
+            },
+          },
+          data: { share: allocationPercentages[i] },
+        }),
+      ),
+    ]);
     return 'Success';
   }
 
