@@ -25,6 +25,7 @@ import {
   BudgetDto,
   ConnectFarcasterDto,
   ConnectWorldIdDto,
+  DelegateBudgetFarcasterDto,
   DelegateFarcasterDto,
   RemoveLastVoteDto,
   RevokeDelegationDto,
@@ -36,7 +37,13 @@ import { verifySignature } from 'src/utils/badges';
 import axios from 'axios';
 import { FarcasterMetadata, FarcasterUserByFid } from './types';
 import { verifyCloudProof } from 'src/utils/world-coin';
-import { CollectionResponse, ProjectResponse } from './dto/responses';
+import {
+  CollectionResponse,
+  delegateStatusExample,
+  delegateStatusExample2,
+  exampleFarcasterUserByFid,
+  ProjectResponse,
+} from './dto/responses';
 
 // export const getAllProjects = (category: number) => {
 //   switch (category) {
@@ -157,7 +164,7 @@ export class FlowController {
   @ApiBody({
     type: VoteProjectsDTO,
     examples: {
-      example1: {
+      1: {
         summary: 'Sample Post Body',
         value: {
           project1Id: 10,
@@ -232,7 +239,8 @@ export class FlowController {
 
   @UseGuards(AuthGuard)
   @ApiOperation({
-    summary: 'Used for a pairwise vote between two collections',
+    summary:
+      'Used for analytics. Called when a ballot is successfully submitted to Optimism',
   })
   @Post('/ballot/success')
   async successBallot(@Req() { userId }: AuthedReq) {
@@ -251,6 +259,22 @@ export class FlowController {
   @UseGuards(AuthGuard)
   @ApiOperation({
     summary: 'Used to prove ownership of a farcaster account',
+  })
+  @ApiBody({
+    type: ConnectFarcasterDto,
+    required: true,
+    examples: {
+      1: {
+        description:
+          'All three properties should be given by the Farcaster QR code sign-in',
+        value: {
+          address: '0x143c777F650aD8v00942D497EE67845774427198',
+          signature:
+            '0x1430x143c777F650aD8v00942D497EE67845774427198c777F0x143c777F650a0x143c777F650aD8v00942D497EE67845774427198D8v00942D497EE67845774427198650aD8v00942D497EE67845774427198',
+          message: 'Signing in to Pairwise.vote',
+        },
+      },
+    },
   })
   @Post('/connect/farcaster')
   async connectFarcaster(
@@ -290,6 +314,10 @@ export class FlowController {
   @ApiOperation({
     summary: 'Proxy to farcaster user by username endpoint',
   })
+  @ApiResponse({
+    schema: {},
+    example: exampleFarcasterUserByFid,
+  })
   @Get('/farcaster/user-by-username')
   async farcasterUserByUsername(@Query('username') username: string) {
     const res = await axios.get<FarcasterUserByFid>(
@@ -301,6 +329,10 @@ export class FlowController {
   @UseGuards(AuthGuard)
   @ApiOperation({
     summary: 'Proxy to farcaster user by fid endpoint',
+  })
+  @ApiResponse({
+    schema: {},
+    example: exampleFarcasterUserByFid,
   })
   @Get('/farcaster/user-by-fid')
   async farcasterUserByFid(@Query('username') username: string) {
@@ -314,18 +346,31 @@ export class FlowController {
   @ApiOperation({
     summary: 'Status of incoming/outgoing delegations',
   })
-  @Post('/delegate/status')
+  @ApiResponse({
+    status: 200,
+    description: 'User has complete delegation profile',
+    example: delegateStatusExample,
+  })
+  @ApiResponse({
+    status: 2001,
+    description: 'User with partial delegation profile',
+    example: delegateStatusExample2,
+  })
+  @Get('/delegate/status')
   async delegateStatus(@Req() { userId }: AuthedReq) {
-    const [collectionDelegations, budgetDelegations] = await Promise.all([
+    const [collectionDelegations, budgetDelegation] = await Promise.all([
       this.prismaService.collectionDelegation.findMany({
         select: { collectionId: true, metadata: true },
         where: { userId },
       }),
-      this.prismaService.budgetDelegation.findMany({
+      this.prismaService.budgetDelegation.findUnique({
         select: { metadata: true },
         where: { userId },
       }),
     ]);
+
+    const budgetDelegationMetadata =
+      budgetDelegation?.metadata as FarcasterMetadata;
 
     let result: any = {
       fromYou: {
@@ -339,16 +384,15 @@ export class FlowController {
             },
           };
         }),
-        budget: budgetDelegations.map((el) => {
-          const metadata = el.metadata as FarcasterMetadata;
-          return {
-            ...el,
-            metadata: {
-              username: metadata.username,
-              profileUrl: metadata.pfp.url,
-            },
-          };
-        }),
+        budget: budgetDelegation
+          ? {
+              ...budgetDelegation,
+              metadata: {
+                username: budgetDelegationMetadata.username,
+                profileUrl: budgetDelegationMetadata.pfp.url,
+              },
+            }
+          : null,
       },
     };
 
@@ -402,7 +446,7 @@ export class FlowController {
 
   @UseGuards(AuthGuard)
   @ApiOperation({
-    summary: 'Used to prove ownership of a farcaster account',
+    summary: 'Used to delegate a category to a farcaster account',
   })
   @Post('/delegate/farcaster')
   async delegateFarcaster(
@@ -450,12 +494,12 @@ export class FlowController {
 
   @UseGuards(AuthGuard)
   @ApiOperation({
-    summary: 'Used to prove ownership of a farcaster account',
+    summary: 'Used to delegate the budget decision to a farcaster account',
   })
   @Post('/delegate/budget/farcaster')
   async delegateBudgetFarcaster(
     @Req() { userId }: AuthedReq,
-    @Body() { targetUsername }: DelegateFarcasterDto,
+    @Body() { targetUsername }: DelegateBudgetFarcasterDto,
   ) {
     let data: FarcasterUserByFid;
     try {
@@ -493,7 +537,18 @@ export class FlowController {
 
   @UseGuards(AuthGuard)
   @ApiOperation({
-    summary: 'Set total budget',
+    summary: 'Set total budget & category percentages',
+  })
+  @ApiBody({
+    type: BudgetDto,
+    examples: {
+      1: {
+        value: {
+          budget: 4500000,
+          allocationPercentages: [0.5, 0.2, 0.3],
+        },
+      },
+    },
   })
   @Post('/budget')
   async setTotalBudget(
@@ -546,6 +601,11 @@ export class FlowController {
   @ApiOperation({
     summary: 'Revoke a delegation',
   })
+  @ApiBody({
+    type: RevokeDelegationDto,
+    description:
+      'Pass collectionId = -1 for the budget and for other categories, simply use their id',
+  })
   @Post('/delegate/revoke')
   async revokeDelegation(
     @Req() { userId }: AuthedReq,
@@ -567,6 +627,10 @@ export class FlowController {
   @UseGuards(AuthGuard)
   @ApiOperation({
     summary: 'Used to prove ownership of a world coin account',
+  })
+  @ApiBody({
+    description: 'Proof is returned by the World coin QR sign-in flow',
+    type: ConnectWorldIdDto,
   })
   @Post('/connect/wid')
   async connectWorldId(

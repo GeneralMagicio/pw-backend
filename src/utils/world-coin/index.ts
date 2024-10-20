@@ -1,6 +1,6 @@
 import { isBytes, isHex, keccak256 } from 'viem';
 
-enum VerificationLevel {
+export enum VerificationLevel {
   Orb = 'orb',
   Device = 'device',
 }

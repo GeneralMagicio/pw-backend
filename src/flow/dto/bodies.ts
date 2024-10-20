@@ -1,8 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
   IsDefined,
+  IsEnum,
   IsEthereumAddress,
   IsObject,
   IsPositive,
@@ -14,7 +16,7 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
-import { ISuccessResult } from 'src/utils/world-coin';
+import { ISuccessResult, VerificationLevel } from 'src/utils/world-coin';
 
 @ValidatorConstraint()
 export class IsPositiveOrNegativeOneConstraint
@@ -61,24 +63,35 @@ export class RemoveLastVoteDto {
 export class ConnectFarcasterDto {
   @IsString()
   @IsDefined()
+  @ApiProperty()
   signature: string;
 
   @IsString()
   @IsDefined()
+  @ApiProperty()
   message: string;
 
   @IsEthereumAddress()
   @IsDefined()
+  @ApiProperty()
   address: string;
 }
 export class DelegateFarcasterDto {
   @IsString()
   @IsDefined()
+  @ApiProperty()
   targetUsername: string;
 
   @Validate(IsPositiveOrNegativeOneConstraint)
   @IsDefined()
+  @ApiProperty()
   collectionId: number;
+}
+export class DelegateBudgetFarcasterDto {
+  @IsString()
+  @IsDefined()
+  @ApiProperty()
+  targetUsername: string;
 }
 
 @ValidatorConstraint()
@@ -100,27 +113,50 @@ export class BudgetDto {
   @Min(2_000_000)
   @Max(8_000_000)
   @IsDefined()
+  @ApiProperty()
   budget: number;
 
   @IsArray()
   @ArrayMinSize(1)
   @IsDefined()
   @Validate(IsPositiveNumberArray)
+  @ApiProperty({ isArray: true, type: Number })
   allocationPercentages: number[];
 }
 export class RevokeDelegationDto {
   @Validate(IsPositiveOrNegativeOneConstraint)
   @IsDefined()
+  @ApiProperty()
   collectionId: number;
 }
 export class UserByUsernameDto {
   @IsString()
   @IsDefined()
+  @ApiProperty()
   username: string;
+}
+
+export class SuccessResultDto {
+  @IsString()
+  @ApiProperty()
+  proof: string;
+
+  @IsString()
+  @ApiProperty()
+  merkle_root: string;
+
+  @IsString()
+  @ApiProperty()
+  nullifier_hash: string;
+
+  @IsEnum(VerificationLevel)
+  @ApiProperty()
+  verification_level: VerificationLevel;
 }
 
 export class ConnectWorldIdDto {
   @IsObject()
   @IsDefined()
+  @ApiProperty({ type: SuccessResultDto })
   proof: ISuccessResult;
 }

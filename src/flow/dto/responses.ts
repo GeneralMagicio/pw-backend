@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { FarcasterUserByFid } from '../types';
 
 export class CollectionResponse {
   @ApiProperty({
@@ -80,3 +81,128 @@ export class ProjectResponse {
   @ApiProperty()
   type: string;
 }
+
+export const exampleFarcasterUserByFid: FarcasterUserByFid = {
+  result: {
+    user: {
+      fid: 12345,
+      username: 'johndoe',
+      displayName: 'John Doe',
+      pfp: {
+        url: 'https://example.com/profile-picture.jpg',
+        verified: true,
+      },
+      profile: {
+        bio: {
+          text: "Hello, I'm John! #tech #coding",
+          mentions: [],
+          channelMentions: [],
+        },
+        location: {
+          placeId: 'ChIJIQBpAG2ahYAR_6128GcTUEo',
+          description: 'San Francisco, CA',
+        },
+      },
+      followerCount: 1000,
+      followingCount: 500,
+      activeOnFcNetwork: true,
+      connectedAccounts: [],
+      viewerContext: {
+        following: true,
+        followedBy: false,
+        canSendDirectCasts: true,
+        enableNotifications: true,
+        hasUploadedInboxKeys: false,
+      },
+    },
+    collectionsOwned: [],
+    extras: {
+      fid: 12345,
+      custodyAddress: '0x1234567890123456789012345678901234567890',
+    },
+  },
+};
+
+export const delegateStatusExample = {
+  fromYou: {
+    budget: {
+      metadata: {
+        username: 'griff.eth',
+        profileUrl: 'https://example.com/some.png',
+      },
+    },
+    collections: [
+      {
+        collectionId: 1,
+        metadata: {
+          username: 'elon.eth',
+          profileUrl: 'https://example.com/elon.png',
+        },
+      },
+      {
+        collectionId: 2,
+        metadata: {
+          username: 'griff.eth',
+          profileUrl: 'https://example.com/some.png',
+        },
+      },
+    ],
+  },
+  toYou: {
+    budget: [
+      {
+        metadata: {
+          username: 'some.eth',
+          profileUrl: 'https://example.com/some.png',
+        },
+      },
+      {
+        metadata: {
+          username: 'some2.eth',
+          profileUrl: 'https://example.com/some.png',
+        },
+      },
+      {
+        metadata: {
+          username: 'some3.eth',
+          profileUrl: 'https://example.com/some.png',
+        },
+      },
+    ],
+    collections: [
+      {
+        collectionId: 1,
+        metadata: {
+          username: 'elon.eth',
+          profileUrl: 'https://example.com/elon.png',
+        },
+      },
+      {
+        collectionId: 1,
+        metadata: {
+          username: 'adele.eth',
+          profileUrl: 'https://example.com/some.png',
+        },
+      },
+    ],
+  },
+};
+
+export const delegateStatusExample2 = {
+  fromYou: {
+    budget: null,
+    collections: [
+      {
+        collectionId: 1,
+        metadata: {
+          username: 'mo.eth',
+          profileUrl: 'https://example.com/elon.png',
+        },
+      },
+    ],
+  },
+  toYou: {
+    budget: [],
+    collections: [],
+  },
+};
