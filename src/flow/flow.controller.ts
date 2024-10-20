@@ -76,10 +76,10 @@ export class FlowController {
     return hash;
   }
 
-  @Get('/isLastLayerCollection')
-  async isLastLayerCollection(@Query('cid') collectionId?: number) {
-    return this.flowService.isLastLayerCollection(collectionId || null);
-  }
+  // @Get('/isLastLayerCollection')
+  // async isLastLayerCollection(@Query('cid') collectionId?: number) {
+  //   return this.flowService.isLastLayerCollection(collectionId || null);
+  // }
 
   @UseGuards(AuthGuard)
   @ApiQuery({
@@ -597,117 +597,117 @@ export class FlowController {
     };
   }
 
-  @ApiOperation({
-    summary: 'Used for a pairwise vote between two collections',
-  })
-  @Get('/temp/finishers')
-  async findFinishers() {
-    const allUsers = await this.prismaService.user.findMany();
+  // @ApiOperation({
+  //   summary: 'Used for a pairwise vote between two collections',
+  // })
+  // @Get('/temp/finishers')
+  // async findFinishers() {
+  //   const allUsers = await this.prismaService.user.findMany();
 
-    let count = 0;
+  //   let count = 0;
 
-    const progresses = [];
+  //   const progresses = [];
 
-    for (let i = 0; i < allUsers.length; i++) {
-      const user = allUsers[i];
+  //   for (let i = 0; i < allUsers.length; i++) {
+  //     const user = allUsers[i];
 
-      const userId = user.id;
-      const res = await this.prismaService.vote.findFirst({
-        where: {
-          userId: userId,
-        },
-        include: { project1: true },
-      });
-      if (!res) progresses.push({ userAddress: user.address, progress: 0 });
-      const parentCollection = res?.project1.parentId;
+  //     const userId = user.id;
+  //     const res = await this.prismaService.vote.findFirst({
+  //       where: {
+  //         userId: userId,
+  //       },
+  //       include: { project1: true },
+  //     });
+  //     if (!res) progresses.push({ userAddress: user.address, progress: 0 });
+  //     const parentCollection = res?.project1.parentId;
 
-      const [collection, votes, projects, allStars, projectCoIs] =
-        await Promise.all([
-          this.prismaService.project.findUnique({
-            where: {
-              id: parentCollection || -1,
-              type: ProjectType.collection,
-            },
-            select: { name: true, id: true },
-          }),
-          this.prismaService.vote.findMany({
-            where: {
-              userId: userId,
-              project1: { parentId: parentCollection },
-              project2: { parentId: parentCollection },
-            },
-          }),
-          this.prismaService.project.findMany({
-            where: {
-              parentId: parentCollection || -1,
-            },
-          }),
-          this.flowService.getUserProjectStars(userId, parentCollection || -1),
-          this.prismaService.projectCoI.findMany({
-            where: {
-              project: { parentId: parentCollection },
-              userId,
-            },
-          }),
-        ]);
+  //     const [collection, votes, projects, allStars, projectCoIs] =
+  //       await Promise.all([
+  //         this.prismaService.project.findUnique({
+  //           where: {
+  //             id: parentCollection || -1,
+  //             type: ProjectType.collection,
+  //           },
+  //           select: { name: true, id: true },
+  //         }),
+  //         this.prismaService.vote.findMany({
+  //           where: {
+  //             userId: userId,
+  //             project1: { parentId: parentCollection },
+  //             project2: { parentId: parentCollection },
+  //           },
+  //         }),
+  //         this.prismaService.project.findMany({
+  //           where: {
+  //             parentId: parentCollection || -1,
+  //           },
+  //         }),
+  //         this.flowService.getUserProjectStars(userId, parentCollection || -1),
+  //         this.prismaService.projectCoI.findMany({
+  //           where: {
+  //             project: { parentId: parentCollection },
+  //             userId,
+  //           },
+  //         }),
+  //       ]);
 
-      // projects except those with conflict of interest
-      const allProjects = projects
-        .filter((item) => !projectCoIs.find((el) => el.projectId === item.id))
-        .sort((a, b) =>
-          (a.implicitCategory || '').localeCompare(b.implicitCategory || ''),
-        );
+  //     // projects except those with conflict of interest
+  //     const allProjects = projects
+  //       .filter((item) => !projectCoIs.find((el) => el.projectId === item.id))
+  //       .sort((a, b) =>
+  //         (a.implicitCategory || '').localeCompare(b.implicitCategory || ''),
+  //       );
 
-      const projectStars = allStars.filter(
-        (item) => !projectCoIs.find((el) => el.projectId === item.projectId),
-      );
+  //     const projectStars = allStars.filter(
+  //       (item) => !projectCoIs.find((el) => el.projectId === item.projectId),
+  //     );
 
-      const allVotes = votes.filter(
-        (item) =>
-          !projectCoIs.find(
-            (el) =>
-              el.projectId === item.project1Id ||
-              el.projectId === item.project2Id,
-          ),
-      );
+  //     const allVotes = votes.filter(
+  //       (item) =>
+  //         !projectCoIs.find(
+  //           (el) =>
+  //             el.projectId === item.project1Id ||
+  //             el.projectId === item.project2Id,
+  //         ),
+  //     );
 
-      const realProgress = this.flowService.calculateProgress(
-        allVotes,
-        projectStars,
-        allProjects,
-      );
+  //     const realProgress = this.flowService.calculateProgress(
+  //       allVotes,
+  //       projectStars,
+  //       allProjects,
+  //     );
 
-      count++;
-      console.log('Done:', count / allUsers.length);
-      progresses.push({ userAddress: user.address, progress: realProgress });
-    }
+  //     count++;
+  //     console.log('Done:', count / allUsers.length);
+  //     progresses.push({ userAddress: user.address, progress: realProgress });
+  //   }
 
-    return progresses
-      .filter((el) => el.progress * 3 >= 1)
-      .filter((el) =>
-        badgeholders
-          .map((item) => item.toLowerCase())
-          .includes(el.userAddress.toLowerCase()),
-      );
-  }
+  //   return progresses
+  //     .filter((el) => el.progress * 3 >= 1)
+  //     .filter((el) =>
+  //       badgeholders
+  //         .map((item) => item.toLowerCase())
+  //         .includes(el.userAddress.toLowerCase()),
+  //     );
+  // }
 
-  @UseGuards(AuthGuard)
-  @ApiOperation({
-    summary: 'Used for a pairwise vote between two collections',
-  })
-  @Post('/collections/vote')
-  async voteCollections(
-    @Req() { userId }: AuthedReq,
-    @Body() { collection1Id, collection2Id, pickedId }: VoteCollectionsDTO,
-  ) {
-    const [id1, id2] = sortProjectId(collection1Id, collection2Id);
-    return await this.flowService.voteForCollections(
-      userId,
-      id1,
-      id2,
-      pickedId,
-    );
-  }
+  // @UseGuards(AuthGuard)
+  // @ApiOperation({
+  //   summary: 'Used for a pairwise vote between two collections',
+  // })
+  // @Post('/collections/vote')
+  // async voteCollections(
+  //   @Req() { userId }: AuthedReq,
+  //   @Body() { collection1Id, collection2Id, pickedId }: VoteCollectionsDTO,
+  // ) {
+  //   const [id1, id2] = sortProjectId(collection1Id, collection2Id);
+  //   return await this.flowService.voteForCollections(
+  //     userId,
+  //     id1,
+  //     id2,
+  //     pickedId,
+  //   );
+  // }
 
   @ApiOperation({
     summary: 'Deletes the last vote by the user in a category',
@@ -856,35 +856,35 @@ export class FlowController {
     };
   }
 
-  @UseGuards(AuthGuard)
-  @Post('/reset')
-  async resetVotes(@Req() { userId }: AuthedReq, @Body('cid') cid: number) {
-    await this.prismaService.vote.deleteMany({
-      where: {
-        userId: userId,
-        OR: [
-          {
-            project1: {
-              parentId: cid,
-            },
-          },
-          {
-            project2: {
-              parentId: cid,
-            },
-          },
-        ],
-      },
-    });
-    await this.prismaService.projectStar.deleteMany({
-      where: {
-        userId: userId,
-        project: {
-          parentId: cid,
-        },
-      },
-    });
-  }
+  // @UseGuards(AuthGuard)
+  // @Post('/reset')
+  // async resetVotes(@Req() { userId }: AuthedReq, @Body('cid') cid: number) {
+  //   await this.prismaService.vote.deleteMany({
+  //     where: {
+  //       userId: userId,
+  //       OR: [
+  //         {
+  //           project1: {
+  //             parentId: cid,
+  //           },
+  //         },
+  //         {
+  //           project2: {
+  //             parentId: cid,
+  //           },
+  //         },
+  //       ],
+  //     },
+  //   });
+  //   await this.prismaService.projectStar.deleteMany({
+  //     where: {
+  //       userId: userId,
+  //       project: {
+  //         parentId: cid,
+  //       },
+  //     },
+  //   });
+  // }
 
   @UseGuards(AuthGuard)
   @ApiOperation({

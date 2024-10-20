@@ -32,31 +32,31 @@ export class AuthController {
     private readonly flowService: FlowService,
   ) {}
 
-  @UseGuards(AuthGuard)
-  @ApiResponse({
-    status: 401,
-    description: "You're not logged in",
-  })
-  @ApiResponse({
-    status: 200,
-    description: "You're logged in and the user object is returned",
-  })
-  @Get('/isLoggedIn')
-  async isLoggedIn(@Req() req: AuthedReq) {
-    return req.userId;
-  }
+  // @UseGuards(AuthGuard)
+  // @ApiResponse({
+  //   status: 401,
+  //   description: "You're not logged in",
+  // })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: "You're logged in and the user object is returned",
+  // })
+  // @Get('/isLoggedIn')
+  // async isLoggedIn(@Req() req: AuthedReq) {
+  //   return req.userId;
+  // }
 
-  @Post('/logout')
-  async logout(@Res() res: Response) {
-    // expire the token from the db because the expiration time of the tokens are rather long
-    res.clearCookie('auth', {
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
-      domain: process.env.NODE_ENV === 'development' ? undefined : STAGING_API,
-      secure: true,
-    });
-    res.send('Logged out.');
-  }
+  // @Post('/logout')
+  // async logout(@Res() res: Response) {
+  //   // expire the token from the db because the expiration time of the tokens are rather long
+  //   res.clearCookie('auth', {
+  //     httpOnly: true,
+  //     sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
+  //     domain: process.env.NODE_ENV === 'development' ? undefined : STAGING_API,
+  //     secure: true,
+  //   });
+  //   res.send('Logged out.');
+  // }
 
   @ApiResponse({ status: 200, description: 'Sets an auth cookie' })
   @Post('/login')
@@ -125,22 +125,22 @@ export class AuthController {
     res.status(200).send({ token, isNewUser });
   }
 
-  @ApiResponse({
-    status: 200,
-    type: String,
-    description: 'a 48 character alphanumerical nonce is returned',
-  })
-  @Get('/nonce')
-  async getNonce() {
-    const nonce = this.authService.generateNonce();
-    await this.prismaService.nonce.create({
-      data: {
-        nonce,
-        expiresAt: `${Date.now() + this.authService.NonceExpirationDuration}`,
-      },
-    });
-    return nonce;
-  }
+  // @ApiResponse({
+  //   status: 200,
+  //   type: String,
+  //   description: 'a 48 character alphanumerical nonce is returned',
+  // })
+  // @Get('/nonce')
+  // async getNonce() {
+  //   const nonce = this.authService.generateNonce();
+  //   await this.prismaService.nonce.create({
+  //     data: {
+  //       nonce,
+  //       expiresAt: `${Date.now() + this.authService.NonceExpirationDuration}`,
+  //     },
+  //   });
+  //   return nonce;
+  // }
 
   // @ApiResponse({
   //   status: 200,
