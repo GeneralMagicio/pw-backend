@@ -160,3 +160,50 @@ export class ConnectWorldIdDto {
   @ApiProperty({ type: SuccessResultDto })
   proof: ISuccessResult;
 }
+
+@ValidatorConstraint()
+export class ValidateRanking implements ValidatorConstraintInterface {
+  validate(array: any[]) {
+    if (!Array.isArray(array)) {
+      return false;
+    }
+    return array.every(
+      (element) =>
+        'id' in element &&
+        typeof element.id === 'number' &&
+        'share' in element &&
+        typeof element.share === 'number',
+    );
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return 'Validation error';
+  }
+}
+
+export class CustomRankingDto {
+  @IsPositive()
+  @IsDefined()
+  @ApiProperty()
+  collectionId: number;
+
+  @Validate(ValidateRanking)
+  @IsDefined()
+  @ApiProperty()
+  ranking: { id: number; share: number }[];
+}
+
+export const exampleRankingDto = {
+  value: {
+    collectionId: 2,
+    ranking: [
+      { id: 11, share: 0.05 },
+      { id: 16, share: 0.25 },
+      { id: 28, share: 0.3 },
+      { id: 21, share: 0.1 },
+      { id: 5, share: 0.1 },
+      { id: 17, share: 0.18 },
+      { id: 31, share: 0.02 },
+    ],
+  },
+};

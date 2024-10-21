@@ -965,43 +965,41 @@ export class FlowService {
     }
   };
 
-  allSiblingsExist = async (
-    data: {
-      id: number;
-      ranking: ProjectRanking[];
-    }[],
+  validateCustomRanking = async (
+    categoryId: number,
+    ranking: { id: number; share: number }[],
   ) => {
-    const valid = await Promise.all(
-      data.map(async (list) => {
-        const listId = list.id === -1 ? null : list.id;
-        const numOfChildren = await this.prismaService.project.count({
-          where: { parentId: listId },
-        });
+    const children = await this.prismaService.project.findMany({
+      select: { id: true },
+      where: {
+        parentId: categoryId,
+      },
+      orderBy: { id: 'asc' },
+    });
 
-        if (
-          numOfChildren !== new Set(list.ranking.map((item) => item.id)).size
-        ) {
-          throw new BadRequestException(
-            'All sibling projects should co-exist in the list',
-          );
-        }
+    const idsAscending = ranking.map((el) => el.id).sort();
 
-        const areValidIds = await Promise.all(
-          list.ranking.map(async (el) => {
-            const res = await this.prismaService.project.findUnique({
-              select: { parentId: true },
-              where: { id: el.id },
-            });
+    if (idsAscending.length !== children.length)
+      throw new BadRequestException(
+        'All projects within a category must be included in the ranking',
+      );
 
-            return res?.parentId === listId;
-          }),
+    for (let i = 0; i < idsAscending.length; i++) {
+      if (idsAscending[i] !== children[i].id)
+        throw new BadRequestException(
+          'All projects within a category must be included in the ranking',
         );
 
-        return !areValidIds.some((val) => val === false);
-      }),
-    );
+      if (ranking[i].share < 0 || ranking[i].share > 1)
+        throw new BadRequestException('Values must be 0 <= v <= 1');
+    }
 
-    return !valid.some((val) => val === false);
+    const summation = ranking.reduce((acc, curr) => (acc += curr.share), 0);
+
+    console.log('summation', summation);
+    // console.log("to fn3 summation", summation)
+    if (Math.abs(1 - toFixedNumber(summation, 5)) > 0.00001)
+      throw new BadRequestException('Sumamtion of shares must equal 1');
   };
 
   private hasSubcollections = async (collectionId: number) => {

@@ -25,8 +25,10 @@ import {
   BudgetDto,
   ConnectFarcasterDto,
   ConnectWorldIdDto,
+  CustomRankingDto,
   DelegateBudgetFarcasterDto,
   DelegateFarcasterDto,
+  exampleRankingDto,
   RemoveLastVoteDto,
   RevokeDelegationDto,
   SetCoIDto,
@@ -620,6 +622,35 @@ export class FlowController {
         where: { userId_collectionId: { collectionId, userId } },
       });
     }
+
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Posting custom ranking lists',
+  })
+  @ApiBody({
+    type: CustomRankingDto,
+    examples: {
+      1: exampleRankingDto,
+    },
+  })
+  @Post('/ranking/custom')
+  async customRanking(
+    @Req() { userId }: AuthedReq,
+    @Body() { collectionId, ranking }: CustomRankingDto,
+  ) {
+    await this.flowService.validateCustomRanking(collectionId, ranking);
+
+    await Promise.all(
+      ranking.map(({ id, share }) =>
+        this.prismaService.share.update({
+          where: { userId_projectId: { userId, projectId: id } },
+          data: { share },
+        }),
+      ),
+    );
 
     return 'Success';
   }
