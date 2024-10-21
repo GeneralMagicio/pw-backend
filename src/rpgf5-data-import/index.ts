@@ -145,7 +145,7 @@ export const main = async () => {
         description: project.description,
         // contributionDescription: project.contributionDescription,
         // shortDescription: project['Short description'],
-        RPGF5Id: project.id,
+        RF6Id: project.id,
         metadata: JSON.stringify(project),
       })),
     });

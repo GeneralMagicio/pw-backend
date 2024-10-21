@@ -53,10 +53,10 @@ export class VoteProjectsDTO {
   pickedId: number | null;
 
   @Validate(IsRating)
-  @ApiProperty()
+  @ApiProperty({ description: 'must be an integer (1 <= r <= 5) or null' })
   project1Stars: Rating;
 
   @Validate(IsRating)
-  @ApiProperty()
+  @ApiProperty({ description: 'must be an integer (1 <= r <= 5) or null' })
   project2Stars: Rating;
 }

@@ -46,17 +46,17 @@ export class AuthController {
     return req.userId;
   }
 
-  @Post('/logout')
-  async logout(@Res() res: Response) {
-    // expire the token from the db because the expiration time of the tokens are rather long
-    res.clearCookie('auth', {
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
-      domain: process.env.NODE_ENV === 'development' ? undefined : STAGING_API,
-      secure: true,
-    });
-    res.send('Logged out.');
-  }
+  // @Post('/logout')
+  // async logout(@Res() res: Response) {
+  //   // expire the token from the db because the expiration time of the tokens are rather long
+  //   res.clearCookie('auth', {
+  //     httpOnly: true,
+  //     sameSite: process.env.NODE_ENV === 'staging' ? 'none' : 'lax',
+  //     domain: process.env.NODE_ENV === 'development' ? undefined : STAGING_API,
+  //     secure: true,
+  //   });
+  //   res.send('Logged out.');
+  // }
 
   @ApiResponse({ status: 200, description: 'Sets an auth cookie' })
   @Post('/login')
@@ -76,7 +76,7 @@ export class AuthController {
       where: { address },
     });
     if (!user) {
-      user = await this.usersService.create({ address, isBadgeHolder: true });
+      user = await this.usersService.create({ address });
       isNewUser = true;
     }
 
@@ -104,13 +104,13 @@ export class AuthController {
       },
     });
 
-    const hasRanks = await this.prismaService.rank.findFirst({
+    const hasShares = await this.prismaService.share.findFirst({
       where: { userId: user.id },
     });
 
-    const noRanks = hasRanks === null;
+    const noShares = hasShares === null;
 
-    if (isNewUser || noRanks)
+    if (isNewUser || noShares)
       await this.flowService.populateInitialRanking(user.id);
     // res.cookie('auth', nonce, {
     //   httpOnly: true,
@@ -125,22 +125,22 @@ export class AuthController {
     res.status(200).send({ token, isNewUser });
   }
 
-  @ApiResponse({
-    status: 200,
-    type: String,
-    description: 'a 48 character alphanumerical nonce is returned',
-  })
-  @Get('/nonce')
-  async getNonce() {
-    const nonce = this.authService.generateNonce();
-    await this.prismaService.nonce.create({
-      data: {
-        nonce,
-        expiresAt: `${Date.now() + this.authService.NonceExpirationDuration}`,
-      },
-    });
-    return nonce;
-  }
+  // @ApiResponse({
+  //   status: 200,
+  //   type: String,
+  //   description: 'a 48 character alphanumerical nonce is returned',
+  // })
+  // @Get('/nonce')
+  // async getNonce() {
+  //   const nonce = this.authService.generateNonce();
+  //   await this.prismaService.nonce.create({
+  //     data: {
+  //       nonce,
+  //       expiresAt: `${Date.now() + this.authService.NonceExpirationDuration}`,
+  //     },
+  //   });
+  //   return nonce;
+  // }
 
   // @ApiResponse({
   //   status: 200,
