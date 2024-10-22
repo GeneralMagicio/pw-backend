@@ -40,7 +40,6 @@ const CorsWhitelist = [
 
 async function bootstrap() {
   // main();
-
   // return;
   let httpsOptions = undefined;
   if (process.env.NODE_ENV === 'development') {
