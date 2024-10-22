@@ -441,9 +441,11 @@ export class FlowController {
           }),
         },
       };
+
+      return result;
     }
 
-    return result;
+    return { ...result, toYou: { collections: [], budget: [] } };
   }
 
   @UseGuards(AuthGuard)
