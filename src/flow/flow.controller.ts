@@ -46,6 +46,7 @@ import {
   exampleFarcasterUserByFid,
   ProjectResponse,
 } from './dto/responses';
+import { InputJsonObject } from '@prisma/client/runtime/library';
 
 // export const getAllProjects = (category: number) => {
 //   switch (category) {
@@ -694,16 +695,24 @@ export class FlowController {
     if (!response.success)
       throw new ForbiddenException('Invalid World id proof');
 
+    const isDuplicate = await this.prismaService.worldIdConnection.findFirst({
+      where: {
+        metadata: { path: ['nullifier_hash'], equals: proof.nullifier_hash },
+      },
+    });
+
+    if (isDuplicate) throw new ForbiddenException('Duplicate World id account');
+
     await this.prismaService.worldIdConnection.upsert({
       where: {
         userId,
       },
       create: {
-        metadata: {},
+        metadata: proof as unknown as InputJsonObject,
         userId: userId,
       },
       update: {
-        metadata: {},
+        metadata: proof as unknown as InputJsonObject,
         userId: userId,
       },
     });
