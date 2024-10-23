@@ -1,12 +1,12 @@
 import { ethers } from 'ethers';
 import { RawSnapshotPoint } from './type';
 
-const medalTypes = [
+export const medalTypes = [
   'Bronze',
-  'Diamond',
-  'Platinum',
-  'Gold',
   'Silver',
+  'Gold',
+  'Platinum',
+  'Diamond',
   'Whale',
 ] as const;
 
@@ -15,10 +15,11 @@ export type BadgeData = {
   delegatePoints?: number;
   holderAmount?: number;
   delegateAmount?: number;
-  recipientsPoints?: 1;
+  // recipientsPoints?: 1;
   badgeholderPoints?: 1;
   holderType?: (typeof medalTypes)[number];
   delegateType?: (typeof medalTypes)[number];
+  worldCoinVerified?: true;
 };
 
 // Import the ethers library

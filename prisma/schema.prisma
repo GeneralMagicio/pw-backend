@@ -9,22 +9,28 @@ generator client {
 }
 
 model User {
-  id                 Int                    @id @default(autoincrement())
-  address            String                 @unique()
-  ballotSuccess      Int?                   @map("ballot_success")
-  opAddress          String?                @unique() @map("op_address")
-  isBadgeHolder      Int                    @map("is_badgeholder")
-  createdAt          DateTime               @default(now()) @map("created_at")
-  updatedAt          DateTime               @default(now()) @updatedAt @map("updated_at")
-  identity           Json? // Ideally should be unique except {} and null values but Prisma doesn't support partial
+  id                  Int                    @id @default(autoincrement())
+  budget              Int                    @default(2000000) // 2M In OP
+  address             String                 @unique()
+  smartaddress        String?                @unique()
+  ballotSuccess       Int?                   @map("ballot_success")
+  opAddress           String?                @unique() @map("op_address")
+  createdAt           DateTime               @default(now()) @map("created_at")
+  updatedAt           DateTime               @default(now()) @updatedAt @map("updated_at")
+  identity            Json? // Ideally should be unique except {} and null values but Prisma doesn't support partial
   // unique constraints
-  badges             Json?
-  projectVotes       Vote[]
-  nonce              Nonce?
-  finishedCollection UserCollectionFinish[]
-  ranks              Rank[]
-  projectStars       ProjectStar[]
-  cois               ProjectCoI[]
+  badges              Json?
+  delegations         CollectionDelegation[]
+  budgetDelegation    BudgetDelegation?
+  farcasterConnection FarcasterConnection?
+  worldIdConnection   WorldIdConnection?
+  projectVotes        Vote[]
+  nonce               Nonce?
+  finishedCollection  UserCollectionFinish[]
+  shares              Share[]
+  attestations        UserAttestation[]
+  projectStars        ProjectStar[]
+  cois                ProjectCoI[]
 }
 
 model Space {
@@ -53,7 +59,6 @@ model Poll {
 
 enum ProjectType {
   collection
-  compositeProject
   project
 }
 
@@ -65,12 +70,13 @@ model Project {
   description         String
   implicitCategory    String?                @map("implicit-category")
   shortDescription    String?                @map("short_description")
-  RPGF5Id             String?                @map("rpgf4_id")
+  RF6Id               String?                @map("rf6_id")
   parentId            Int?                   @map("parent_id")
   image               String?
   metadata            String
   aiSummary           String?                @map("ai_summary")
   createdAt           DateTime               @default(now()) @map("created_at")
+  delegations         CollectionDelegation[]
   parent              Project?               @relation("ParentRelation", fields: [parentId], references: [id])
   children            Project[]              @relation("ParentRelation")
   type                ProjectType
@@ -78,7 +84,8 @@ model Project {
   options1            Vote[]                 @relation("VoteToProject1")
   options2            Vote[]                 @relation("VoteToProject2")
   voted               Vote[]                 @relation("Voted")
-  ranks               Rank[]
+  shares              Share[]
+  attestations        UserAttestation[]
   finishedCollections UserCollectionFinish[]
   stars               ProjectStar[]
   cois                ProjectCoI[]
@@ -119,30 +126,30 @@ model Nonce {
 //   @@id([userId, otp])
 // }
 
-// model Share {
-//   userId    Int      @map("user_id")
-//   projectId Int      @map("project_id")
-//   share     Float // the percentage of allocation from the 100% available to all projects
-//   createdAt DateTime @default(now()) @map("created_at")
-//   updatedAt DateTime @default(now()) @map("updated_at")
-//   user      User     @relation(fields: [userId], references: [id])
-//   project   Project  @relation(fields: [projectId], references: [id])
-
-//   @@id([userId, projectId])
-// }
-
-model Rank {
+model Share {
   userId    Int      @map("user_id")
   projectId Int      @map("project_id")
-  rank      Int? // the rank of a project in a category (rank = 1 is the best, etc)
+  share     Float // the percentage of allocation from the 100% available to all projects within one collection
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
   user      User     @relation(fields: [userId], references: [id])
   project   Project  @relation(fields: [projectId], references: [id])
 
   @@id([userId, projectId])
-  @@unique([userId, projectId, rank])
 }
+
+// model Rank {
+//   userId    Int      @map("user_id")
+//   projectId Int      @map("project_id")
+//   rank      Int? // the rank of a project in a category (rank = 1 is the best, etc)
+//   createdAt DateTime @default(now()) @map("created_at")
+//   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+//   user      User     @relation(fields: [userId], references: [id])
+//   project   Project  @relation(fields: [projectId], references: [id])
+
+//   @@id([userId, projectId])
+//   @@unique([userId, projectId, rank])
+// }
 
 model ProjectStar {
   id        Int      @id @default(autoincrement())
@@ -166,6 +173,22 @@ model ProjectCoI {
   @@id([userId, projectId])
 }
 
+model FarcasterConnection {
+  userId    Int      @id @map("user_id")
+  metadata  Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model WorldIdConnection {
+  userId    Int      @id @map("user_id")
+  metadata  Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id])
+}
+
 model UserCollectionFinish {
   userId       Int      @map("user_id")
   collectionId Int      @map("collection_id")
@@ -177,13 +200,44 @@ model UserCollectionFinish {
   @@id([userId, collectionId])
 }
 
-// model UserAttestation {
-//   userId       Int      @map("user_id")
-//   collectionId Int      @map("collection_id")
-//   createdAt    DateTime @default(now()) @map("created_at")
-//   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
-//   user         User     @relation(fields: [userId], references: [id])
-//   collection   Project  @relation(fields: [collectionId], references: [id])
+model UserAttestation {
+  userId       Int      @map("user_id")
+  collectionId Int      @map("collection_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+  user         User     @relation(fields: [userId], references: [id])
+  collection   Project  @relation(fields: [collectionId], references: [id])
 
-//   @@id([userId, collectionId])
-// }
+  @@id([userId, collectionId])
+}
+
+enum DelegationPlatform {
+  FARCASTER
+  TWITTER
+}
+
+model CollectionDelegation {
+  userId       Int                @map("user_id")
+  collectionId Int                @map("collection_id")
+  platform     DelegationPlatform
+  target       String
+  metadata     Json
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @default(now()) @updatedAt @map("updated_at")
+  user         User               @relation(fields: [userId], references: [id])
+  collection   Project            @relation(fields: [collectionId], references: [id])
+
+  @@id([userId, collectionId])
+}
+
+model BudgetDelegation {
+  userId    Int                @map("user_id")
+  platform  DelegationPlatform
+  target    String
+  metadata  Json
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @default(now()) @updatedAt @map("updated_at")
+  user      User               @relation(fields: [userId], references: [id])
+
+  @@id([userId])
+}

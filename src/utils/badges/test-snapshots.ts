@@ -2,10 +2,31 @@ import { RawSnapshotPoint } from './type';
 
 export const testAddresses: RawSnapshotPoint[] = [
   {
+    User: '0x51984D6E0D11254DEE25CAf5Ba0987be0dD6F021',
+    holderPoints: 2,
+    delegatePoints: 0,
+    badgeholderPoints: 1,
+    holderType: 'Silver',
+    delegateType: null,
+    holderAmount: 7200,
+    delegateAmount: 0,
+  },
+  {
+    User: '0x143c777F650aD8D00942D497EE66f4D774427195',
+    holderPoints: 1,
+    delegatePoints: 0,
+
+    badgeholderPoints: 0,
+    holderType: 'Bronze',
+    delegateType: null,
+    holderAmount: 7200,
+    delegateAmount: 0,
+  },
+  {
     User: '0x316131DC685A63B1dbC8E0Fc6B893ec51CF159DA',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -16,7 +37,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0x393053056EB678EA95CBc67CB7E1198184984707',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -27,7 +48,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0xc0f2A154abA3f12D71AF25e87ca4f225B9C52203',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -38,7 +59,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0xcd192b61a8Dd586A97592555c1f5709e032F2505',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -49,7 +70,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0xA1179f64638adb613DDAAc32D918EB6BEB824104',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -60,7 +81,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0x6eb78c56F639b3d161456e9f893c8e8aD9d754F0',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -71,7 +92,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0xD5db3F8B0a236176587460dC85F0fC5705D78477',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -82,7 +103,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0xe1e5dcbbc95aabe80e2f9c65c7a2cef85daf61c4',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -93,7 +114,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0x33878e070db7f70D2953Fe0278Cd32aDf8104572',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -104,7 +125,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0xB9573982875b83aaDc1296726E2ae77D13D9B98F',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -115,7 +136,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0x9FE099C5234E873551Fec5c7dd06E5213360A46c',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -126,7 +147,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0x44AC194359fA44eCe6Cb2E53E8c90547BCCb95a0',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -137,7 +158,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0x7F37e3008207C27360b20ABCFB5fdCc8e37596B8',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -148,7 +169,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0x871Cd6353B803CECeB090Bb827Ecb2F361Db81AB',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,
@@ -159,7 +180,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0x523E41A134Ab0999F2dC844eA02d9b53cC28fD1a',
     holderPoints: 3,
     delegatePoints: 1,
-    recipientsPoints: 1,
+
     badgeholderPoints: 1,
     holderType: 'Gold',
     delegateType: 'Silver',
@@ -170,7 +191,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0xA602BBA404f3EEA8231398Df0CFA78B46550331d',
     holderPoints: 0,
     delegatePoints: 5,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: 'Silver',
     delegateType: 'Silver',
@@ -181,7 +202,7 @@ export const testAddresses: RawSnapshotPoint[] = [
     User: '0x501EcB2eD1BAFeEDCB122B321618044C07e6C324',
     holderPoints: 0,
     delegatePoints: 0,
-    recipientsPoints: 1,
+
     badgeholderPoints: 0,
     holderType: null,
     delegateType: null,

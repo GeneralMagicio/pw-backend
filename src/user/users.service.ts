@@ -1,22 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
-import { hashData } from 'src/utils';
+import { getBadges } from 'src/utils/badges/readBadges';
+import { snapshots } from 'src/utils/badges/snapshot';
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
   constructor(private prismaService: PrismaService) {}
 
-  create = async ({
-    address,
-    isBadgeHolder,
-  }: {
-    address: string;
-    isBadgeHolder: boolean;
-  }): Promise<User | null> => {
+  create = async ({ address }: { address: string }): Promise<User | null> => {
+    const badges = (await getBadges(snapshots, address)) ?? {};
+
     return this.prismaService.user.create({
-      data: { address, isBadgeHolder: isBadgeHolder ? 1 : 0 },
+      data: { address, badges },
     });
   };
 }
