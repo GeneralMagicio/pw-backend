@@ -291,6 +291,13 @@ export class FlowController {
     if (isNaN(fid))
       throw new InternalServerErrorException("Can't find the fid");
 
+    const isDuplicate = await this.prismaService.farcasterConnection.findFirst({
+      where: { metadata: { path: ['fid'], equals: fid } },
+    });
+
+    if (isDuplicate)
+      throw new ForbiddenException('Duplicate Farcaster account');
+
     const { data } = await axios.get<FarcasterUserByFid>(
       `https://client.warpcast.com/v2/user-by-fid?fid=${fid}`,
     );
