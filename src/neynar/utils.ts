@@ -78,6 +78,7 @@ export const sendCastsFor12Hours = async () => {
     [startTimestamp, endTimestamp] = [endTimestamp, startTimestamp];
   }
   const delegations = await getDelegations(startTimestamp, endTimestamp);
+  if (!delegations || delegations.length === 0) return;
   for (const delegation of delegations) {
     await sendDelegationCast(delegation);
   }
@@ -101,6 +102,6 @@ const sendDelegationCast = async (props: {
 
 ${totalDelegates} people have delegated to you in the last 12 hours 🥳
 
-They want you to vote on their behalf in the @Optimism Retro Funding 6 Round. Go to  https://app.pairwise.vote/ and rank the projects!`,
+They want you to vote on their behalf in the @Optimism Retro Funding 6 Round. Go to https://app.pairwise.vote/ and rank the projects!`,
   );
 };
