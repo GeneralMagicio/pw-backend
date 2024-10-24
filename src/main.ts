@@ -6,6 +6,7 @@ import * as cors from 'cors';
 import * as cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
+import { initializeCronJobs } from './cronJobs';
 // import { main } from './read-rpgf4-projects';
 // import { main } from './project-reading';
 
@@ -136,6 +137,8 @@ async function bootstrap() {
   SwaggerModule.setup('swagger', app, document);
 
   await app.listen(process.env.PORT || 7070, '0.0.0.0');
+
+  initializeCronJobs();
 }
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 bootstrap();
