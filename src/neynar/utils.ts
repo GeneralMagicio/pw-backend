@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { FarcasterMetadata } from 'src/flow/types';
+import neynarClient from './neynarClient';
 
 /**
  * Returns an array of `{fid, username, totalDelegates}` mapping in which `totalDelegates` is
@@ -54,12 +55,52 @@ const getDelegations = async (start: number, end?: number) => {
   return result;
 };
 
-// Uncommect this to test
+export const sendCastsFor12Hours = async () => {
+  const currentTimestamp = new Date();
+  // Get the timestamp for 00:00 of the current day
+  const midnightTimestamp = new Date(currentTimestamp);
+  midnightTimestamp.setHours(0, 0, 0, 0); // set to 00:00:00
+  // Get the timestamp for 12:00 of the current day
+  const noonTimestamp = new Date(currentTimestamp);
+  noonTimestamp.setHours(12, 0, 0, 0); // set to 12:00:00
+  // Check if the current time is past 00:00 and 12:00
+  if (currentTimestamp < midnightTimestamp) {
+    // If current time is earlier than today's midnight, subtract 1 day for midnight timestamp
+    midnightTimestamp.setDate(midnightTimestamp.getDate() - 1);
+  }
+  if (currentTimestamp < noonTimestamp) {
+    // If current time is earlier than today's noon, subtract 1 day for noon timestamp
+    noonTimestamp.setDate(noonTimestamp.getDate() - 1);
+  }
+  let startTimestamp = midnightTimestamp.getTime();
+  let endTimestamp = noonTimestamp.getTime();
+  if (endTimestamp < startTimestamp) {
+    [startTimestamp, endTimestamp] = [endTimestamp, startTimestamp];
+  }
+  const delegations = await getDelegations(startTimestamp, endTimestamp);
+  for (const delegation of delegations) {
+    await sendDelegationCast(delegation);
+  }
+};
 
-// const test = async () => {
-//   const res = await getDelegations(1725759433 * 1000);
+const farcasterSignerUUID = process.env.FARCASTER_SIGNER_UUID;
 
-//   console.log(res);
-// };
+const sendDelegationCast = async (props: {
+  username: string;
+  totalDelegates: number;
+}) => {
+  const { username, totalDelegates } = props || {};
+  if (!farcasterSignerUUID) {
+    throw new Error(
+      'Make sure you set FARCASTER_SIGNER_UUID in your .env file',
+    );
+  }
+  await neynarClient.publishCast(
+    farcasterSignerUUID,
+    `Hey @${username} 👋
 
-// void test();
+${totalDelegates} people have delegated to you in the last 12 hours 🥳
+
+They want you to vote on their behalf in the @Optimism Retro Funding 6 Round. Go to  https://app.pairwise.vote/ and rank the projects!`,
+  );
+};

@@ -1,24 +1,19 @@
 import { schedule } from 'node-cron';
-import { sendDelegationCast } from './neynar/functions';
+import { sendCastsFor12Hours } from './neynar/utils';
 
-const fetchDelegationsCronJobTime =
-  process.env.FETCH_DELEGATIONS_CRONJOB_EXPRESSION || '11 11 */4 * * *'; // every four hours
 const sendCastsCronJobTime =
-  process.env.SEND_CASTS_CRONJOB_EXPRESSION || '21 21 */4 * * *'; // every four hours
+  process.env.SEND_CASTS_CRONJOB_EXPRESSION || '21 21 0,12 * * *'; // at 00:21 and 12:21 every day
 
-export const initializeCronJobs = async () => {
-  fetchDelegationsCronJob();
+export const initializeCronJobs = () => {
   sendCastsCronJob();
-};
-
-const fetchDelegationsCronJob = () => {
-  schedule(fetchDelegationsCronJobTime, async () => {
-    console.log('fetchDelegationsCronJobTime');
-  });
 };
 
 const sendCastsCronJob = () => {
   schedule(sendCastsCronJobTime, async () => {
-    await sendDelegationCast();
+    try {
+      await sendCastsFor12Hours();
+    } catch (e) {
+      console.error('sendCastsCronJob error', e);
+    }
   });
 };
