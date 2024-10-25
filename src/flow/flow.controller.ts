@@ -47,7 +47,14 @@ import {
   ProjectResponse,
 } from './dto/responses';
 import { InputJsonObject } from '@prisma/client/runtime/library';
-import { AgoraBallotPost } from 'src/rf6-data-import/submit';
+
+type AgoraBallotPost = {
+  projects: {
+    project_id: string;
+    allocation: string;
+    impact: number;
+  }[];
+};
 
 // export const getAllProjects = (category: number) => {
 //   switch (category) {
