@@ -47,6 +47,7 @@ import {
   ProjectResponse,
 } from './dto/responses';
 import { InputJsonObject } from '@prisma/client/runtime/library';
+import { AgoraBallotPost } from 'src/rf6-data-import/submit';
 
 // export const getAllProjects = (category: number) => {
 //   switch (category) {
@@ -206,39 +207,29 @@ export class FlowController {
     await Promise.all(promises);
   }
 
-  // @UseGuards(AuthGuard)
-  // @ApiOperation({
-  //   summary: 'Used for a pairwise vote between two collections',
-  // })
-  // @Get('/ballot')
-  // async getBallot(
-  //   @Req() { userId }: AuthedReq,
-  //   @Query('cid') collectionId: number,
-  // ) {
-  //   if (!collectionId)
-  //     throw new BadRequestException('You need to supply a collection id');
-  //   const ranking = await this.flowService.getRanking(userId, collectionId);
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Returns a ballot list according to Agora API specs',
+  })
+  @Get('/ballot')
+  async getBallot(
+    @Req() { userId }: AuthedReq,
+    @Query('cid') collectionId: number,
+  ) {
+    if (!collectionId)
+      throw new BadRequestException('You need to supply a collection id');
+    const ranking = await this.flowService.getRanking(userId, collectionId);
 
-  //   const ballot: AgoraBallotPost = { projects: [] };
+    const ballot: AgoraBallotPost = { projects: [] };
 
-  //   ballot.projects = ranking.map((el) => ({
-  //     project_id: el.project.RF6Id!,
-  //     allocation: (el.share * 100).toFixed(3),
-  //     impact: el.stars === null ? 3 : el.stars,
-  //   }));
+    ballot.projects = ranking.map((el) => ({
+      project_id: el.project.RF6Id!,
+      allocation: (el.share * 100).toFixed(3),
+      impact: el.stars === null ? 3 : el.stars,
+    }));
 
-  //   // Add spam projects for staging:
-
-  //   const spams = getAllProjects(collectionId)
-  //     .filter(
-  //       (el) => !ballot.projects.find((item) => item.project_id === el.id),
-  //     )
-  //     .map((item) => ({ project_id: item.id, allocation: `0`, impact: 3 }));
-
-  //   ballot.projects = [...ballot.projects, ...spams];
-
-  //   return ballot;
-  // }
+    return ballot;
+  }
 
   @UseGuards(AuthGuard)
   @ApiOperation({
