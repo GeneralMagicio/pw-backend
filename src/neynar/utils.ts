@@ -91,6 +91,7 @@ const sendDelegationCast = async (props: {
   totalDelegates: number;
 }) => {
   const { username, totalDelegates } = props || {};
+  const oneDelegate = totalDelegates === 1;
   if (!farcasterSignerUUID) {
     throw new Error(
       'Make sure you set FARCASTER_SIGNER_UUID in your .env file',
@@ -98,10 +99,16 @@ const sendDelegationCast = async (props: {
   }
   await neynarClient.publishCast(
     farcasterSignerUUID,
-    `Hey @${username} 👋
+    `@${username} 👋
 
-${totalDelegates} people have delegated to you in the last 12 hours 🥳
+🗳️${totalDelegates} ${
+      oneDelegate ? 'person has' : 'people have'
+    } delegated to you in @Pairwise's Liquid Democracy experiment!
 
-They want you to vote on their behalf in the @Optimism Retro Funding 6 Round. Go to https://app.pairwise.vote/ and rank the projects!`,
+🤝 Delegate this voting power to the @Farcaster users you trust to judge the impact of the governance projects in @Optimism's Retro Funding 6 round or vote yourself! 🫡
+
+👇 
+https://app.pairwise.vote 
+`,
   );
 };
