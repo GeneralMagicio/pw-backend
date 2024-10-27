@@ -5,6 +5,8 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  HttpException,
+  HttpStatus,
   InternalServerErrorException,
   Logger,
   Post,
@@ -225,7 +227,21 @@ export class FlowController {
   ) {
     if (!collectionId)
       throw new BadRequestException('You need to supply a collection id');
-    const ranking = await this.flowService.getRanking(userId, collectionId);
+    const [ranking, state] = await Promise.all([
+      this.flowService.getRanking(userId, collectionId),
+      this.flowService.getCollectionProgressStatus(userId, collectionId),
+    ]);
+
+    if (state !== 'Attested' && state !== 'Finished') {
+      throw new HttpException(
+        {
+          status: HttpStatus.FORBIDDEN,
+          message: 'Designated category not finished',
+          pwCode: 'e-1005',
+        },
+        HttpStatus.FORBIDDEN,
+      );
+    }
 
     const ballot: AgoraBallotPost = { projects: [] };
 
