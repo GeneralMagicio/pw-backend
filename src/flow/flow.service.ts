@@ -977,7 +977,7 @@ export class FlowService {
       orderBy: { id: 'asc' },
     });
 
-    const idsAscending = ranking.map((el) => el.id).sort();
+    const idsAscending = ranking.map((el) => el.id).sort((a, b) => a - b);
 
     if (idsAscending.length !== children.length)
       throw new BadRequestException(
