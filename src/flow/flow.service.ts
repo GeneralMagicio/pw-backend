@@ -647,6 +647,8 @@ export class FlowService {
 
     starSubcategories.null = nullProjects.length;
 
+    // console.log('dist', starSubcategories);
+
     let total = 0;
     for (const key in starSubcategories) {
       if (key === '1') continue;
@@ -661,7 +663,77 @@ export class FlowService {
         getStarsById(vote.project1Id) !== 1,
     );
 
+    // console.log('effectiveVotes', effectiveVotes);
+    // console.log('total:', total);
+
+    if (total === 0) {
+      return allVotes.length / combinations(allProjects.length, 2);
+    }
+
     return effectiveVotes.length / total;
+  };
+
+  test = async () => {
+    const userId = 13;
+    const parentCollection = 1;
+
+    const [collection, votes, projects, allStars, projectCoIs] =
+      await Promise.all([
+        this.prismaService.project.findUnique({
+          where: {
+            id: parentCollection || -1,
+            type: ProjectType.collection,
+          },
+          select: { name: true, id: true },
+        }),
+        this.prismaService.vote.findMany({
+          where: {
+            userId: userId,
+            project1: { parentId: parentCollection },
+            project2: { parentId: parentCollection },
+          },
+        }),
+        this.prismaService.project.findMany({
+          where: {
+            parentId: parentCollection || -1,
+          },
+        }),
+        this.getUserProjectStars(userId, parentCollection || -1),
+        this.prismaService.projectCoI.findMany({
+          where: {
+            project: { parentId: parentCollection },
+            userId,
+          },
+        }),
+      ]);
+
+    // projects except those with conflict of interest
+    const allProjects = projects
+      .filter((item) => !projectCoIs.find((el) => el.projectId === item.id))
+      .sort((a, b) =>
+        (a.implicitCategory || '').localeCompare(b.implicitCategory || ''),
+      );
+
+    const projectStars = allStars.filter(
+      (item) => !projectCoIs.find((el) => el.projectId === item.projectId),
+    );
+
+    const allVotes = votes.filter(
+      (item) =>
+        !projectCoIs.find(
+          (el) =>
+            el.projectId === item.project1Id ||
+            el.projectId === item.project2Id,
+        ),
+    );
+
+    const realProgress = this.calculateProgress(
+      allVotes,
+      projectStars,
+      allProjects,
+    );
+
+    console.log(realProgress);
   };
 
   // if projectId is provided, the returend pair must include that project if possible
@@ -727,7 +799,7 @@ export class FlowService {
       allProjects,
     );
 
-    const progress = Math.min(1, realProgress * 3);
+    const progress = Math.min(1, realProgress * 10);
 
     if (progress === 1) {
       if (collection) {
@@ -998,7 +1070,7 @@ export class FlowService {
 
     console.log('summation', summation);
     // console.log("to fn3 summation", summation)
-    if (Math.abs(1 - toFixedNumber(summation, 5)) > 0.00001)
+    if (Math.abs(1 - toFixedNumber(summation, 3)) > 0.001)
       throw new BadRequestException('Sumamtion of shares must equal 1');
   };
 

@@ -149,6 +149,9 @@ export const delegateStatusExample = {
     ],
   },
   toYou: {
+    uniqueCollection: 3,
+    uniqueCollectionDelegators: 1,
+    uniqueBudgetDelegators: 3,
     budget: [
       {
         metadata: {
@@ -158,13 +161,13 @@ export const delegateStatusExample = {
       },
       {
         metadata: {
-          username: 'some2.eth',
+          username: 'some.eth',
           profileUrl: 'https://example.com/some.png',
         },
       },
       {
         metadata: {
-          username: 'some3.eth',
+          username: 'some.eth',
           profileUrl: 'https://example.com/some.png',
         },
       },
@@ -173,14 +176,14 @@ export const delegateStatusExample = {
       {
         collectionId: 1,
         metadata: {
-          username: 'elon.eth',
+          username: 'some.eth',
           profileUrl: 'https://example.com/elon.png',
         },
       },
       {
-        collectionId: 1,
+        collectionId: 2,
         metadata: {
-          username: 'adele.eth',
+          username: 'some.eth',
           profileUrl: 'https://example.com/some.png',
         },
       },
@@ -202,6 +205,9 @@ export const delegateStatusExample2 = {
     ],
   },
   toYou: {
+    uniqueCollection: 0,
+    uniqueCollectionDelegators: 0,
+    uniqueBudgetDelegators: 0,
     budget: [],
     collections: [],
   },
