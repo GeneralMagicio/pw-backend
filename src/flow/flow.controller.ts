@@ -430,11 +430,11 @@ export class FlowController {
       const fid = (res.metadata as FarcasterMetadata).fid;
       const [res2, res3] = await Promise.all([
         this.prismaService.collectionDelegation.findMany({
-          select: { metadata: true, collectionId: true },
+          select: { metadata: true, collectionId: true, userId: true },
           where: { target: `${fid}` },
         }),
         this.prismaService.budgetDelegation.findMany({
-          select: { metadata: true },
+          select: { metadata: true, userId: true },
           where: { target: `${fid}` },
         }),
       ]);
@@ -442,10 +442,12 @@ export class FlowController {
       result = {
         ...result,
         toYou: {
+          uniqueCollectionDelegates: new Set(res2.map((el) => el.userId)).size,
+          uniqueBudgetDelegates: new Set(res3.map((el) => el.userId)).size,
           collections: res2.map((el) => {
             const metadata = el.metadata as FarcasterMetadata;
             return {
-              ...el,
+              collectionId: el.collectionId,
               metadata: {
                 username: metadata.username,
                 profileUrl: metadata.pfp.url,
@@ -455,7 +457,6 @@ export class FlowController {
           budget: res3.map((el) => {
             const metadata = el.metadata as FarcasterMetadata;
             return {
-              ...el,
               metadata: {
                 username: metadata.username,
                 profileUrl: metadata.pfp.url,
