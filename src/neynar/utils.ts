@@ -19,7 +19,7 @@ const getDelegations = async (start: number, end?: number) => {
 
   await prisma.$connect();
 
-  const delegations = await prisma.collectionDelegation.findMany({
+  const newDelegations = await prisma.collectionDelegation.findMany({
     where: {
       platform: 'FARCASTER',
       createdAt: {
@@ -29,10 +29,30 @@ const getDelegations = async (start: number, end?: number) => {
     },
   });
 
+  const uniqueFids = Array.from(
+    new Set(newDelegations.map((delegation) => delegation.target)),
+  );
+
+  console.log('Today new delegations FIDs: ', uniqueFids);
+
+  if (uniqueFids.length === 0) {
+    await prisma.$disconnect();
+    return [];
+  }
+
+  const targetsDelegations = await prisma.collectionDelegation.findMany({
+    where: {
+      platform: 'FARCASTER',
+      target: {
+        in: uniqueFids,
+      },
+    },
+  });
+
   const result: { fid: number; username: string; totalDelegates: number }[] =
     [];
 
-  for (const delegation of delegations) {
+  for (const delegation of targetsDelegations) {
     const index = result.findIndex(
       (el) => el.fid === Number(delegation.target),
     );
@@ -50,34 +70,22 @@ const getDelegations = async (start: number, end?: number) => {
     }
   }
 
+  console.log('Today casts to be sent: ', result);
+
   await prisma.$disconnect();
 
   return result;
 };
 
-export const sendCastsFor12Hours = async () => {
+export const sendDailyCasts = async () => {
   const currentTimestamp = new Date();
-  // Get the timestamp for 00:00 of the current day
-  const midnightTimestamp = new Date(currentTimestamp);
-  midnightTimestamp.setHours(0, 0, 0, 0); // set to 00:00:00
-  // Get the timestamp for 12:00 of the current day
-  const noonTimestamp = new Date(currentTimestamp);
-  noonTimestamp.setHours(12, 0, 0, 0); // set to 12:00:00
-  // Check if the current time is past 00:00 and 12:00
-  if (currentTimestamp < midnightTimestamp) {
-    // If current time is earlier than today's midnight, subtract 1 day for midnight timestamp
-    midnightTimestamp.setDate(midnightTimestamp.getDate() - 1);
-  }
-  if (currentTimestamp < noonTimestamp) {
-    // If current time is earlier than today's noon, subtract 1 day for noon timestamp
-    noonTimestamp.setDate(noonTimestamp.getDate() - 1);
-  }
-  let startTimestamp = midnightTimestamp.getTime();
-  let endTimestamp = noonTimestamp.getTime();
-  if (endTimestamp < startTimestamp) {
-    [startTimestamp, endTimestamp] = [endTimestamp, startTimestamp];
-  }
-  const delegations = await getDelegations(startTimestamp, endTimestamp);
+  // Get the timestamp for 17:00 of the current day
+  const endTimestamp = new Date(currentTimestamp);
+  endTimestamp.setHours(17, 0, 0, 0); // set to 00:00:00
+  const delegations = await getDelegations(
+    endTimestamp.getTime() - 24 * 60 * 60 * 1000, // Get the timestamp for 17:00 of the previous day
+    endTimestamp.getTime(),
+  );
   if (!delegations || delegations.length === 0) return;
   for (const delegation of delegations) {
     await sendDelegationCast(delegation);
@@ -91,6 +99,7 @@ const sendDelegationCast = async (props: {
   totalDelegates: number;
 }) => {
   const { username, totalDelegates } = props || {};
+  const oneDelegate = totalDelegates === 1;
   if (!farcasterSignerUUID) {
     throw new Error(
       'Make sure you set FARCASTER_SIGNER_UUID in your .env file',
@@ -98,10 +107,19 @@ const sendDelegationCast = async (props: {
   }
   await neynarClient.publishCast(
     farcasterSignerUUID,
-    `Hey @${username} 👋
+    `@${username} 👋
 
-${totalDelegates} people have delegated to you in the last 12 hours 🥳
+🗳️ ${totalDelegates} ${
+      oneDelegate ? 'person has' : 'people have'
+    } delegated to you in @Pairwise's Liquid Democracy experiment!
 
-They want you to vote on their behalf in the @Optimism Retro Funding 6 Round. Go to https://app.pairwise.vote/ and rank the projects!`,
+🤝 Delegate this voting power to the @Farcaster users you trust to judge the impact of the governance projects in @Optimism's Retro Funding 6 round or vote yourself! 🫡
+
+👇 
+https://app.pairwise.vote 
+`,
+  );
+  console.log(
+    `Cast successfully sent to @${username} for ${totalDelegates} delegations`,
   );
 };
