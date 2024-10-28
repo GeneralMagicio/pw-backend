@@ -48,6 +48,7 @@
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "siwe": "^2.3.2",
+    "thirdweb": "^5.64.2",
     "viem": "^2.21.5"
   },
   "devDependencies": {

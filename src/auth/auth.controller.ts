@@ -16,7 +16,7 @@ import { PrismaService } from 'src/prisma.service';
 import { Response } from 'express';
 import { UsersService } from 'src/user/users.service';
 import { AuthGuard } from './auth.guard';
-import { LoginDTO } from './dto/login.dto';
+import { LoginDTO, ThirdwebLoginDTO } from './dto/login.dto';
 import { ApiResponse } from '@nestjs/swagger';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { STAGING_API, generateRandomString } from 'src/utils';
@@ -123,6 +123,32 @@ export class AuthController {
     // return nonce;
 
     res.status(200).send({ token, isNewUser });
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Sets an auth cookie' })
+  @Post('/thirdweb/login')
+  async loginWithThirdweb(
+    @Req() { userId }: AuthedReq,
+    @Body() { message, signature, address }: ThirdwebLoginDTO,
+  ) {
+    const isAuthentic = await this.authService.verifyThirdwebUser(
+      message,
+      signature,
+      address,
+    );
+    if (!isAuthentic) throw new UnauthorizedException('Invalid signature');
+
+    await this.prismaService.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        smartaddress: address,
+      },
+    });
+
+    return 'Success';
   }
 
   // @ApiResponse({

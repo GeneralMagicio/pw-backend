@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SiweMessage } from 'siwe';
 
 export class SiweMessageClass {
   @ApiProperty({
@@ -77,6 +76,16 @@ export class SiweMessageClass {
 }
 
 export class LoginDTO {
+  @ApiProperty()
+  message: string;
+
+  @ApiProperty()
+  signature: string;
+
+  @ApiProperty()
+  address: string;
+}
+export class ThirdwebLoginDTO {
   @ApiProperty()
   message: string;
 

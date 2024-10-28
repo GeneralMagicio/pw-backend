@@ -3,6 +3,8 @@ import { generateRandomString } from 'src/utils';
 import { PrismaService } from 'src/prisma.service';
 import { SiweMessage } from 'siwe';
 import { verifyMessage } from 'viem';
+import { chain, thirdwebClient } from './thirdweb';
+import { verifySignature } from 'thirdweb/auth';
 // import { chain, thirdwebClient } from 'src/thirdweb';
 
 @Injectable()
@@ -138,6 +140,22 @@ export class AuthService {
     if (user === null) return false;
 
     return user;
+  };
+
+  verifyThirdwebUser = async (
+    message: string,
+    signature: string,
+    address: string,
+  ) => {
+    const isValid = await verifySignature({
+      message,
+      signature,
+      address,
+      client: thirdwebClient,
+      chain,
+    });
+
+    return isValid;
   };
 
   verifyUser = async (
