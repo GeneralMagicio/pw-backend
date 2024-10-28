@@ -24,6 +24,7 @@ import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
 import {
+  AttestationDto,
   BudgetDto,
   ConnectFarcasterDto,
   ConnectWorldIdDto,
@@ -1082,6 +1083,46 @@ export class FlowController {
 
     if (collectionId) return result;
     else return { ...result, budget: budgetRes?.budget };
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary:
+      'Notifies the server that the user has done an attestation for a collection',
+  })
+  @Post('/report-attest')
+  async reportAttestations(
+    @Req() { userId }: AuthedReq,
+    @Body() { collectionId, attestationId }: AttestationDto,
+  ) {
+    // collectionId = -1 is for the budget attestation
+    const isFinished =
+      collectionId > 0
+        ? await this.flowService.isCollectionFinished(userId, collectionId)
+        : true;
+
+    if (!isFinished)
+      throw new ForbiddenException(
+        'You can not attest a collection which is yet to be finished',
+      );
+
+    await this.prismaService.userAttestation.upsert({
+      where: {
+        userId_collectionId: {
+          userId: userId,
+          collectionId: collectionId,
+        },
+      },
+      create: {
+        userId: userId,
+        collectionId: collectionId,
+        attestationId,
+      },
+      update: {
+        attestationId,
+      },
+    });
+    return 'Success';
   }
 
   // @UseGuards(AuthGuard)
