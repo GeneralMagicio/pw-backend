@@ -1136,6 +1136,12 @@ export class FlowController {
     return 'Success';
   }
 
+  @Get('/test')
+  async test() {
+    await this.flowService.test();
+    return 'Success';
+  }
+
   // @UseGuards(AuthGuard)
   // @Post('/reset')
   // async resetVotes(@Req() { userId }: AuthedReq, @Body('cid') cid: number) {
