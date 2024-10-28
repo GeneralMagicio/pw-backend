@@ -442,8 +442,10 @@ export class FlowController {
       result = {
         ...result,
         toYou: {
-          uniqueCollectionDelegates: new Set(res2.map((el) => el.userId)).size,
-          uniqueBudgetDelegates: new Set(res3.map((el) => el.userId)).size,
+          uniqueDelegators: new Set([...res2, ...res3].map((el) => el.userId))
+            .size,
+          uniqueCollectionDelegators: new Set(res2.map((el) => el.userId)).size,
+          uniqueBudgetDelegators: new Set(res3.map((el) => el.userId)).size,
           collections: res2.map((el) => {
             const metadata = el.metadata as FarcasterMetadata;
             return {
@@ -469,7 +471,15 @@ export class FlowController {
       return result;
     }
 
-    return { ...result, toYou: { collections: [], budget: [] } };
+    return {
+      ...result,
+      toYou: {
+        uniqueCollectionDelegators: 0,
+        uniqueBudgetDelegators: 0,
+        collections: [],
+        budget: [],
+      },
+    };
   }
 
   @UseGuards(AuthGuard)
