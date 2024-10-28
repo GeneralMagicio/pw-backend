@@ -667,7 +667,7 @@ export class FlowService {
     // console.log('total:', total);
 
     if (total === 0) {
-      return allVotes.length / combinations(allProjects.length, 2);
+      return 0;
     }
 
     return effectiveVotes.length / total;
@@ -917,6 +917,11 @@ export class FlowService {
           ),
       ),
     );
+
+    if (pairs.length === 0 && collection) {
+      // Finishing the collection automatically
+      await this.finishCollection(userId, collection.id);
+    }
 
     return {
       pairs,
