@@ -9,14 +9,14 @@ generator client {
 }
 
 model User {
-  id                  Int                    @id @default(autoincrement())
-  budget              Int                    @default(2000000) // 2M In OP
-  address             String                 @unique()
-  smartaddress        String?                @unique()
-  ballotSuccess       Int?                   @map("ballot_success")
-  opAddress           String?                @unique() @map("op_address")
-  createdAt           DateTime               @default(now()) @map("created_at")
-  updatedAt           DateTime               @default(now()) @updatedAt @map("updated_at")
+  id                  Int                     @id @default(autoincrement())
+  budget              Int                     @default(2000000) // 2M In OP
+  address             String                  @unique()
+  smartaddress        String?                 @unique()
+  ballotSuccess       Int?                    @map("ballot_success")
+  opAddress           String?                 @unique() @map("op_address")
+  createdAt           DateTime                @default(now()) @map("created_at")
+  updatedAt           DateTime                @default(now()) @updatedAt @map("updated_at")
   identity            Json? // Ideally should be unique except {} and null values but Prisma doesn't support partial
   // unique constraints
   badges              Json?
@@ -29,6 +29,7 @@ model User {
   finishedCollection  UserCollectionFinish[]
   shares              Share[]
   attestations        UserAttestation[]
+  budgetAttestations  UserBudgetAttestation[]
   projectStars        ProjectStar[]
   cois                ProjectCoI[]
 }
@@ -210,6 +211,16 @@ model UserAttestation {
   collection    Project  @relation(fields: [collectionId], references: [id])
 
   @@id([userId, collectionId])
+}
+
+model UserBudgetAttestation {
+  userId        Int      @map("user_id")
+  attestationId String   @unique() @map("attestation_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@id([userId])
 }
 
 enum DelegationPlatform {

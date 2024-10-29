@@ -1106,11 +1106,27 @@ export class FlowController {
     @Req() { userId }: AuthedReq,
     @Body() { collectionId, attestationId }: AttestationDto,
   ) {
+    if (collectionId === -1) {
+      await this.prismaService.userBudgetAttestation.upsert({
+        where: {
+          userId: userId,
+        },
+        create: {
+          userId: userId,
+          attestationId,
+        },
+        update: {
+          attestationId,
+        },
+      });
+
+      return 'Success';
+    }
     // collectionId = -1 is for the budget attestation
-    const isFinished =
-      collectionId > 0
-        ? await this.flowService.isCollectionFinished(userId, collectionId)
-        : true;
+    const isFinished = await this.flowService.isCollectionFinished(
+      userId,
+      collectionId,
+    );
 
     if (!isFinished)
       throw new ForbiddenException(
