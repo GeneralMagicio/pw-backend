@@ -207,3 +207,15 @@ export const exampleRankingDto = {
     ],
   },
 };
+
+export class AttestationDto {
+  @IsDefined()
+  @Validate(IsPositiveOrNegativeOneConstraint)
+  @ApiProperty()
+  collectionId: number;
+
+  @IsString()
+  @IsDefined()
+  @ApiProperty()
+  attestationId: string;
+}

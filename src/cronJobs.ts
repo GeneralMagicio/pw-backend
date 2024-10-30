@@ -1,7 +1,7 @@
 import { schedule } from 'node-cron';
-import { sendCastsFor12Hours } from './neynar/utils';
+import { sendDailyCasts } from './neynar/utils';
 
-const sendCastsCronJobTime = '21 21 0,12 * * *'; // at 00:21 and 12:21 every day
+const sendCastsCronJobTime = '21 1 17 * * *'; // at 17:01 every day
 
 export const initializeCronJobs = () => {
   sendCastsCronJob();
@@ -10,7 +10,7 @@ export const initializeCronJobs = () => {
 const sendCastsCronJob = () => {
   schedule(sendCastsCronJobTime, async () => {
     try {
-      await sendCastsFor12Hours();
+      await sendDailyCasts();
     } catch (e) {
       console.error('sendCastsCronJob error', e);
     }

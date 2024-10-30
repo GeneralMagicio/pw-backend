@@ -183,10 +183,25 @@ export class FlowService {
           this.getCollectionProgressStatus(userId, collection.id),
           this.countNumOfProjects(collection.id),
         ]);
+        let attestationLink = null;
+        if (progress === 'Attested') {
+          const res = await this.prismaService.userAttestation.findUnique({
+            select: { attestationId: true },
+            where: {
+              userId_collectionId: {
+                userId: userId,
+                collectionId: collection.id,
+              },
+            },
+          });
+
+          attestationLink = res?.attestationId || null;
+        }
         return {
           ...collection,
           // hasSubcollections,
           progress,
+          attestationLink,
           projectCount,
         };
       }),
@@ -647,6 +662,8 @@ export class FlowService {
 
     starSubcategories.null = nullProjects.length;
 
+    // console.log('dist', starSubcategories);
+
     let total = 0;
     for (const key in starSubcategories) {
       if (key === '1') continue;
@@ -661,7 +678,22 @@ export class FlowService {
         getStarsById(vote.project1Id) !== 1,
     );
 
+    // console.log('effectiveVotes', effectiveVotes);
+    // console.log('total:', total);
+
+    if (total === 0) {
+      return 0;
+    }
+
     return effectiveVotes.length / total;
+  };
+
+  test = async () => {
+    const userId = 18;
+
+    const result = this.getCollections(userId, null);
+
+    return result;
   };
 
   // if projectId is provided, the returend pair must include that project if possible
@@ -727,7 +759,7 @@ export class FlowService {
       allProjects,
     );
 
-    const progress = Math.min(1, realProgress * 3);
+    const progress = Math.min(1, realProgress * 10);
 
     if (progress === 1) {
       if (collection) {
@@ -845,6 +877,11 @@ export class FlowService {
           ),
       ),
     );
+
+    if (pairs.length === 0 && collection) {
+      // Finishing the collection automatically
+      await this.finishCollection(userId, collection.id);
+    }
 
     return {
       pairs,
@@ -977,7 +1014,7 @@ export class FlowService {
       orderBy: { id: 'asc' },
     });
 
-    const idsAscending = ranking.map((el) => el.id).sort();
+    const idsAscending = ranking.map((el) => el.id).sort((a, b) => a - b);
 
     if (idsAscending.length !== children.length)
       throw new BadRequestException(
@@ -998,7 +1035,7 @@ export class FlowService {
 
     console.log('summation', summation);
     // console.log("to fn3 summation", summation)
-    if (Math.abs(1 - toFixedNumber(summation, 5)) > 0.00001)
+    if (Math.abs(1 - toFixedNumber(summation, 3)) > 0.001)
       throw new BadRequestException('Sumamtion of shares must equal 1');
   };
 

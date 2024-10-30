@@ -5,6 +5,8 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  HttpException,
+  HttpStatus,
   InternalServerErrorException,
   Logger,
   Post,
@@ -22,6 +24,7 @@ import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
 import {
+  AttestationDto,
   BudgetDto,
   ConnectFarcasterDto,
   ConnectWorldIdDto,
@@ -47,6 +50,14 @@ import {
   ProjectResponse,
 } from './dto/responses';
 import { InputJsonObject } from '@prisma/client/runtime/library';
+
+type AgoraBallotPost = {
+  projects: {
+    project_id: string;
+    allocation: string;
+    impact: number;
+  }[];
+};
 
 // export const getAllProjects = (category: number) => {
 //   switch (category) {
@@ -206,39 +217,43 @@ export class FlowController {
     await Promise.all(promises);
   }
 
-  // @UseGuards(AuthGuard)
-  // @ApiOperation({
-  //   summary: 'Used for a pairwise vote between two collections',
-  // })
-  // @Get('/ballot')
-  // async getBallot(
-  //   @Req() { userId }: AuthedReq,
-  //   @Query('cid') collectionId: number,
-  // ) {
-  //   if (!collectionId)
-  //     throw new BadRequestException('You need to supply a collection id');
-  //   const ranking = await this.flowService.getRanking(userId, collectionId);
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Returns a ballot list according to Agora API specs',
+  })
+  @Get('/ballot')
+  async getBallot(
+    @Req() { userId }: AuthedReq,
+    @Query('cid') collectionId: number,
+  ) {
+    if (!collectionId)
+      throw new BadRequestException('You need to supply a collection id');
+    const [ranking, state] = await Promise.all([
+      this.flowService.getRanking(userId, collectionId),
+      this.flowService.getCollectionProgressStatus(userId, collectionId),
+    ]);
 
-  //   const ballot: AgoraBallotPost = { projects: [] };
+    if (state !== 'Attested' && state !== 'Finished') {
+      throw new HttpException(
+        {
+          status: HttpStatus.FORBIDDEN,
+          message: 'Designated category not finished',
+          pwCode: 'e-1005',
+        },
+        HttpStatus.FORBIDDEN,
+      );
+    }
 
-  //   ballot.projects = ranking.map((el) => ({
-  //     project_id: el.project.RF6Id!,
-  //     allocation: (el.share * 100).toFixed(3),
-  //     impact: el.stars === null ? 3 : el.stars,
-  //   }));
+    const ballot: AgoraBallotPost = { projects: [] };
 
-  //   // Add spam projects for staging:
+    ballot.projects = ranking.map((el) => ({
+      project_id: el.project.RF6Id!,
+      allocation: (el.share * 100).toFixed(3),
+      impact: el.stars === null ? 3 : el.stars,
+    }));
 
-  //   const spams = getAllProjects(collectionId)
-  //     .filter(
-  //       (el) => !ballot.projects.find((item) => item.project_id === el.id),
-  //     )
-  //     .map((item) => ({ project_id: item.id, allocation: `0`, impact: 3 }));
-
-  //   ballot.projects = [...ballot.projects, ...spams];
-
-  //   return ballot;
-  // }
+    return ballot;
+  }
 
   @UseGuards(AuthGuard)
   @ApiOperation({
@@ -415,11 +430,11 @@ export class FlowController {
       const fid = (res.metadata as FarcasterMetadata).fid;
       const [res2, res3] = await Promise.all([
         this.prismaService.collectionDelegation.findMany({
-          select: { metadata: true, collectionId: true },
+          select: { metadata: true, collectionId: true, userId: true },
           where: { target: `${fid}` },
         }),
         this.prismaService.budgetDelegation.findMany({
-          select: { metadata: true },
+          select: { metadata: true, userId: true },
           where: { target: `${fid}` },
         }),
       ]);
@@ -427,10 +442,14 @@ export class FlowController {
       result = {
         ...result,
         toYou: {
+          uniqueDelegators: new Set([...res2, ...res3].map((el) => el.userId))
+            .size,
+          uniqueCollectionDelegators: new Set(res2.map((el) => el.userId)).size,
+          uniqueBudgetDelegators: new Set(res3.map((el) => el.userId)).size,
           collections: res2.map((el) => {
             const metadata = el.metadata as FarcasterMetadata;
             return {
-              ...el,
+              collectionId: el.collectionId,
               metadata: {
                 username: metadata.username,
                 profileUrl: metadata.pfp.url,
@@ -440,7 +459,6 @@ export class FlowController {
           budget: res3.map((el) => {
             const metadata = el.metadata as FarcasterMetadata;
             return {
-              ...el,
               metadata: {
                 username: metadata.username,
                 profileUrl: metadata.pfp.url,
@@ -453,7 +471,15 @@ export class FlowController {
       return result;
     }
 
-    return { ...result, toYou: { collections: [], budget: [] } };
+    return {
+      ...result,
+      toYou: {
+        uniqueCollectionDelegators: 0,
+        uniqueBudgetDelegators: 0,
+        collections: [],
+        budget: [],
+      },
+    };
   }
 
   @UseGuards(AuthGuard)
@@ -1067,7 +1093,82 @@ export class FlowController {
     };
 
     if (collectionId) return result;
-    else return { ...result, budget: budgetRes?.budget };
+    else {
+      const res = await this.prismaService.userBudgetAttestation.findUnique({
+        where: {
+          userId: userId,
+        },
+      });
+      if (res)
+        return {
+          ...result,
+          budget: budgetRes?.budget,
+          progress: 'Attested',
+          attestationLink: res.attestationId,
+        };
+      return { ...result, budget: budgetRes?.budget };
+    }
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary:
+      'Notifies the server that the user has done an attestation for a collection',
+  })
+  @Post('/report-attest')
+  async reportAttestations(
+    @Req() { userId }: AuthedReq,
+    @Body() { collectionId, attestationId }: AttestationDto,
+  ) {
+    if (collectionId === -1) {
+      await this.prismaService.userBudgetAttestation.upsert({
+        where: {
+          userId: userId,
+        },
+        create: {
+          userId: userId,
+          attestationId,
+        },
+        update: {
+          attestationId,
+        },
+      });
+
+      return 'Success';
+    }
+    // collectionId = -1 is for the budget attestation
+    const isFinished = await this.flowService.isCollectionFinished(
+      userId,
+      collectionId,
+    );
+
+    if (!isFinished)
+      throw new ForbiddenException(
+        'You can not attest a collection which is yet to be finished',
+      );
+
+    await this.prismaService.userAttestation.upsert({
+      where: {
+        userId_collectionId: {
+          userId: userId,
+          collectionId: collectionId,
+        },
+      },
+      create: {
+        userId: userId,
+        collectionId: collectionId,
+        attestationId,
+      },
+      update: {
+        attestationId,
+      },
+    });
+    return 'Success';
+  }
+
+  @Get('/test')
+  async test() {
+    return 'test';
   }
 
   // @UseGuards(AuthGuard)
