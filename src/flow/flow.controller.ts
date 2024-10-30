@@ -1093,7 +1093,21 @@ export class FlowController {
     };
 
     if (collectionId) return result;
-    else return { ...result, budget: budgetRes?.budget };
+    else {
+      const res = await this.prismaService.userBudgetAttestation.findUnique({
+        where: {
+          userId: userId,
+        },
+      });
+      if (res)
+        return {
+          ...result,
+          budget: budgetRes?.budget,
+          progress: 'Attested',
+          attestationLink: res.attestationId,
+        };
+      return { ...result, budget: budgetRes?.budget };
+    }
   }
 
   @UseGuards(AuthGuard)
@@ -1154,8 +1168,7 @@ export class FlowController {
 
   @Get('/test')
   async test() {
-    const res = await this.flowService.test();
-    return res;
+    return 'test';
   }
 
   // @UseGuards(AuthGuard)
