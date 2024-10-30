@@ -110,8 +110,8 @@ export class IsPositiveNumberArray implements ValidatorConstraintInterface {
 
 export class BudgetDto {
   @IsPositive()
-  @Min(2_000_000)
-  @Max(8_000_000)
+  @Min(1_100_000)
+  @Max(3_500_000)
   @IsDefined()
   @ApiProperty()
   budget: number;
