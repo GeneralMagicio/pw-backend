@@ -126,6 +126,20 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard)
+  @ApiResponse({ status: 200, description: 'Gets the sa address of a user' })
+  @Get('/thirdweb/sa-address')
+  async getSaAddress(@Req() { userId }: AuthedReq) {
+    const res = await this.prismaService.user.findUnique({
+      select: { smartaddress: true },
+      where: {
+        id: userId,
+      },
+    });
+
+    return res?.smartaddress || null;
+  }
+
+  @UseGuards(AuthGuard)
   @ApiResponse({ status: 200, description: 'Sets an auth cookie' })
   @Post('/thirdweb/login')
   async loginWithThirdweb(
