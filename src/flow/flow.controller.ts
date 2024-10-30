@@ -1154,8 +1154,8 @@ export class FlowController {
 
   @Get('/test')
   async test() {
-    await this.flowService.test();
-    return 'Success';
+    const res = await this.flowService.test();
+    return res;
   }
 
   // @UseGuards(AuthGuard)

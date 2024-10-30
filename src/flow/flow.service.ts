@@ -183,10 +183,25 @@ export class FlowService {
           this.getCollectionProgressStatus(userId, collection.id),
           this.countNumOfProjects(collection.id),
         ]);
+        let attestationLink = null;
+        if (progress === 'Attested') {
+          const res = await this.prismaService.userAttestation.findUnique({
+            select: { attestationId: true },
+            where: {
+              userId_collectionId: {
+                userId: userId,
+                collectionId: collection.id,
+              },
+            },
+          });
+
+          attestationLink = res?.attestationId || null;
+        }
         return {
           ...collection,
           // hasSubcollections,
           progress,
+          attestationLink,
           projectCount,
         };
       }),
@@ -674,66 +689,11 @@ export class FlowService {
   };
 
   test = async () => {
-    const userId = 13;
-    const parentCollection = 1;
+    const userId = 18;
 
-    const [collection, votes, projects, allStars, projectCoIs] =
-      await Promise.all([
-        this.prismaService.project.findUnique({
-          where: {
-            id: parentCollection || -1,
-            type: ProjectType.collection,
-          },
-          select: { name: true, id: true },
-        }),
-        this.prismaService.vote.findMany({
-          where: {
-            userId: userId,
-            project1: { parentId: parentCollection },
-            project2: { parentId: parentCollection },
-          },
-        }),
-        this.prismaService.project.findMany({
-          where: {
-            parentId: parentCollection || -1,
-          },
-        }),
-        this.getUserProjectStars(userId, parentCollection || -1),
-        this.prismaService.projectCoI.findMany({
-          where: {
-            project: { parentId: parentCollection },
-            userId,
-          },
-        }),
-      ]);
+    const result = this.getCollections(userId, null);
 
-    // projects except those with conflict of interest
-    const allProjects = projects
-      .filter((item) => !projectCoIs.find((el) => el.projectId === item.id))
-      .sort((a, b) =>
-        (a.implicitCategory || '').localeCompare(b.implicitCategory || ''),
-      );
-
-    const projectStars = allStars.filter(
-      (item) => !projectCoIs.find((el) => el.projectId === item.projectId),
-    );
-
-    const allVotes = votes.filter(
-      (item) =>
-        !projectCoIs.find(
-          (el) =>
-            el.projectId === item.project1Id ||
-            el.projectId === item.project2Id,
-        ),
-    );
-
-    const realProgress = this.calculateProgress(
-      allVotes,
-      projectStars,
-      allProjects,
-    );
-
-    console.log(realProgress);
+    return result;
   };
 
   // if projectId is provided, the returend pair must include that project if possible
