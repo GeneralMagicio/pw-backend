@@ -759,7 +759,7 @@ export class FlowService {
       allProjects,
     );
 
-    const progress = Math.min(1, realProgress * 10);
+    const progress = Math.min(1, realProgress * 3);
 
     if (progress === 1) {
       if (collection) {

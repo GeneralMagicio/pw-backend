@@ -228,9 +228,15 @@ export class FlowController {
   ) {
     if (!collectionId)
       throw new BadRequestException('You need to supply a collection id');
-    const [ranking, state] = await Promise.all([
+    const [ranking, state, cois] = await Promise.all([
       this.flowService.getRanking(userId, collectionId),
       this.flowService.getCollectionProgressStatus(userId, collectionId),
+      this.prismaService.projectCoI.findMany({
+        where: {
+          userId,
+          project: { parentId: collectionId },
+        },
+      }),
     ]);
 
     if (state !== 'Attested' && state !== 'Finished') {
@@ -246,10 +252,13 @@ export class FlowController {
 
     const ballot: AgoraBallotPost = { projects: [] };
 
+    const isCoi = (projectId: number) =>
+      cois.findIndex((el) => el.projectId === projectId) !== -1;
+
     ballot.projects = ranking.map((el) => ({
       project_id: el.project.RF6Id!,
       allocation: (el.share * 100).toFixed(3),
-      impact: el.stars === null ? 3 : el.stars,
+      impact: isCoi(el.projectId) ? 0 : el.stars === null ? 3 : el.stars,
     }));
 
     return ballot;
