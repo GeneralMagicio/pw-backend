@@ -234,9 +234,9 @@ export class FlowController {
       this.prismaService.projectCoI.findMany({
         where: {
           userId,
-          project: {parentId: collectionId},
-        }
-      })
+          project: { parentId: collectionId },
+        },
+      }),
     ]);
 
     if (state !== 'Attested' && state !== 'Finished') {
@@ -252,7 +252,8 @@ export class FlowController {
 
     const ballot: AgoraBallotPost = { projects: [] };
 
-    const isCoi = (projectId: number) => cois.findIndex((el) => el.projectId === projectId) !== -1
+    const isCoi = (projectId: number) =>
+      cois.findIndex((el) => el.projectId === projectId) !== -1;
 
     ballot.projects = ranking.map((el) => ({
       project_id: el.project.RF6Id!,
