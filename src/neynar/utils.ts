@@ -79,11 +79,10 @@ const getDelegations = async (start: number, end?: number) => {
 
 export const sendDailyCasts = async () => {
   const currentTimestamp = new Date();
-  // Get the timestamp for 17:00 of the current day
   const endTimestamp = new Date(currentTimestamp);
-  endTimestamp.setHours(17, 0, 0, 0); // set to 00:00:00
+  endTimestamp.setMinutes(0, 0, 0); // set to xx:00:00
   const delegations = await getDelegations(
-    endTimestamp.getTime() - 24 * 60 * 60 * 1000, // Get the timestamp for 17:00 of the previous day
+    endTimestamp.getTime() - 24 * 60 * 60 * 1000, // Get the timestamp for xx:00 of the previous day
     endTimestamp.getTime(),
   );
   if (!delegations || delegations.length === 0) return;
