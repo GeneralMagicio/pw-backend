@@ -111,9 +111,9 @@ const sendDelegationCast = async (props: {
 
 🗳️ ${totalDelegates} ${
       oneDelegate ? 'person has' : 'people have'
-    } delegated to you in @Pairwise's Liquid Democracy experiment!
+    } delegated to you in @pairwise's Liquid Democracy experiment!
 
-🤝 Delegate this voting power to the @Farcaster users you trust to judge the impact of the governance projects in @Optimism's Retro Funding 6 round or vote yourself! 🫡
+🤝 Delegate this voting power to the @farcaster users you trust to judge projects in @optimism's Retro Funding 6 round or vote yourself! 🫡
 
 👇 
 https://app.pairwise.vote 
