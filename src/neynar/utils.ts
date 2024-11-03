@@ -8,7 +8,7 @@ import neynarClient from './neynarClient';
  * @param start starting time for the query. In milliseconds from epoch.
  * @param end end time for the query. In milliseconds from epoch. If not specified, defaults to `now`.
  */
-const getDelegations = async (start: number, end?: number) => {
+export const getDelegations = async (start: number, end?: number) => {
   const prisma = new PrismaClient({
     datasources: {
       db: {
@@ -78,8 +78,7 @@ const getDelegations = async (start: number, end?: number) => {
 };
 
 export const sendDailyCasts = async () => {
-  const currentTimestamp = new Date();
-  const endTimestamp = new Date(currentTimestamp);
+  const endTimestamp = new Date();
   endTimestamp.setMinutes(0, 0, 0); // set to xx:00:00
   const delegations = await getDelegations(
     endTimestamp.getTime() - 24 * 60 * 60 * 1000, // Get the timestamp for xx:00 of the previous day
