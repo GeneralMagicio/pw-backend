@@ -50,6 +50,7 @@ import {
   ProjectResponse,
 } from './dto/responses';
 import { InputJsonObject } from '@prisma/client/runtime/library';
+import { getDelegations } from '../neynar/utils';
 
 type AgoraBallotPost = {
   projects: {
@@ -489,6 +490,40 @@ export class FlowController {
         budget: [],
       },
     };
+  }
+
+  @ApiOperation({
+    summary: 'Total farcaster delegations',
+  })
+  @Get('/delegate/farcaster')
+  async getTotalFarcasterDelegations() {
+    return await getDelegations(new Date('2022-01-01').getTime());
+  }
+
+  @ApiOperation({
+    summary: 'Daily farcaster delegations',
+  })
+  @Get('/delegate/farcaster/daily')
+  async getDailyFarcasterDelegations() {
+    const now = new Date();
+    const gmt1830Today = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        18,
+        30,
+        0,
+      ),
+    );
+    if (now < gmt1830Today) {
+      gmt1830Today.setUTCDate(gmt1830Today.getUTCDate() - 1);
+    }
+    const endTimestamp = gmt1830Today.getTime();
+    return await getDelegations(
+      endTimestamp - 24 * 60 * 60 * 1000,
+      endTimestamp,
+    );
   }
 
   @UseGuards(AuthGuard)
