@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { FarcasterMetadata } from 'src/flow/types';
 import neynarClient from './neynarClient';
 
-const findFarcasterMaxiUsers = async () => {
+const findMaxiUsers = async () => {
   const prisma = new PrismaClient({
     datasources: {
       db: {
@@ -29,6 +29,7 @@ const findFarcasterMaxiUsers = async () => {
     where: {
       farcasterConnection: {
         isNot: null,
+        thankYouCastSent: false,
       },
     },
     select: {
@@ -87,12 +88,7 @@ const findFarcasterMaxiUsers = async () => {
       },
     },
   });
-  return maxiUsers.map(
-    (user) =>
-      (user.farcasterConnection?.metadata?.valueOf() as FarcasterMetadata)[
-        'username'
-      ],
-  );
+  return maxiUsers.map((user) => user.farcasterConnection);
 };
 
 const sendThankYouCast = async (username: string) => {
@@ -110,11 +106,34 @@ YOU ROCK!`,
   console.log(`The Thanks you Cast successfully sent to @${username}`);
 };
 
+const updateThankYouCastSent = async (userId?: number) => {
+  if (!userId) return;
+  const prisma = new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.POSTGRES_PRISMA_URL,
+      },
+    },
+  });
+  await prisma.farcasterConnection.update({
+    where: { userId },
+    data: { thankYouCastSent: true },
+  });
+  await prisma.$disconnect();
+};
+
 export const sendDailyThankYouCast = async () => {
-  const maxiUserIds = await findFarcasterMaxiUsers();
-  if (!maxiUserIds || maxiUserIds.length === 0) return;
-  for (const username of maxiUserIds) {
-    await sendThankYouCast(username);
+  const maxiUsers = await findMaxiUsers();
+  if (!maxiUsers || maxiUsers.length === 0) return;
+  for (const user of maxiUsers) {
+    try {
+      await sendThankYouCast(
+        (user?.metadata?.valueOf() as FarcasterMetadata)['username'],
+      );
+      await updateThankYouCastSent(user?.userId);
+    } catch (e) {
+      console.error('Error sending Thank you cast for user ID: ', user?.userId);
+    }
   }
 };
 
