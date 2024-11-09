@@ -4,6 +4,9 @@
 /certs
 /src/project-reading
 /src/ai-summary
+/src/ai-summary-rf5
+/src/rf6-data-import
+
 # Envs
 
 .env
