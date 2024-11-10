@@ -28,7 +28,6 @@ const findMaxiUsers = async () => {
   const usersWithFarcaster = await prisma.user.findMany({
     where: {
       farcasterConnection: {
-        isNot: null,
         thankYouCastSent: false,
       },
     },
