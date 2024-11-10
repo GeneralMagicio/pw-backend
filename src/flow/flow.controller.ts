@@ -1277,5 +1277,29 @@ export class FlowController {
     await this.prismaService.projectCoI.deleteMany({
       where: { userId: userId },
     });
+    await this.prismaService.budgetDelegation.findUnique({
+      where: { userId: userId },
+    });
+    await this.prismaService.collectionDelegation.deleteMany({
+      where: { userId: userId },
+    });
+    await this.prismaService.farcasterConnection.deleteMany({
+      where: { userId: userId },
+    });
+    await this.prismaService.share.deleteMany({
+      where: { userId: userId },
+    });
+    await this.prismaService.userAttestation.deleteMany({
+      where: { userId: userId },
+    });
+    await this.prismaService.userBudgetAttestation.deleteMany({
+      where: { userId: userId },
+    });
+    await this.prismaService.userCollectionFinish.deleteMany({
+      where: { userId: userId },
+    });
+    await this.prismaService.user.deleteMany({
+      where: { id: userId },
+    });
   }
 }

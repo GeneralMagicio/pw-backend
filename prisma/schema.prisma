@@ -10,7 +10,7 @@ generator client {
 
 model User {
   id                  Int                     @id @default(autoincrement())
-  budget              Int                     @default(2000000) // 2M In OP
+  budget              Int                     @default(1100000) // 1.1M In OP
   address             String                  @unique()
   smartaddress        String?                 @unique()
   ballotSuccess       Int?                    @map("ballot_success")
