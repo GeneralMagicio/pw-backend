@@ -32,7 +32,6 @@ model User {
   budgetAttestations  UserBudgetAttestation[]
   projectStars        ProjectStar[]
   cois                ProjectCoI[]
-  thankYouCastSent    Boolean                 @default(false)
 }
 
 model Space {
@@ -181,6 +180,7 @@ model FarcasterConnection {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
   user      User     @relation(fields: [userId], references: [id])
+  thankYouCastSent    Boolean                 @default(false)
 }
 
 model WorldIdConnection {
