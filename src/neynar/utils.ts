@@ -25,18 +25,18 @@ const findMaxiUsers = async () => {
     (category) => category.id,
   );
 
-  const usersWithFarcaster = await prisma.user.findMany({
+  const farcasterConnections = await prisma.farcasterConnection.findMany({
     where: {
-      farcasterConnection: {
-        isNot: null,
-        thankYouCastSent: false,
-      },
+      thankYouCastSent: false,
     },
     select: {
-      id: true,
+      userId: true,
     },
   });
-  const userIdsWithFarcaster = usersWithFarcaster.map((user) => user.id);
+
+  const userIdsWithFarcaster = farcasterConnections.map(
+    (connection) => connection.userId,
+  );
 
   // Find users who have delegated or attested to all categories (Collection + Budget)
   const maxiUsers = await prisma.user.findMany({
