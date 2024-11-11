@@ -1,5 +1,8 @@
 import { schedule } from 'node-cron';
-import { sendDailyCasts } from './neynar/utils';
+import {
+  sendDailyDelegationCasts,
+  sendDailyThankYouCast,
+} from './neynar/utils';
 
 const sendCastsCronJobTime = '21 1 22 * * *'; // at 22:01 Tehran time every day
 
@@ -12,7 +15,8 @@ const sendCastsCronJob = () => {
     sendCastsCronJobTime,
     async () => {
       try {
-        await sendDailyCasts();
+        await sendDailyDelegationCasts();
+        await sendDailyThankYouCast();
       } catch (e) {
         console.error('sendCastsCronJob error', e);
       }
