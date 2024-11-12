@@ -174,6 +174,21 @@ export class FlowController {
 
   @UseGuards(AuthGuard)
   @ApiOperation({
+    summary: 'Used to unmark a project as Conflict of Interest',
+  })
+  @ApiBody({
+    type: SetCoIDto,
+    description: 'Project id',
+  })
+  @UseGuards(AuthGuard)
+  @Post('/unmark-coI')
+  async unmarkCoI(@Req() { userId }: AuthedReq, @Body() { pid }: SetCoIDto) {
+    await this.flowService.unsetCoi(userId, pid);
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
     summary: 'Used for a pairwise vote between two projects',
   })
   @ApiBody({

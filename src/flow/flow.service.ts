@@ -260,6 +260,30 @@ export class FlowService {
     });
   };
 
+  unsetCoi = async (userId: number, projectId: number) => {
+    await this.prismaService.projectCoI.delete({
+      where: {
+        userId_projectId: {
+          projectId,
+          userId,
+        },
+      },
+    });
+  };
+
+  isCoi = async (userId: number, projectId: number) => {
+    const res = await this.prismaService.projectCoI.findUnique({
+      where: {
+        userId_projectId: {
+          projectId,
+          userId,
+        },
+      },
+    });
+
+    return !!res;
+  };
+
   setRating = async (
     projectId: number,
     userId: number,
@@ -568,14 +592,15 @@ export class FlowService {
       include: { project: true },
     });
 
-    const withStars = await Promise.all(
+    const withMoreFields = await Promise.all(
       ranking.map(async (el) => ({
         ...el,
         stars: await this.getProjectStars(el.projectId, userId),
+        coi: await this.isCoi(el.projectId, userId),
       })),
     );
 
-    return withStars.sort((a, b) => b.share - a.share);
+    return withMoreFields.sort((a, b) => b.share - a.share);
   };
 
   undo = async (userId: number, parentCollection: number | null) => {
