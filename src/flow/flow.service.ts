@@ -596,7 +596,7 @@ export class FlowService {
       ranking.map(async (el) => ({
         ...el,
         stars: await this.getProjectStars(el.projectId, userId),
-        coi: await this.isCoi(el.projectId, userId),
+        coi: await this.isCoi(userId, el.projectId),
       })),
     );
 
@@ -604,6 +604,8 @@ export class FlowService {
   };
 
   undo = async (userId: number, parentCollection: number | null) => {
+    // TODO: Check if a colleciton is still wip and not finished
+
     const lastVote = await this.prismaService.vote.findFirst({
       where: {
         userId,
@@ -783,6 +785,7 @@ export class FlowService {
       projectStars,
       allProjects,
     );
+    // console.log('real progress:', realProgress);
 
     const progress = Math.min(1, realProgress * 3);
 
@@ -833,7 +836,7 @@ export class FlowService {
       new Set(allProjects.map((item) => item.implicitCategory)),
     ).map((cat, index) => ({ name: cat, priority: index * 2 }));
 
-    console.log(shuffleArraySeeded(implicitCategoryPriorities, userId));
+    // console.log(shuffleArraySeeded(implicitCategoryPriorities, userId));
 
     const getImplicitCatScore = (cat: string) =>
       shuffleArraySeeded(implicitCategoryPriorities, userId).find(
