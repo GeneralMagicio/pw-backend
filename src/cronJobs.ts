@@ -4,7 +4,7 @@ import {
   sendDailyThankYouCast,
 } from './neynar/utils';
 
-const sendCastsCronJobTime = '21 1 22 * * *'; // at 22:01 Tehran time every day
+const sendCastsCronJobTime = '21 12 14 * * *'; // at 22:01 Tehran time every day
 
 export const initializeCronJobs = () => {
   sendCastsCronJob();
