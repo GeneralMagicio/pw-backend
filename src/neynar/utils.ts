@@ -2,6 +2,141 @@ import { PrismaClient } from '@prisma/client';
 import { FarcasterMetadata } from 'src/flow/types';
 import neynarClient from './neynarClient';
 
+const findMaxiUsers = async () => {
+  const prisma = new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.POSTGRES_PRISMA_URL,
+      },
+    },
+  });
+
+  await prisma.$connect();
+
+  const collectionCategories = await prisma.project.findMany({
+    where: {
+      type: 'collection',
+    },
+    select: {
+      id: true,
+    },
+  });
+  const collectionCategoryIds = collectionCategories.map(
+    (category) => category.id,
+  );
+
+  const farcasterConnections = await prisma.farcasterConnection.findMany({
+    where: {
+      thankYouCastSent: false,
+    },
+    select: {
+      userId: true,
+    },
+  });
+
+  const userIdsWithFarcaster = farcasterConnections.map(
+    (connection) => connection.userId,
+  );
+
+  // Find users who have delegated or attested to all categories (Collection + Budget)
+  const maxiUsers = await prisma.user.findMany({
+    where: {
+      id: { in: userIdsWithFarcaster },
+      // Check that the user has attested or delegated to the Budget category
+      OR: [
+        {
+          budgetAttestations: {
+            some: {},
+          },
+        },
+        {
+          budgetDelegation: {
+            isNot: null,
+          },
+        },
+      ],
+      // Ensure the user has attested or delegated to all Collection categories
+      AND: [
+        {
+          AND: collectionCategoryIds.map((categoryId) => ({
+            OR: [
+              {
+                attestations: {
+                  some: {
+                    collectionId: categoryId,
+                  },
+                },
+              },
+              {
+                delegations: {
+                  some: {
+                    collectionId: categoryId,
+                  },
+                },
+              },
+            ],
+          })),
+        },
+      ],
+    },
+    select: {
+      farcasterConnection: {
+        select: {
+          userId: true,
+          metadata: true,
+        },
+      },
+    },
+  });
+  return maxiUsers.map((user) => user.farcasterConnection);
+};
+
+const sendThankYouCast = async (username: string) => {
+  if (!farcasterSignerUUID) {
+    throw new Error(
+      'Make sure you set FARCASTER_SIGNER_UUID in your .env file',
+    );
+  }
+  await neynarClient.publishCast(
+    farcasterSignerUUID,
+    `@${username}! Thank you for playing with Pairwise!
+
+YOU ROCK!`,
+  );
+  console.log(`The Thanks you Cast successfully sent to @${username}`);
+};
+
+const updateThankYouCastSent = async (userId?: number) => {
+  if (!userId) return;
+  const prisma = new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.POSTGRES_PRISMA_URL,
+      },
+    },
+  });
+  await prisma.farcasterConnection.update({
+    where: { userId },
+    data: { thankYouCastSent: true },
+  });
+  await prisma.$disconnect();
+};
+
+export const sendDailyThankYouCast = async () => {
+  const maxiUsers = await findMaxiUsers();
+  if (!maxiUsers || maxiUsers.length === 0) return;
+  for (const user of maxiUsers) {
+    try {
+      await sendThankYouCast(
+        (user?.metadata?.valueOf() as FarcasterMetadata)['username'],
+      );
+      await updateThankYouCastSent(user?.userId);
+    } catch (e) {
+      console.error('Error sending Thank you cast for user ID: ', user?.userId);
+    }
+  }
+};
+
 /**
  * Returns an array of `{fid, username, totalDelegates}` mapping in which `totalDelegates` is
  * the number of times that another user has delegated to this specific username/fid
@@ -77,7 +212,7 @@ export const getDelegations = async (start: number, end?: number) => {
   return result;
 };
 
-export const sendDailyCasts = async () => {
+export const sendDailyDelegationCasts = async () => {
   const endTimestamp = new Date();
   endTimestamp.setMinutes(0, 0, 0); // set to xx:00:00
   const delegations = await getDelegations(
