@@ -16,6 +16,7 @@ import {
 import {
   generateZeroMatrix,
   getRankingForSetOfDampingFactors,
+  makeIt100,
   toFixedNumber,
 } from 'src/utils/mathematical-logic';
 import {
@@ -530,7 +531,7 @@ export class FlowService {
       })),
     ];
 
-    return ranking.sort((a, b) => a.rank - b.rank);
+    return makeIt100(ranking.sort((a, b) => a.rank - b.rank));
   };
 
   // getRootRanking = async (userId: number) => {
