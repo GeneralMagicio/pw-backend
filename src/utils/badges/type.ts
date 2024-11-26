@@ -7,7 +7,7 @@ export type RawSnapshotPoint = {
   delegateAmount: number;
   recipientsPoints: '';
   badgeholderPoints: 0 | 1 | '0' | '1';
-  badgeholderType: null | 'Citizen' | 'Guest'
+  badgeholderType: null | 'Citizen' | 'Guest';
   holderType:
     | 'Bronze'
     | 'Diamond'
