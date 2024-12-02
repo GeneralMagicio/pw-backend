@@ -60,17 +60,14 @@ export class AuthController {
 
   @ApiResponse({ status: 200, description: 'Sets an auth cookie' })
   @Post('/login')
-  async login(
-    @Res() res: Response,
-    @Body() { message, signature, address }: LoginDTO,
-  ) {
+  async login(@Res() res: Response, @Body() { address }: LoginDTO) {
     let isNewUser = false;
-    const isAuthentic = await this.authService.verifyUser(
-      message,
-      signature as `0x${string}`,
-      address as `0x${string}`,
-    );
-    if (!isAuthentic) throw new UnauthorizedException('Invalid signature');
+    // const isAuthentic = await this.authService.verifyUser(
+    //   message,
+    //   signature as `0x${string}`,
+    //   address as `0x${string}`,
+    // );
+    // if (!isAuthentic) throw new UnauthorizedException('Invalid signature');
 
     let user = await this.prismaService.user.findFirst({
       where: { address },
