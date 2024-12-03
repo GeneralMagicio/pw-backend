@@ -5,6 +5,7 @@ COPY package*.json ./
 COPY tsconfig*.json ./
 RUN npm install -g @nestjs/cli
 RUN npm install
+RUN apk add git curl
 COPY . .
 RUN npm run build
 EXPOSE 7070

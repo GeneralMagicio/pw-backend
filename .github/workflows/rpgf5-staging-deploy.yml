@@ -41,25 +41,72 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd pw-backend
-            git reset --hard HEAD~1
+            git reset --hard origin/staging
             git checkout staging
             git pull origin staging
             docker image prune -a --force
             docker compose -f docker-compose-staging.yml pull
 
+  rollout-deploy-1:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and Redeploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USERNAME }}
+          key: ${{ secrets.STAGING_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd pw-backend
             ## Update each backend service one by one
-            docker compose -f docker-compose-staging.yml up -d --no-deps --scale pw-backend1=0 --scale pw-backend2=1
-            docker compose -f docker-compose-staging.yml up -d
-            # Check the health of pw-backend1
-            if [ "$(docker inspect --format='{{json .State.Status}}' pw-backend1)" != "\"running\"" ]; then
-              echo "pw-backend1 is not running, stopping deployment"
-              exit 1
-            fi
+            ## First Deployment
+            docker compose -f docker-compose-staging.yml rm -fs pw-backend1
+            docker compose -f docker-compose-staging.yml up --force-recreate -d pw-backend1
 
-            docker compose -f docker-compose-staging.yml up -d --no-deps --scale pw-backend1=1 --scale pw-backend2=0
-            docker compose -f docker-compose-staging.yml up -d
-            # Check the health of pw-backend2
-            if [ "$(docker inspect --format='{{json .State.Status}}' pw-backend2)" != "\"running\"" ]; then
-              echo "pw-backend2 is not running, stopping deployment"
-              exit 1
+            # Wait for pw-backend1 to be healthy (timeout after 5 minutes)
+            echo "Waiting for pw-backend1 to become healthy..."
+            timeout 300 bash -c 'until [ "$(docker inspect --format="{{json .State.Health.Status}}" pw-backend1)" == "\"healthy\"" ]; do echo "Waiting for pw-backend1 to be healthy..."; sleep 5; done'
+            if [ $? -eq 124 ]; then
+                echo "Timeout waiting for pw-backend1 to become healthy"
+                exit 1
             fi
+            # Check if pw-backend1 is healthy
+            if [ "$(docker inspect --format='{{json .State.Health.Status}}' pw-backend1)" != "\"healthy\"" ]; then
+                echo "pw-backend1 is not healthy, stopping deployment"
+                exit 1
+            fi
+            echo "First deployment phase completed successfully"
+
+  rollout-deploy-2:
+    needs: rollout-deploy-1
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and Redeploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USERNAME }}
+          key: ${{ secrets.STAGING_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd pw-backend
+            ## Update each backend service one by one
+            ## Second Deployment
+            docker compose -f docker-compose-staging.yml rm -fs pw-backend2
+            docker compose -f docker-compose-staging.yml up --force-recreate -d pw-backend2
+
+            # Wait for pw-backend2 to be healthy (timeout after 5 minutes)
+            echo "Waiting for pw-backend2 to become healthy..."
+            timeout 300 bash -c 'until [ "$(docker inspect --format="{{json .State.Health.Status}}" pw-backend2)" == "\"healthy\"" ]; do echo "Waiting for pw-backend2 to be healthy..."; sleep 5; done'
+            if [ $? -eq 124 ]; then
+                echo "Timeout waiting for pw-backend2 to become healthy"
+                exit 1
+            fi
+            # Check if pw-backend2 is healthy
+            if [ "$(docker inspect --format='{{json .State.Health.Status}}' pw-backend2)" != "\"healthy\"" ]; then
+                echo "pw-backend2 is not healthy, stopping deployment"
+                exit 1
+            fi
+            echo "Second deployment phase completed successfully"
