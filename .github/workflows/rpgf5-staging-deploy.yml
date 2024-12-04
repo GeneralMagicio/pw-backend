@@ -54,9 +54,9 @@ jobs:
       - name: SSH and Redeploy
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USERNAME }}
-          key: ${{ secrets.STAGING_PRIVATE_KEY }}
+          host: ${{ secrets.RPGF5_STAGING_HOST }}
+          username: ${{ secrets.RPGF5_STAGING_USERNAME }}
+          key: ${{ secrets.RPGF5_STAGING_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd pw-backend
@@ -86,9 +86,9 @@ jobs:
       - name: SSH and Redeploy
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USERNAME }}
-          key: ${{ secrets.STAGING_PRIVATE_KEY }}
+          host: ${{ secrets.RPGF5_STAGING_HOST }}
+          username: ${{ secrets.RPGF5_STAGING_USERNAME }}
+          key: ${{ secrets.RPGF5_STAGING_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd pw-backend
