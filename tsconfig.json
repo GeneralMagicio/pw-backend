@@ -15,8 +15,5 @@
     "incremental": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": false
-  },
-  "include": [
-    "src/**/*"
-  ]
+  }
 }
