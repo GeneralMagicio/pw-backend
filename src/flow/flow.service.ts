@@ -457,6 +457,7 @@ export class FlowService {
         .map(({ project, percentage, star }, index) => {
           return {
             id: project!.id,
+            project,
             rank: index + 1,
             star,
             share: percentage,
@@ -467,6 +468,7 @@ export class FlowService {
         }),
       ...oneRatingProjects.map((project, index) => ({
         id: project!.id,
+        project,
         rank: result.length + index + 1,
         star: 1,
         share: 0,
@@ -476,6 +478,7 @@ export class FlowService {
       })),
       ...allCoIs.map(({ project }, index) => ({
         id: project!.id,
+        project,
         rank: result.length + oneRatingProjects.length + index + 1,
         star: 0, // conflict of interest
         share: 0,
