@@ -974,6 +974,28 @@ export class FlowService {
     }
   };
 
+  delegateBudgetTwitter = async (userId: number, username: string) => {
+    try {
+      await this.prismaService.budgetDelegation.create({
+        data: {
+          userId,
+          platform: 'TWITTER',
+          target: username,
+          metadata: {},
+        },
+      });
+    } catch (e: unknown) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'collection is already delegated for the user',
+        );
+      }
+    }
+  };
+
   getBadgesFromDb = async (address: string): Promise<BadgeData | undefined> => {
     const res = await this.prismaService.user.findFirst({
       select: { badges: true },

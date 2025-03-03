@@ -23,6 +23,7 @@ model User {
   delegations         CollectionDelegation[]
   budgetDelegation    BudgetDelegation?
   farcasterConnection FarcasterConnection?
+  twitterConnection   TwitterConnection?
   worldIdConnection   WorldIdConnection?
   projectVotes        Vote[]
   nonce               Nonce?
@@ -177,6 +178,16 @@ model ProjectCoI {
 model FarcasterConnection {
   userId    Int      @id @map("user_id")
   metadata  Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id])
+  thankYouCastSent    Boolean                 @default(false)
+}
+
+model TwitterConnection {
+  userId    Int      @id @map("user_id")
+  metadata  Json
+  username  String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
   user      User     @relation(fields: [userId], references: [id])

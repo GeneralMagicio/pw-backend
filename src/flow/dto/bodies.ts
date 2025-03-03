@@ -76,6 +76,13 @@ export class ConnectFarcasterDto {
   @ApiProperty()
   address: string;
 }
+
+export class ConnectTwitterDto {
+  @IsString()
+  @IsDefined()
+  @ApiProperty()
+  username: string;
+}
 export class DelegateFarcasterDto {
   @IsString()
   @IsDefined()

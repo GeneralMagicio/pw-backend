@@ -27,6 +27,7 @@ import {
   AttestationDto,
   BudgetDto,
   ConnectFarcasterDto,
+  ConnectTwitterDto,
   ConnectWorldIdDto,
   CustomRankingDto,
   DelegateBudgetFarcasterDto,
@@ -362,6 +363,48 @@ export class FlowController {
 
   @UseGuards(AuthGuard)
   @ApiOperation({
+    summary: 'Used to prove ownership of a twitter account',
+  })
+  @Post('/connect/twitter')
+  async connectTwitter(
+    @Req() { userId }: AuthedReq,
+    @Body() { username }: ConnectTwitterDto,
+  ) {
+    const isDuplicate = await this.prismaService.twitterConnection.findFirst({
+      where: { username },
+    });
+
+    if (isDuplicate) throw new ForbiddenException('Duplicate Twitter account');
+
+    // TODO: get Twitter metadata for a user
+
+    // const { data } = await axios.get<FarcasterUserByFid>(
+    //   `https://client.warpcast.com/v2/user-by-fid?fid=${fid}`,
+    // );
+
+    const metadata = {};
+
+    await this.prismaService.twitterConnection.upsert({
+      where: {
+        userId,
+      },
+      create: {
+        username,
+        metadata,
+        userId: userId,
+      },
+      update: {
+        username,
+        metadata,
+        userId: userId,
+      },
+    });
+
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
     summary: 'Proxy to farcaster user by username endpoint',
   })
   @ApiResponse({
@@ -411,11 +454,11 @@ export class FlowController {
     const [collectionDelegations, budgetDelegation] = await Promise.all([
       this.prismaService.collectionDelegation.findMany({
         select: { collectionId: true, metadata: true },
-        where: { userId },
+        where: { userId, platform: 'FARCASTER' },
       }),
       this.prismaService.budgetDelegation.findUnique({
         select: { metadata: true },
-        where: { userId },
+        where: { userId, platform: 'FARCASTER' },
       }),
     ]);
 
@@ -571,6 +614,56 @@ export class FlowController {
             platform: 'FARCASTER',
             target: `${data.result.user.fid}`,
             metadata: data.result.user,
+            collectionId: collectionId,
+          },
+        });
+      } catch (e: unknown) {
+        if (
+          e instanceof Prisma.PrismaClientKnownRequestError &&
+          e.code === 'P2002'
+        ) {
+          throw new ConflictException(
+            'collection is already delegated for the user',
+          );
+        }
+      }
+    }
+
+    return 'Success';
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiOperation({
+    summary: 'Used to delegate a category to a twitter account',
+  })
+  @Post('/delegate/twitter')
+  async delegateTwitter(
+    @Req() { userId }: AuthedReq,
+    @Body() { collectionId, targetUsername }: DelegateFarcasterDto,
+  ) {
+    // TODO: validate the target username by Twitter APIs
+
+    // let data: FarcasterUserByFid;
+    // try {
+    //   const res = await axios.get<FarcasterUserByFid>(
+    //     `https://client.warpcast.com/v2/user-by-username?username=${targetUsername}`,
+    //   );
+    //   data = res.data;
+    // } catch (e) {
+    //   console.error(e);
+    //   throw new ForbiddenException('Username invalid');
+    // }
+
+    if (collectionId === -1) {
+      await this.flowService.delegateBudgetTwitter(userId, targetUsername);
+    } else {
+      try {
+        await this.prismaService.collectionDelegation.create({
+          data: {
+            userId,
+            platform: 'TWITTER',
+            target: targetUsername,
+            metadata: {},
             collectionId: collectionId,
           },
         });
@@ -827,20 +920,26 @@ export class FlowController {
   })
   @Get('/connect/status')
   async getConnectStatus(@Req() { userId }: AuthedReq) {
-    const [farcasterConnection, worldCoinConnection] = await Promise.all([
-      this.prismaService.farcasterConnection.findUnique({
-        select: { metadata: true },
-        where: { userId },
-      }),
-      this.prismaService.worldIdConnection.findUnique({
-        select: { metadata: true },
-        where: { userId },
-      }),
-    ]);
+    const [farcasterConnection, worldCoinConnection, twitterConnection] =
+      await Promise.all([
+        this.prismaService.farcasterConnection.findUnique({
+          select: { metadata: true },
+          where: { userId },
+        }),
+        this.prismaService.worldIdConnection.findUnique({
+          select: { metadata: true },
+          where: { userId },
+        }),
+        this.prismaService.twitterConnection.findUnique({
+          select: { metadata: true, username: true },
+          where: { userId },
+        }),
+      ]);
 
     return {
       farcaster: farcasterConnection,
       worldId: worldCoinConnection,
+      twitter: twitterConnection,
     };
   }
 
