@@ -25,7 +25,7 @@ import {
   FarcasterMetadata,
   ProjectRanking,
 } from './types';
-import { Prisma, ProjectType } from '@prisma/client';
+import { DelegationPlatform, Prisma, ProjectType, User } from '@prisma/client';
 import axios from 'axios';
 import * as fs from 'fs';
 import * as FormData from 'form-data';
@@ -532,6 +532,148 @@ export class FlowService {
     ];
 
     return makeIt100(ranking.sort((a, b) => a.rank - b.rank));
+  };
+
+  /**
+   * Find all users who have directly or indirectly delegated to a user with the given social ID.
+   * @param socialId The Twitter or Farcaster ID of the user receiving delegations
+   * @returns Array of User objects who have delegated to the target
+   */
+  getCollectionDelegators = async (
+    socialId: string,
+    platform?: DelegationPlatform,
+    collectionId?: number,
+  ): Promise<User[]> => {
+    // Store users who have delegated to our target
+    const delegators: User[] = [];
+
+    // Track processed userIds to avoid cycles in delegation chains
+    const processedUserIds = new Set<number>();
+
+    // Use BFS to traverse the delegation graph backward
+    let currentBatch: string[] = [socialId];
+
+    while (currentBatch.length > 0) {
+      // Find all direct delegations to users in the current batch
+      const directDelegations =
+        await this.prismaService.collectionDelegation.findMany({
+          where: {
+            target: {
+              in: currentBatch,
+              mode: 'insensitive',
+            },
+            collectionId,
+            platform,
+          },
+          include: {
+            user: true,
+          },
+        });
+
+      const nextBatch: string[] = [];
+
+      for (const delegation of directDelegations) {
+        const delegatorId = delegation.userId;
+
+        // Avoid processing the same user multiple times
+        if (!processedUserIds.has(delegatorId)) {
+          processedUserIds.add(delegatorId);
+          delegators.push(delegation.user);
+
+          // For each delegator, get their social ID to find who delegated to them
+        }
+      }
+      const delegatorSocialIds = await this.convertUserIdsToSocials(
+        directDelegations.map((el) => el.userId),
+      );
+      nextBatch.push(...delegatorSocialIds);
+
+      currentBatch = nextBatch;
+    }
+
+    return delegators;
+  };
+
+  /**
+   * Find all users who have directly or indirectly delegated to a user with the given social ID.
+   * @param socialId The Twitter or Farcaster ID of the user receiving delegations
+   * @returns Array of User objects who have delegated to the target
+   */
+  getBudgetDelegators = async (
+    socialId: string,
+    platform?: DelegationPlatform,
+  ): Promise<User[]> => {
+    // Store users who have delegated to our target
+    const delegators: User[] = [];
+
+    // Track processed userIds to avoid cycles in delegation chains
+    const processedUserIds = new Set<number>();
+
+    // Use BFS to traverse the delegation graph backward
+    let currentBatch: string[] = [socialId];
+
+    while (currentBatch.length > 0) {
+      // Find all direct delegations to users in the current batch
+      const directDelegations =
+        await this.prismaService.budgetDelegation.findMany({
+          where: {
+            target: {
+              in: currentBatch,
+              mode: 'insensitive',
+            },
+            platform,
+          },
+          include: {
+            user: true,
+          },
+        });
+
+      const nextBatch: string[] = [];
+
+      for (const delegation of directDelegations) {
+        const delegatorId = delegation.userId;
+
+        // Avoid processing the same user multiple times
+        if (!processedUserIds.has(delegatorId)) {
+          processedUserIds.add(delegatorId);
+          delegators.push(delegation.user);
+
+          // For each delegator, get their social ID to find who delegated to them
+        }
+      }
+      const delegatorSocialIds = await this.convertUserIdsToSocials(
+        directDelegations.map((el) => el.userId),
+      );
+      nextBatch.push(...delegatorSocialIds);
+
+      currentBatch = nextBatch;
+    }
+
+    return delegators;
+  };
+
+  convertUserIdsToSocials = async (userIds: number[]): Promise<string[]> => {
+    const socials = new Set<string>();
+
+    const [farcasterConnections, twitterConnections] = await Promise.all([
+      this.prismaService.farcasterConnection.findMany({
+        where: { userId: { in: userIds } },
+      }),
+      this.prismaService.twitterConnection.findMany({
+        where: { userId: { in: userIds } },
+      }),
+    ]);
+
+    for (const fc of farcasterConnections) {
+      const metadata = fc.metadata?.valueOf() as FarcasterMetadata;
+      socials.add(`${metadata.fid}`);
+    }
+
+    for (const tc of twitterConnections) {
+      socials.add(tc.username);
+    }
+
+    return [...socials];
   };
 
   // getRootRanking = async (userId: number) => {

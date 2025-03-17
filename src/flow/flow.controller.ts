@@ -453,101 +453,151 @@ export class FlowController {
   async delegateStatus(@Req() { userId }: AuthedReq) {
     const [collectionDelegations, budgetDelegation] = await Promise.all([
       this.prismaService.collectionDelegation.findMany({
-        select: { collectionId: true, metadata: true },
-        where: { userId, platform: 'FARCASTER' },
+        select: { collectionId: true, metadata: true, target: true },
+        where: { userId },
       }),
       this.prismaService.budgetDelegation.findUnique({
-        select: { metadata: true },
-        where: { userId, platform: 'FARCASTER' },
+        select: { metadata: true, target: true },
+        where: { userId },
       }),
     ]);
 
-    const budgetDelegationMetadata =
-      budgetDelegation?.metadata as FarcasterMetadata;
+    const budgetDelegationMetadata = budgetDelegation?.metadata as
+      | FarcasterMetadata
+      | object;
 
     let result: any = {
       fromYou: {
-        collections: collectionDelegations.map((el) => {
-          const metadata = el.metadata as FarcasterMetadata;
-          return {
-            ...el,
-            metadata: {
-              username: metadata.username,
-              profileUrl: metadata.pfp.url,
-            },
-          };
-        }),
-        budget: budgetDelegation
-          ? {
-              ...budgetDelegation,
-              metadata: {
-                username: budgetDelegationMetadata.username,
-                profileUrl: budgetDelegationMetadata.pfp.url,
-              },
-            }
-          : null,
+        collections: collectionDelegations,
+        budget: budgetDelegation || null,
       },
     };
 
-    const res = await this.prismaService.farcasterConnection.findUnique({
-      select: { metadata: true },
+    const farcasterRes =
+      await this.prismaService.farcasterConnection.findUnique({
+        select: { metadata: true },
+        where: { userId },
+      });
+
+    const twitterRes = await this.prismaService.twitterConnection.findUnique({
       where: { userId },
     });
 
-    if (res) {
-      const fid = (res.metadata as FarcasterMetadata).fid;
-      const [res2, res3] = await Promise.all([
-        this.prismaService.collectionDelegation.findMany({
-          select: { metadata: true, collectionId: true, userId: true },
-          where: { target: `${fid}` },
-        }),
-        this.prismaService.budgetDelegation.findMany({
-          select: { metadata: true, userId: true },
-          where: { target: `${fid}` },
-        }),
-      ]);
+    const fid = farcasterRes
+      ? (farcasterRes.metadata?.valueOf() as FarcasterMetadata).fid
+      : null;
 
-      result = {
-        ...result,
-        toYou: {
-          uniqueDelegators: new Set([...res2, ...res3].map((el) => el.userId))
-            .size,
-          uniqueCollectionDelegators: new Set(res2.map((el) => el.userId)).size,
-          uniqueBudgetDelegators: new Set(res3.map((el) => el.userId)).size,
-          collections: res2.map((el) => {
-            const metadata = el.metadata as FarcasterMetadata;
-            return {
-              collectionId: el.collectionId,
-              metadata: {
-                username: metadata.username,
-                profileUrl: metadata.pfp.url,
-              },
-            };
-          }),
-          budget: res3.map((el) => {
-            const metadata = el.metadata as FarcasterMetadata;
-            return {
-              metadata: {
-                username: metadata.username,
-                profileUrl: metadata.pfp.url,
-              },
-            };
-          }),
-        },
-      };
+    const twitterUsername = twitterRes ? twitterRes.username : null;
 
-      return result;
-    }
+    const uniqueFarcasterCollectionDelegators = fid
+      ? await this.flowService.getCollectionDelegators(`${fid}`, 'FARCASTER')
+      : [];
 
-    return {
+    const uniqueTwitterCollectionDelegators = twitterUsername
+      ? await this.flowService.getCollectionDelegators(
+          twitterUsername,
+          'TWITTER',
+        )
+      : [];
+
+    const uniqueFarcasterBudgetDelegators = fid
+      ? await this.flowService.getBudgetDelegators(`${fid}`, 'FARCASTER')
+      : [];
+
+    const uniqueTwitterBudgetDelegators = twitterUsername
+      ? await this.flowService.getBudgetDelegators(twitterUsername, 'TWITTER')
+      : [];
+
+    // const fid = (res.metadata as FarcasterMetadata).fid;
+    const [res2, res3] = await Promise.all([
+      this.prismaService.collectionDelegation.findMany({
+        select: { metadata: true, collectionId: true, userId: true },
+        where: { target: { in: [`${fid}`, `${twitterUsername}`] } },
+      }),
+      this.prismaService.budgetDelegation.findMany({
+        select: { metadata: true, userId: true },
+        where: { target: { in: [`${fid}`, `${twitterUsername}`] } },
+      }),
+    ]);
+
+    const uniqueDelegatorsSize = new Set(
+      [
+        ...uniqueFarcasterBudgetDelegators,
+        ...uniqueFarcasterCollectionDelegators,
+        ...uniqueTwitterBudgetDelegators,
+        ...uniqueTwitterCollectionDelegators,
+      ].map((el) => el.id),
+    ).size;
+
+    console.log('res2', res2);
+
+    const uniqueBudgetDelegatorsSize = new Set(
+      [
+        ...uniqueFarcasterBudgetDelegators,
+        ...uniqueTwitterBudgetDelegators,
+      ].map((el) => el.id),
+    ).size;
+
+    const uniqueCollectionDelegatorsSize = new Set(
+      [
+        ...uniqueFarcasterCollectionDelegators,
+        ...uniqueTwitterCollectionDelegators,
+      ].map((el) => el.id),
+    ).size;
+
+    result = {
       ...result,
       toYou: {
-        uniqueCollectionDelegators: 0,
-        uniqueBudgetDelegators: 0,
-        collections: [],
-        budget: [],
+        uniqueDelegators: uniqueDelegatorsSize,
+        uniqueCollectionDelegators: uniqueCollectionDelegatorsSize,
+        uniqueBudgetDelegators: uniqueBudgetDelegatorsSize,
+        collections: await Promise.all(
+          res2.map(async (el) => {
+            return {
+              collectionId: el.collectionId,
+              delegators: [
+                ...(!fid
+                  ? []
+                  : await this.flowService.getCollectionDelegators(
+                      `${fid}`,
+                      'FARCASTER',
+                      el.collectionId,
+                    )),
+                ...(!twitterUsername
+                  ? []
+                  : await this.flowService.getCollectionDelegators(
+                      twitterUsername,
+                      'TWITTER',
+                      el.collectionId,
+                    )),
+              ],
+            };
+          }),
+        ),
+        budget: await Promise.all(
+          res3.map(async () => {
+            return {
+              delegators: [
+                ...(!fid
+                  ? []
+                  : await this.flowService.getBudgetDelegators(
+                      `${fid}`,
+                      'FARCASTER',
+                    )),
+                ...(!twitterUsername
+                  ? []
+                  : await this.flowService.getBudgetDelegators(
+                      twitterUsername,
+                      'TWITTER',
+                    )),
+              ],
+            };
+          }),
+        ),
       },
     };
+
+    return result;
   }
 
   @ApiOperation({
