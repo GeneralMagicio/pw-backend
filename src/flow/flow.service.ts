@@ -541,7 +541,6 @@ export class FlowService {
    */
   getCollectionDelegators = async (
     socialId: string,
-    platform?: DelegationPlatform,
     collectionId?: number,
   ): Promise<User[]> => {
     // Store users who have delegated to our target
@@ -553,8 +552,22 @@ export class FlowService {
     // Use BFS to traverse the delegation graph backward
     let currentBatch: string[] = [socialId];
 
+    // let iteration = 1;
+
+    // console.log('--------------------------------');
+
     while (currentBatch.length > 0) {
       // Find all direct delegations to users in the current batch
+
+      // console.log(
+      //   'iteration',
+      //   iteration++,
+      //   'current batch',
+      //   currentBatch,
+      //   'metadata',
+      //   { collectionId },
+      // );
+
       const directDelegations =
         await this.prismaService.collectionDelegation.findMany({
           where: {
@@ -563,7 +576,6 @@ export class FlowService {
               mode: 'insensitive',
             },
             collectionId,
-            platform,
           },
           include: {
             user: true,
@@ -583,6 +595,8 @@ export class FlowService {
           // For each delegator, get their social ID to find who delegated to them
         }
       }
+
+      // console.log('Direct delegations', directDelegations);
       const delegatorSocialIds = await this.convertUserIdsToSocials(
         directDelegations.map((el) => el.userId),
       );
@@ -590,6 +604,8 @@ export class FlowService {
 
       currentBatch = nextBatch;
     }
+
+    // console.log('--------------------------------');
 
     return delegators;
   };
@@ -599,10 +615,7 @@ export class FlowService {
    * @param socialId The Twitter or Farcaster ID of the user receiving delegations
    * @returns Array of User objects who have delegated to the target
    */
-  getBudgetDelegators = async (
-    socialId: string,
-    platform?: DelegationPlatform,
-  ): Promise<User[]> => {
+  getBudgetDelegators = async (socialId: string): Promise<User[]> => {
     // Store users who have delegated to our target
     const delegators: User[] = [];
 
@@ -621,7 +634,6 @@ export class FlowService {
               in: currentBatch,
               mode: 'insensitive',
             },
-            platform,
           },
           include: {
             user: true,

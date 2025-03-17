@@ -490,22 +490,19 @@ export class FlowController {
     const twitterUsername = twitterRes ? twitterRes.username : null;
 
     const uniqueFarcasterCollectionDelegators = fid
-      ? await this.flowService.getCollectionDelegators(`${fid}`, 'FARCASTER')
+      ? await this.flowService.getCollectionDelegators(`${fid}`)
       : [];
 
     const uniqueTwitterCollectionDelegators = twitterUsername
-      ? await this.flowService.getCollectionDelegators(
-          twitterUsername,
-          'TWITTER',
-        )
+      ? await this.flowService.getCollectionDelegators(twitterUsername)
       : [];
 
     const uniqueFarcasterBudgetDelegators = fid
-      ? await this.flowService.getBudgetDelegators(`${fid}`, 'FARCASTER')
+      ? await this.flowService.getBudgetDelegators(`${fid}`)
       : [];
 
     const uniqueTwitterBudgetDelegators = twitterUsername
-      ? await this.flowService.getBudgetDelegators(twitterUsername, 'TWITTER')
+      ? await this.flowService.getBudgetDelegators(twitterUsername)
       : [];
 
     // const fid = (res.metadata as FarcasterMetadata).fid;
@@ -528,8 +525,6 @@ export class FlowController {
         ...uniqueTwitterCollectionDelegators,
       ].map((el) => el.id),
     ).size;
-
-    console.log('res2', res2);
 
     const uniqueBudgetDelegatorsSize = new Set(
       [
@@ -560,14 +555,12 @@ export class FlowController {
                   ? []
                   : await this.flowService.getCollectionDelegators(
                       `${fid}`,
-                      'FARCASTER',
                       el.collectionId,
                     )),
                 ...(!twitterUsername
                   ? []
                   : await this.flowService.getCollectionDelegators(
                       twitterUsername,
-                      'TWITTER',
                       el.collectionId,
                     )),
               ],
@@ -580,15 +573,11 @@ export class FlowController {
               delegators: [
                 ...(!fid
                   ? []
-                  : await this.flowService.getBudgetDelegators(
-                      `${fid}`,
-                      'FARCASTER',
-                    )),
+                  : await this.flowService.getBudgetDelegators(`${fid}`)),
                 ...(!twitterUsername
                   ? []
                   : await this.flowService.getBudgetDelegators(
                       twitterUsername,
-                      'TWITTER',
                     )),
               ],
             };
