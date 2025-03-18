@@ -534,6 +534,29 @@ export class FlowService {
     return makeIt100(ranking.sort((a, b) => a.rank - b.rank));
   };
 
+  getTotalCollectionDelegators = async (
+    socialId: string,
+  ): Promise<Record<number, User[]>> => {
+    const collections = await this.prismaService.project.findMany({
+      select: { id: true },
+      where: {
+        type: 'collection',
+      },
+    });
+
+    const delegators = await Promise.all(
+      collections.map((item) =>
+        this.getCollectionDelegators(socialId, item.id),
+      ),
+    );
+
+    const result = collections.reduce((acc, curr, index) => {
+      return { ...acc, [curr.id]: delegators[index] };
+    }, {});
+
+    return result;
+  };
+
   /**
    * Find all users who have directly or indirectly delegated to a user with the given social ID.
    * @param socialId The Twitter or Farcaster ID of the user receiving delegations
@@ -541,7 +564,7 @@ export class FlowService {
    */
   getCollectionDelegators = async (
     socialId: string,
-    collectionId?: number,
+    collectionId: number,
   ): Promise<User[]> => {
     // Store users who have delegated to our target
     const delegators: User[] = [];

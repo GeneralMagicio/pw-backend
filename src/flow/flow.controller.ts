@@ -19,7 +19,6 @@ import { PrismaService } from 'src/prisma.service';
 import { ApiBody, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { VoteProjectsDTO } from './dto/voteProjects.dto';
-import { VoteCollectionsDTO } from './dto/voteCollections.dto';
 import { AuthedReq } from 'src/utils/types/AuthedReq.type';
 import { PairsResult } from './dto/pairsResult';
 import { sortProjectId } from 'src/utils';
@@ -37,8 +36,7 @@ import {
   RevokeDelegationDto,
   SetCoIDto,
 } from './dto/bodies';
-import { Prisma, ProjectType } from '@prisma/client';
-import { badgeholders } from 'src/rpgf5-data-import/badgeholders';
+import { Prisma, User } from '@prisma/client';
 import { verifySignature } from 'src/utils/badges';
 import axios from 'axios';
 import { FarcasterMetadata, FarcasterUserByFid } from './types';
@@ -490,11 +488,11 @@ export class FlowController {
     const twitterUsername = twitterRes ? twitterRes.username : null;
 
     const uniqueFarcasterCollectionDelegators = fid
-      ? await this.flowService.getCollectionDelegators(`${fid}`)
+      ? await this.flowService.getTotalCollectionDelegators(`${fid}`)
       : [];
 
     const uniqueTwitterCollectionDelegators = twitterUsername
-      ? await this.flowService.getCollectionDelegators(twitterUsername)
+      ? await this.flowService.getTotalCollectionDelegators(twitterUsername)
       : [];
 
     const uniqueFarcasterBudgetDelegators = fid
@@ -517,12 +515,21 @@ export class FlowController {
       }),
     ]);
 
+    const aggregateFunc = (obj: Record<number, User[]>) => {
+      const arr = [];
+      for (const key in obj) {
+        arr.push(...obj[key]);
+      }
+
+      return arr;
+    };
+
     const uniqueDelegatorsSize = new Set(
       [
         ...uniqueFarcasterBudgetDelegators,
-        ...uniqueFarcasterCollectionDelegators,
+        ...aggregateFunc(uniqueFarcasterCollectionDelegators),
         ...uniqueTwitterBudgetDelegators,
-        ...uniqueTwitterCollectionDelegators,
+        ...aggregateFunc(uniqueTwitterCollectionDelegators),
       ].map((el) => el.id),
     ).size;
 
@@ -535,8 +542,8 @@ export class FlowController {
 
     const uniqueCollectionDelegatorsSize = new Set(
       [
-        ...uniqueFarcasterCollectionDelegators,
-        ...uniqueTwitterCollectionDelegators,
+        ...aggregateFunc(uniqueFarcasterCollectionDelegators),
+        ...aggregateFunc(uniqueTwitterCollectionDelegators),
       ].map((el) => el.id),
     ).size;
 
@@ -546,6 +553,8 @@ export class FlowController {
         uniqueDelegators: uniqueDelegatorsSize,
         uniqueCollectionDelegators: uniqueCollectionDelegatorsSize,
         uniqueBudgetDelegators: uniqueBudgetDelegatorsSize,
+        // TODO: use uniqueTwitterCollectionDelegators and uniqueFarcasterCollectionDelegators
+        // as they already contain the per collections data
         collections: await Promise.all(
           res2.map(async (el) => {
             return {
