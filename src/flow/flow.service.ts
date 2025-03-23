@@ -536,6 +536,7 @@ export class FlowService {
 
   getTotalCollectionDelegators = async (
     socialId: string,
+    userId: number,
   ): Promise<Record<number, User[]>> => {
     const collections = await this.prismaService.project.findMany({
       select: { id: true },
@@ -546,7 +547,7 @@ export class FlowService {
 
     const delegators = await Promise.all(
       collections.map((item) =>
-        this.getCollectionDelegators(socialId, item.id),
+        this.getCollectionDelegators(socialId, item.id, userId),
       ),
     );
 
@@ -565,70 +566,50 @@ export class FlowService {
   getCollectionDelegators = async (
     socialId: string,
     collectionId: number,
+    userId: number,
   ): Promise<User[]> => {
-    // Store users who have delegated to our target
     const delegators: User[] = [];
+    const processedUserIds = new Set<number>([userId]);
+    const processedSocialIds = new Set<string>(); // Add this line
+    processedSocialIds.add(socialId.toLowerCase()); // Add this line - normalize case
 
-    // Track processed userIds to avoid cycles in delegation chains
-    const processedUserIds = new Set<number>();
-
-    // Use BFS to traverse the delegation graph backward
     let currentBatch: string[] = [socialId];
 
-    // let iteration = 1;
-
-    // console.log('--------------------------------');
-
     while (currentBatch.length > 0) {
-      // Find all direct delegations to users in the current batch
-
-      // console.log(
-      //   'iteration',
-      //   iteration++,
-      //   'current batch',
-      //   currentBatch,
-      //   'metadata',
-      //   { collectionId },
-      // );
-
       const directDelegations =
         await this.prismaService.collectionDelegation.findMany({
           where: {
-            target: {
-              in: currentBatch,
-              mode: 'insensitive',
-            },
+            target: { in: currentBatch, mode: 'insensitive' },
             collectionId,
           },
-          include: {
-            user: true,
-          },
+          include: { user: true },
         });
 
       const nextBatch: string[] = [];
 
       for (const delegation of directDelegations) {
         const delegatorId = delegation.userId;
-
-        // Avoid processing the same user multiple times
         if (!processedUserIds.has(delegatorId)) {
           processedUserIds.add(delegatorId);
           delegators.push(delegation.user);
-
-          // For each delegator, get their social ID to find who delegated to them
         }
       }
 
-      // console.log('Direct delegations', directDelegations);
       const delegatorSocialIds = await this.convertUserIdsToSocials(
         directDelegations.map((el) => el.userId),
       );
-      nextBatch.push(...delegatorSocialIds);
+
+      // Only add social IDs that haven't been processed yet
+      for (const id of delegatorSocialIds) {
+        const normalizedId = id.toLowerCase(); // Normalize case
+        if (!processedSocialIds.has(normalizedId)) {
+          processedSocialIds.add(normalizedId);
+          nextBatch.push(id);
+        }
+      }
 
       currentBatch = nextBatch;
     }
-
-    // console.log('--------------------------------');
 
     return delegators;
   };

@@ -488,11 +488,14 @@ export class FlowController {
     const twitterUsername = twitterRes ? twitterRes.username : null;
 
     const uniqueFarcasterCollectionDelegators = fid
-      ? await this.flowService.getTotalCollectionDelegators(`${fid}`)
+      ? await this.flowService.getTotalCollectionDelegators(`${fid}`, userId)
       : [];
 
     const uniqueTwitterCollectionDelegators = twitterUsername
-      ? await this.flowService.getTotalCollectionDelegators(twitterUsername)
+      ? await this.flowService.getTotalCollectionDelegators(
+          twitterUsername,
+          userId,
+        )
       : [];
 
     const uniqueFarcasterBudgetDelegators = fid
@@ -565,12 +568,14 @@ export class FlowController {
                   : await this.flowService.getCollectionDelegators(
                       `${fid}`,
                       el.collectionId,
+                      userId,
                     )),
                 ...(!twitterUsername
                   ? []
                   : await this.flowService.getCollectionDelegators(
                       twitterUsername,
                       el.collectionId,
+                      userId,
                     )),
               ],
             };
