@@ -70,7 +70,7 @@ export class UsersController {
           id: userId,
         },
         data: {
-          identity,
+          identity: identity || '{}',
           badges: badges || {},
           opAddress: mainAddress,
         },

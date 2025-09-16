@@ -1,4 +1,4 @@
-import { IsDefined, IsEthereumAddress } from 'class-validator';
+import { IsDefined, IsEthereumAddress, IsOptional } from 'class-validator';
 
 export class StoreBadgesAndIdentityDTO {
   @IsEthereumAddress()
@@ -8,7 +8,7 @@ export class StoreBadgesAndIdentityDTO {
   @IsDefined()
   signature: string;
 
-  @IsDefined()
+  @IsOptional()
   identity: string;
 }
 
@@ -22,7 +22,7 @@ export class StoreBadgesDTO {
 }
 
 export class StoreIdentityDTO {
-  @IsDefined()
+  @IsOptional()
   identity: string;
 }
 export class GetBadgesDTO {
